@@ -88,6 +88,10 @@ func _apply_key(section: String, key: String) -> void:
 					DisplayServer.window_set_mode(modo)
 		["graphics", "shadows"], ["graphics", "view_distance"]:
 			apply_to_world(vp)
+		["graphics", "show_fps"]:
+			var sm := get_node_or_null("/root/SceneManager")
+			if sm:
+				sm.set_fps_visible(v)
 		["interface", "ui_scale"]:
 			vp.content_scale_factor = v
 		["audio", _]:
@@ -138,7 +142,13 @@ func _aplicar_camera(n: Node) -> void:
 func _aplicar_ambiente(n: Node) -> void:
 	var we := n as WorldEnvironment
 	if we and we.environment:
-		# neblina cobre o corte da distância de visão
+		# neblina de profundidade: começa na metade da distância de visão e
+		# cobre o corte da câmera; objetos próximos ficam nítidos
 		var dist: float = store.get_value("graphics", "view_distance")
-		we.environment.fog_enabled = true
-		we.environment.fog_density = clampf(1.6 / dist, 0.002, 0.03)
+		var env := we.environment
+		env.fog_enabled = true
+		env.fog_mode = Environment.FOG_MODE_DEPTH
+		env.fog_depth_begin = dist * 0.5
+		env.fog_depth_end = dist
+		env.fog_depth_curve = 1.0
+		env.fog_density = 1.0

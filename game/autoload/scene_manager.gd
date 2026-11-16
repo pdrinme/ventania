@@ -17,11 +17,14 @@ var _carregando := false
 var _tela: CanvasLayer
 var _barra: ProgressBar
 var _texto: Label
+var _fps: Label
+var _fps_t := 0.0
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_criar_tela_carregamento()
+	_criar_fps()
 
 
 func go(key_or_path: String) -> bool:
@@ -61,6 +64,36 @@ func go(key_or_path: String) -> bool:
 
 func back(fallback := "menu") -> void:
 	go(previous if not previous.is_empty() and previous != current else fallback)
+
+
+## Contador de FPS no canto da tela (opção "Mostrar FPS").
+func set_fps_visible(v: bool) -> void:
+	if _fps:
+		_fps.get_parent().visible = v
+
+
+func _process(delta: float) -> void:
+	if _fps == null or not _fps.get_parent().visible:
+		return
+	_fps_t += delta
+	if _fps_t >= 0.5:
+		_fps_t = 0.0
+		_fps.text = "%d FPS" % Engine.get_frames_per_second()
+
+
+func _criar_fps() -> void:
+	var camada := CanvasLayer.new()
+	camada.layer = 90
+	add_child(camada)
+	_fps = Label.new()
+	_fps.position = Vector2(8, 4)
+	_fps.add_theme_color_override("font_color", Color("ffc93c"))
+	_fps.add_theme_color_override("font_outline_color", Color("24252c"))
+	_fps.add_theme_constant_override("outline_size", 6)
+	_fps.add_theme_font_size_override("font_size", 18)
+	_fps.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	camada.add_child(_fps)
+	camada.visible = Settings.get_value("graphics", "show_fps")
 
 
 func _criar_tela_carregamento() -> void:

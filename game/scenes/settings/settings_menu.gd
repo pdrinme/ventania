@@ -166,7 +166,7 @@ func _formatar(key: String, v: Variant) -> String:
 	match key:
 		"render_scale", "master", "music", "sfx", "ui":
 			return "%d%%" % roundi(float(v) * 100)
-		"ui_scale", "touch_button_scale", "mouse_sensitivity", "gamepad_sensitivity", "touch_sensitivity":
+		"ui_scale", "mouse_sensitivity", "gamepad_sensitivity", "touch_sensitivity":
 			return "%.2fx" % float(v)
 		"view_distance":
 			return "%d m" % roundi(float(v))

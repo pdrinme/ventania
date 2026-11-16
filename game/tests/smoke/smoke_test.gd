@@ -27,6 +27,9 @@ func run(tree: SceneTree) -> void:
 	Settings.set_value("audio", "master", 0.0)
 	_checar(AudioServer.is_bus_mute(AudioServer.get_bus_index("Master")), "volume 0 silencia o Master")
 	Settings.set_value("audio", "master", 0.8)
+	Settings.set_value("graphics", "show_fps", true)
+	_checar(SceneManager._fps.get_parent().visible, "mostrar FPS liga o contador")
+	Settings.set_value("graphics", "show_fps", false)
 	var tecla := InputEventKey.new()
 	tecla.physical_keycode = KEY_F
 	InputManager.remap("jump", tecla)

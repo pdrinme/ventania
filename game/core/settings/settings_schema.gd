@@ -31,7 +31,6 @@ const SPEC := {
 	},
 	"interface": {
 		"ui_scale": {"type": "float", "min": 0.75, "max": 1.5, "step": 0.05, "default": 1.0},
-		"touch_button_scale": {"type": "float", "min": 0.6, "max": 1.6, "step": 0.05, "default": 1.0, "mobile_only": true},
 	},
 	"network": {
 		"server_url": {"type": "string", "default": "http://127.0.0.1:8080", "max_len": 200},
@@ -46,7 +45,7 @@ const LABELS := {
 	"master": "Volume geral", "music": "Música", "sfx": "Efeitos", "ui": "Interface",
 	"mouse_sensitivity": "Sensibilidade do mouse", "gamepad_sensitivity": "Sensibilidade do controle",
 	"touch_sensitivity": "Sensibilidade do toque", "invert_y": "Inverter eixo vertical",
-	"ui_scale": "Escala da interface", "touch_button_scale": "Tamanho dos botões de toque",
+	"ui_scale": "Escala da interface",
 	"server_url": "Endereço do servidor",
 	"performance": "Desempenho", "balanced": "Equilibrado", "quality": "Qualidade", "custom": "Personalizado",
 	"off": "Desligadas", "low": "Baixas", "high": "Altas", "windowed": "Janela", "fullscreen": "Tela cheia",
