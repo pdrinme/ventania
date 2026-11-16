@@ -76,6 +76,13 @@ rodar_godot timeout 400 "$GODOT" --headless --path game -s res://tests/integrati
 grep -E "partida [0-9]+ (começou|terminou)" "$LOGSRV" | sed 's/^.*\] /   servidor: /'
 kill "$PID" 2>/dev/null; wait "$PID" 2>/dev/null; rm -f "$LOGSRV"
 
+passo "Etapa 5: 2 clientes construindo e editando sem divergência (+ 1 que entra depois)"
+FILTRO="CONSTRUCAO_REDE|FALHOU"
+rodar_godot timeout 300 "$GODOT" --headless --path game -s res://tests/integration/test_construcao_rede.gd; checar $? "construção em rede"
+
+passo "Etapa 5: custo das construções (limite de peças)"
+"$GODOT" --headless --path game -s res://tests/perf/perf_construcao.gd -- 1200 2>&1 | grep PERF_CONSTRUCAO
+
 passo "Desempenho do servidor (24 jogadores): campo de treino e ilha"
 "$GODOT" --headless --path game -s res://tests/perf/perf_server.gd -- 24 300 2>&1 | grep PERF_SERVIDOR
 echo "   (Ilha Ventania, jogadores espalhados pelos POIs):"

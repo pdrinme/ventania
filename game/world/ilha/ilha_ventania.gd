@@ -38,6 +38,9 @@ var _loot: Array = []
 var _spawns: Array = []
 var _rng := RandomNumberGenerator.new()
 var _inst: KitInstancer
+var _props: Array = []              # [caminho, Transform3D, material] (vegetação e rochas)
+var _pecas: Array = []              # construções do mapa: {"tipo","cell","rot","material"} (Etapa 5)
+var _slots := {}
 var _ocupado: Array = []            # [Vector2 centro, raio] (evita vegetação sobre construções)
 
 
@@ -49,6 +52,16 @@ func _init() -> void:
 	_ruido.fractal_octaves = 3
 	_planejar_pads()
 	_gerar_alturas()
+	# tudo é planejado aqui (sem nós): o servidor e o cliente têm as mesmas listas
+	# antes de montar a cena
+	for p in POIS:
+		call("_poi_" + p["tipo"], p)
+	for p in _pads:
+		if p.get("cabana", false):
+			_cabana(p)
+	_loot_espalhado()
+	_vegetacao()
+	_spawns_partida()
 
 
 func map_name() -> String:
@@ -94,7 +107,9 @@ func points_of_interest() -> Array:
 
 func _planejar_pads() -> void:
 	for p in POIS:
-		_pads.append({"pos": p["pos"], "raio": p["raio"], "h": _altura_bruta(p["pos"].x, p["pos"].y)})
+		# platôs na altura da grade de construção (múltiplo de 4 m): as casas do mapa
+		# ficam alinhadas à mesma grade das peças dos jogadores
+		_pads.append({"pos": p["pos"], "raio": p["raio"], "h": snappedf(_altura_bruta(p["pos"].x, p["pos"].y), CELULA)})
 	# cabanas espalhadas: posições fixas pela semente, longe dos POIs e da borda
 	var tentativas := 0
 	var cabanas := 0
@@ -103,7 +118,7 @@ func _planejar_pads() -> void:
 		var q := Vector2(_rng.randf_range(-230, 230), _rng.randf_range(-230, 230))
 		if _perto_de_pad(q, 30.0) or _altura_bruta(q.x, q.y) < 1.0:
 			continue
-		_pads.append({"pos": q, "raio": 9.0, "h": _altura_bruta(q.x, q.y), "cabana": true})
+		_pads.append({"pos": q, "raio": 9.0, "h": snappedf(_altura_bruta(q.x, q.y), CELULA), "cabana": true})
 		cabanas += 1
 
 
@@ -166,14 +181,8 @@ func _ready() -> void:
 	_terreno()
 	_bordas()
 	_inst = KitInstancer.new(self, com_ambiente)
-	for p in POIS:
-		call("_poi_" + p["tipo"], p)
-	for p in _pads:
-		if p.get("cabana", false):
-			_cabana(p)
-	_loot_espalhado()
-	_vegetacao()
-	_spawns_partida()
+	for pr in _props:
+		_inst.place(pr[0], pr[1], pr[2])
 	var grupos := _inst.build()
 	for dados_bau in _baus:
 		var bau := (load("res://assets/baus_coletaveis/bau_ventania_01.glb") as PackedScene).instantiate() as Node3D
@@ -183,7 +192,7 @@ func _ready() -> void:
 		add_child(bau)
 		chest_nodes.append(bau)
 	if OS.is_debug_build():
-		print("[ilha] %d corpos, %d grupos visuais, %d baús, %d pontos de loot" % [_inst.corpos, grupos, _baus.size(), _loot.size()])
+		print("[ilha] %d corpos, %d grupos visuais, %d peças de construção, %d baús, %d pontos de loot" % [_inst.corpos, grupos, _pecas.size(), _baus.size(), _loot.size()])
 
 
 func _ambiente() -> void:
@@ -287,16 +296,48 @@ func _bordas() -> void:
 
 # ---------------- construções ----------------
 
+## Peça de construção do mapa: vira uma entrada da grade (destrutível na Etapa 5).
+## pos/rot no formato do kit (centro do cômodo; parede no plano da borda).
 func _peca(nome: String, pos: Vector3, rot_y := 0.0) -> void:
-	var xf := Transform3D(Basis(Vector3.UP, deg_to_rad(rot_y)), pos)
-	_inst.place(B + nome + ".glb", xf, ImpactMaterial.from_asset(nome))
+	var partes := nome.split("_")
+	var mat := Grade.MATERIAIS.find(partes[1])
+	var tipo := Grade.PISO
+	var cell: Vector3i
+	var rot := 0
+	match partes[0]:
+		"parede":
+			if is_zero_approx(fmod(absf(rot_y), 180.0)):
+				tipo = Grade.PAREDE_X
+				cell = Vector3i(roundi((pos.x - 2.0) / CELULA), roundi(pos.y / CELULA), roundi(pos.z / CELULA))
+				rot = 0 if is_zero_approx(rot_y) else 2
+			else:
+				tipo = Grade.PAREDE_Z
+				cell = Vector3i(roundi(pos.x / CELULA), roundi(pos.y / CELULA), roundi((pos.z - 2.0) / CELULA))
+				rot = 1 if rot_y > 0.0 else 3
+		_:
+			tipo = {"piso": Grade.PISO, "rampa": Grade.RAMPA, "teto": Grade.TETO}[partes[0]]
+			cell = Vector3i(roundi((pos.x - 2.0) / CELULA), roundi(pos.y / CELULA), roundi((pos.z - 2.0) / CELULA))
+	var k := Grade.key(tipo, cell)
+	if _slots.has(k):
+		return
+	_slots[k] = true
+	_pecas.append({"tipo": tipo, "cell": cell, "rot": rot, "material": mat})
+
+
+func _prop(caminho: String, xf: Transform3D, material: int) -> void:
+	_props.append([caminho, xf, material])
+
+
+func building_pieces() -> Array:
+	return _pecas
 
 
 ## Casa em grade de 4 m. origem = canto (-x, -z) do 1º cômodo no nível do chão;
 ## w × d cômodos, `andares` níveis (rampa interna no 1º cômodo da última fileira),
 ## porta: "n", "s", "l", "o" (cômodo do meio do lado). Registra baú e loot.
 func _casa(origem: Vector3, w: int, d: int, andares: int, mat: String, porta := "s", bau := true, rot := 0) -> void:
-	var o := origem
+	# alinhado à grade de construção (cantos dos cômodos em múltiplos de 4 m)
+	var o := Vector3(snappedf(origem.x, CELULA), snappedf(origem.y, CELULA), snappedf(origem.z, CELULA))
 	var centro := o + Vector3(w * CELULA * 0.5, 0, d * CELULA * 0.5)
 	_ocupado.append([Vector2(centro.x, centro.z), maxf(w, d) * CELULA * 0.75])
 	var rampa_cel := Vector2i(0, d - 1)
@@ -342,7 +383,9 @@ func _casa(origem: Vector3, w: int, d: int, andares: int, mat: String, porta := 
 
 
 ## Torre de rampas em linha (rampa → piso → rampa → piso…), subindo para -Z.
-func _torre(base: Vector3, niveis: int, mat: String) -> void:
+func _torre(origem: Vector3, niveis: int, mat: String) -> Vector3:
+	# centro de cômodo da grade (4k + 2)
+	var base := Vector3(snappedf(origem.x - 2.0, CELULA) + 2.0, snappedf(origem.y, CELULA), snappedf(origem.z - 2.0, CELULA) + 2.0)
 	var z := base.z
 	for n in niveis:
 		_peca("rampa_" + mat, Vector3(base.x, base.y + n * CELULA, z))
@@ -350,6 +393,7 @@ func _torre(base: Vector3, niveis: int, mat: String) -> void:
 		z -= CELULA * 2.0
 	_ocupado.append([Vector2(base.x, base.z - niveis * CELULA), niveis * CELULA + 4.0])
 	_loot.append(Vector3(base.x + 1.2, base.y + niveis * CELULA + 0.1, z + CELULA))
+	return Vector3(base.x, base.y + niveis * CELULA + 0.1, z + CELULA)     # centro do piso do topo
 
 
 func _h(p: Vector2) -> float:
@@ -379,7 +423,7 @@ func _poi_pedreira(p: Dictionary) -> void:
 	for k in 14:
 		var ang := k * TAU / 14.0
 		var q := c + Vector2(cos(ang), sin(ang)) * _rng.randf_range(24, 36)
-		_inst.place(C + "pedra_01.glb", Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3.ONE * _rng.randf_range(1.0, 2.2)),
+		_prop(C + "pedra_01.glb", Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3.ONE * _rng.randf_range(1.0, 2.2)),
 				Vector3(q.x, _h(q), q.y)), ImpactMaterial.PEDRA)
 	for k in 5:
 		var q := c + Vector2(_rng.randf_range(-14, 14), _rng.randf_range(-14, 14))
@@ -412,7 +456,7 @@ func _poi_fazenda(p: Dictionary) -> void:
 	for i in 6:
 		for j in 4:
 			var q := c + Vector2(4 + i * 4.0, 14 + j * 5.0)
-			_inst.place(C + "arbusto_01.glb", Transform3D(Basis(), Vector3(q.x, _h(q), q.y)), ImpactMaterial.MADEIRA)
+			_prop(C + "arbusto_01.glb", Transform3D(Basis(), Vector3(q.x, _h(q), q.y)), ImpactMaterial.MADEIRA)
 	_ocupado.append([c + Vector2(14, 22), 16.0])
 	for k in 5:
 		var q := c + Vector2(_rng.randf_range(-20, 20), _rng.randf_range(-4, 10))
@@ -422,9 +466,9 @@ func _poi_fazenda(p: Dictionary) -> void:
 func _poi_mirante(p: Dictionary) -> void:
 	var c: Vector2 = p["pos"]
 	var y := _h(c)
-	_torre(Vector3(c.x, y, c.y + 10), 3, "pedra")
+	var topo := _torre(Vector3(c.x, y, c.y + 10), 3, "pedra")
 	_casa(Vector3(c.x - 18, y, c.y - 4), 2, 2, 1, "pedra", "l")
-	_baus.append([Vector3(c.x - 1.0, y + 3 * CELULA + 0.1, c.y + 10 - 5 * CELULA), 0.0])
+	_baus.append([topo + Vector3(-1.0, 0, 0), 0.0])
 
 
 func _poi_acampamento(p: Dictionary) -> void:
@@ -478,7 +522,7 @@ func _vegetacao() -> void:
 				continue
 			var escala := _rng.randf_range(0.85, 1.35)
 			var mat := ImpactMaterial.PEDRA if t[0] == "pedra_01" else ImpactMaterial.MADEIRA
-			_inst.place(C + t[0] + ".glb", Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3.ONE * escala), Vector3(q.x, h - 0.05, q.y)), mat)
+			_prop(C + t[0] + ".glb", Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3.ONE * escala), Vector3(q.x, h - 0.05, q.y)), mat)
 			feitos += 1
 
 

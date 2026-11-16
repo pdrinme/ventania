@@ -65,3 +65,9 @@ func ground_height(_x: float, _z: float) -> float:
 ## Pontos de interesse: [{"nome", "pos": Vector3, "raio"}] (mapa e minimapa).
 func points_of_interest() -> Array:
 	return []
+
+
+## Construções do mapa na grade (Etapa 5): [{"tipo","cell","rot","material"}].
+## Viram peças destrutíveis do sistema de construção, com ids 1..N nesta ordem.
+func building_pieces() -> Array:
+	return []

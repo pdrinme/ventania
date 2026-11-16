@@ -73,10 +73,11 @@ Eles ficam em arquivos de dados e serão ajustados com testes de jogo.
 
 - **Grade** de células de 4 m × 4 m × 4 m (configurável).
 - **Peças:** parede, piso, rampa e teto (pirâmide).
-- **Materiais:** madeira (constrói rápido, pouca vida), pedra (médio) e metal (lento, muita vida). Cada peça custa 10 do material e "nasce" com pouca vida, que cresce até o máximo.
+- **Materiais:** madeira (150 de vida, pronta em 1 s), pedra (300, 1,6 s) e metal (500, 2,4 s). Cada peça custa 10 do material e "nasce" com 15% da vida, que cresce até o máximo. Máximo de 999 de cada no inventário. Valores em `data/construcao.json`.
+- **Limite:** 1200 peças de jogadores por partida (medido).
 - **Edição:** cada peça tem uma máscara de ladrilhos (ex.: parede 3×3, piso 2×2) para criar portas, janelas e cantos. A edição é confirmada pelo servidor.
 - **Destruição:** por dano ou por coleta. Peças sem apoio desabam por verificação de conectividade com o chão, feita só no servidor e em lotes.
-- **Coleta:** a ferramenta de coleta golpeia props (árvores = madeira, pedras = pedra, veículos e objetos metálicos = metal).
+- **Coleta:** a picareta golpeia props e construções do mapa: árvores e arbustos = 7 de madeira, rochas = 6 de pedra, casas do mapa = 4 do material da peça por golpe e +10 ao derrubar (o metal vem das casas do Porto Ferrugem). Construções de jogadores não dão material. A picareta tira 50 de vida das peças; os tiros tiram o dano da arma.
 - **Desempenho:** peças renderizadas com MultiMesh por tipo e material, colisões em pool e limite global de peças por partida.
 
 ## 7. Partida Battle Royale

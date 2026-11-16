@@ -13,7 +13,7 @@ para um pequeno grupo de amigos.
 
 ## Status
 
-**Etapa 4 (mapa e Battle Royale): implementada e testada com clientes simulados.** Partida Battle Royale na Ilha Ventania (~600 m, 6 pontos de interesse), com loot pelo inventário completo, picareta permanente, Tormenta em 7 fases, eliminações, espectador, vitória e partidas seguidas no servidor dedicado. O campo de treino (bonecos, reaparecer) continua disponível. Ainda não há construção pelo jogador (Etapa 5) nem bots (Etapa 6).
+**Etapa 4 (mapa e Battle Royale): implementada e testada com clientes simulados.** Partida Battle Royale na Ilha Ventania (~600 m, 6 pontos de interesse), com loot pelo inventário completo, picareta permanente, Tormenta em 7 fases, eliminações, espectador, vitória e partidas seguidas no servidor dedicado. O campo de treino (bonecos, reaparecer) continua disponível. **Etapa 5 (construção): implementada e testada com clientes simulados.** Parede, piso, rampa e teto numa grade de 4 m, edição (portas e janelas), vida, rachaduras, destruição, desabamento sem apoio, coleta de materiais com a picareta, e as casas do mapa destrutíveis no mesmo sistema. Ainda não há bots (Etapa 6).
 Veja [ROADMAP.md](ROADMAP.md).
 
 ## Documentos

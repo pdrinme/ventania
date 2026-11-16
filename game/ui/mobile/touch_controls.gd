@@ -14,6 +14,7 @@ const RAIO_BOTAO := 62.0
 
 var sampler: InputSampler
 var camera: PlayerCamera
+var construcao: BuildMode         # botões de construção (Construir, Peça, Material, Editar)
 
 var _joy_dedo := -1
 var _joy_centro := Vector2.ZERO
@@ -44,6 +45,10 @@ func _layout() -> void:
 		"recarregar": {"centro": Vector2(t.x - r * 4.0, t.y - r * 3.4), "raio": r * 0.7, "dedo": -1, "texto": "Recarga"},
 		"interagir": {"centro": Vector2(t.x - r * 6.0, t.y - r * 2.4), "raio": r * 0.75, "dedo": -1, "texto": "Pegar"},
 		"mochila": {"centro": Vector2(t.x - r * 1.0, r * 2.2), "raio": r * 0.62, "dedo": -1, "texto": "Mochila"},
+		"construir": {"centro": Vector2(t.x - r * 2.5, r * 2.2), "raio": r * 0.62, "dedo": -1, "texto": "Construir"},
+		"peca": {"centro": Vector2(t.x - r * 6.2, t.y - r * 4.4), "raio": r * 0.62, "dedo": -1, "texto": "Peça", "so_construcao": true},
+		"material": {"centro": Vector2(t.x - r * 4.0, t.y - r * 3.4), "raio": r * 0.62, "dedo": -1, "texto": "Material", "so_construcao": true},
+		"editar": {"centro": Vector2(t.x - r * 4.0, r * 2.2), "raio": r * 0.62, "dedo": -1, "texto": "Editar", "so_construcao": true},
 	}
 	queue_redraw()
 
@@ -61,6 +66,8 @@ func _toque(e: InputEventScreenTouch) -> void:
 	if e.pressed:
 		for nome in _botoes:
 			var b: Dictionary = _botoes[nome]
+			if not _visivel(nome):
+				continue
 			if e.position.distance_to(b["centro"]) <= b["raio"] * 1.15:
 				b["dedo"] = e.index
 				_apertar(nome)
@@ -97,7 +104,36 @@ func _arrasto(e: InputEventScreenDrag) -> void:
 		camera.add_look(e.relative * float(Settings.get_value("controls", "touch_sensitivity")) * 1.4)
 
 
+## Botões de construção só aparecem no modo construção (e Recarga some nele).
+func _visivel(nome: String) -> bool:
+	var em_construcao := construcao != null and (construcao.ativo or construcao.editando >= 0)
+	if _botoes[nome].get("so_construcao", false):
+		return em_construcao
+	return not (em_construcao and nome == "recarregar")
+
+
 func _apertar(nome: String) -> void:
+	if construcao:
+		match nome:
+			"construir":
+				construcao.set_active(not construcao.ativo)
+				return
+			"peca":
+				construcao.select_piece(construcao.escolha + 1)
+				return
+			"material":
+				construcao.next_material()
+				return
+			"editar":
+				if construcao.editando >= 0:
+					construcao.confirm_edit()
+				else:
+					construcao.start_edit()
+				return
+			"atirar":
+				if construcao.editando >= 0:
+					construcao.toggle_tile()
+					return
 	match nome:
 		"pular":
 			sampler.touch_jump = true
@@ -133,6 +169,8 @@ func _draw() -> void:
 		draw_arc(p, RAIO_JOY * _escala, 0, TAU, 48, Color(1, 1, 1, 0.25), 3.0)
 		draw_string(fonte, p + Vector2(-60, 6), "Mover", HORIZONTAL_ALIGNMENT_CENTER, 120, 20, Color(1, 1, 1, 0.5))
 	for nome in _botoes:
+		if not _visivel(nome):
+			continue
 		var b: Dictionary = _botoes[nome]
 		var ativo: bool = b["dedo"] != -1 or (nome == "agachar" and sampler and sampler.touch_crouch)
 		draw_circle(b["centro"], b["raio"], Color(0.13, 0.72, 0.66, 0.85) if ativo else Color(0.06, 0.31, 0.34, 0.6))

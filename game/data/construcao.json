@@ -1,0 +1,23 @@
+{
+  "_doc": "Construção (Etapa 5). Grade de 4 m alinhada ao mundo. Cada peça nasce com vida_inicial (fração) e cresce até vida_max em tempo_s; o dano reduz a vida e, em zero, a peça é destruída. Peças sem caminho até o chão desabam (verificação no servidor, em lotes). O servidor é a autoridade.",
+  "grade": 4.0,
+  "custo": 10,
+  "limite_pecas": 1200,
+  "alcance": 9.0,
+  "desabar_por_tick": 40,
+  "materiais": {
+    "madeira": {"vida_max": 150, "vida_inicial": 0.15, "tempo_s": 1.0},
+    "pedra": {"vida_max": 300, "vida_inicial": 0.15, "tempo_s": 1.6},
+    "metal": {"vida_max": 500, "vida_inicial": 0.15, "tempo_s": 2.4}
+  },
+  "pecas": {
+    "parede": {"nome": "Parede", "vida": 1.0, "ladrilhos": [3, 3]},
+    "piso": {"nome": "Piso", "vida": 1.0, "ladrilhos": [2, 2]},
+    "rampa": {"nome": "Rampa", "vida": 1.0, "ladrilhos": [0, 0]},
+    "teto": {"nome": "Teto", "vida": 1.0, "ladrilhos": [0, 0]}
+  },
+  "dano_armas": 1.0,
+  "_doc_coleta": "Materiais por golpe de picareta: props (árvores, pedras) e peças do mapa (do material da peça). bonus_destruir: extra ao destruir uma peça do mapa com a picareta. Peças construídas por jogadores não dão material.",
+  "coleta": {"arvore": 7, "pedra": 6, "peca_mapa": 4, "bonus_destruir": 10},
+  "kit_treino": 300
+}

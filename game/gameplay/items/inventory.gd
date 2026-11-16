@@ -12,7 +12,8 @@ const SLOTS := 5
 const PICKAXE := -1
 const PICKAXE_ID := "picareta"
 
-enum Err { OK, FULL, INVALID, NOT_DROPPABLE, NO_SPACE, EMPTY, TOO_FAR, GONE, BUSY }
+enum Err { OK, FULL, INVALID, NOT_DROPPABLE, NO_SPACE, EMPTY, TOO_FAR, GONE, BUSY,
+		NO_MATERIAL, OCCUPIED, NO_SUPPORT, PIECE_LIMIT, NOT_OWNER }
 
 ## Mensagem ao jogador para cada código.
 const MENSAGENS := {
@@ -25,6 +26,11 @@ const MENSAGENS := {
 	Err.TOO_FAR: "Longe demais para pegar.",
 	Err.GONE: "O item não está mais aí.",
 	Err.BUSY: "Aguarde: muitas ações seguidas.",
+	Err.NO_MATERIAL: "Material insuficiente (custa 10).",
+	Err.OCCUPIED: "Já existe uma peça aí.",
+	Err.NO_SUPPORT: "A peça precisa tocar o chão ou outra construção.",
+	Err.PIECE_LIMIT: "Limite de construções da partida atingido.",
+	Err.NOT_OWNER: "Só dá para editar as suas construções.",
 }
 
 class Slot:

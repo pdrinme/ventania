@@ -151,3 +151,7 @@ salvar("picareta_sacar", whoosh(0.16, 500, 1600, 0.4) + clique(900, 0.04, 0.5), 
 salvar("largar", tom([600, 380], 0.1, 0.45, decai=0.05), vol=0.5)
 salvar("inv_erro", tom([330, 300], 0.09, 0.45, onda="tri") + silencio(0.03) + tom([300, 260], 0.11, 0.45, onda="tri"), vol=0.45)
 salvar("inv_mover", clique(1500, 0.03, 0.5) + tom([900, 1100], 0.05, 0.3, decai=0.03), vol=0.45)
+# construção
+salvar("construir", mix(batida(0.18, 1800, 160, 0.035), silencio(0.05) + clique(1300, 0.04, 0.4)), vol=0.6)
+salvar("desabar", mix(ruido_filtrado(int(TAXA * 0.7), 900)[:int(TAXA * 0.7)] and
+       [v * math.exp(-(i / TAXA) / 0.25) for i, v in enumerate(ruido_filtrado(int(TAXA * 0.7), 900))], tom([110, 55], 0.5, 0.6)), vol=0.65)

@@ -203,6 +203,11 @@ func _combate(tree: SceneTree, jogo) -> void:
 	await _picareta_e_inventario(tree, jogo)
 
 
+func _quadros_tree(tree: SceneTree, n: int) -> void:
+	for i in n:
+		await tree.process_frame
+
+
 func _apertar(acao: String) -> void:
 	var ev := InputEventAction.new()
 	ev.action = acao
@@ -311,6 +316,79 @@ func _picareta_e_inventario(tree: SceneTree, jogo) -> void:
 	_checar(ItemDB.id_of(jogo._status["slots"][0]["item"]) == "faisca", "pistola de volta no espaço 1")
 	jogo._inventario(false)
 	_checar(not jogo.inventario.is_open() and not jogo.sampler.inventario_aberto, "tela de inventário fecha")
+	await _construcao(tree, jogo)
+
+
+## Construção pelo caminho real das teclas: modo construção, piso sob os pés,
+## parede à frente, edição (porta) e picareta derrubando a parede.
+func _construcao(tree: SceneTree, jogo) -> void:
+	var cli: GameServer.Cliente = jogo.server.clientes.values()[0]
+	var pos := Vector3(42, 0.1, 42)
+	cli.pawn.global_position = pos
+	jogo.pawn.global_position = pos
+	jogo.camera.yaw = 0.0
+	jogo.camera.pitch = -60.0
+	for i in 8:
+		await tree.physics_frame
+	var madeira: int = jogo._status["materials"][0]
+	_checar(madeira >= 10, "treino dá materiais para construir (%d de madeira)" % madeira)
+	var golpes_antes := cli.swings
+	var balas_antes: int = jogo._status["slots"][0]["mag"]
+	_apertar("build_mode")
+	await _quadros_tree(tree, 3)
+	_checar(jogo.modo_build.ativo and jogo.sampler.modo_construcao, "Q liga o modo construção")
+	_apertar("slot_2")
+	await _quadros_tree(tree, 3)
+	_checar(jogo.modo_build.escolha == 1, "tecla 2 escolhe o piso")
+	var n_antes: int = jogo.server.build.estado.count_players()
+	Input.action_press("fire")
+	for i in 3:
+		await tree.physics_frame
+	Input.action_release("fire")
+	for i in 12:
+		await tree.physics_frame
+	_checar(jogo.server.build.estado.count_players() == n_antes + 1, "piso construído no servidor")
+	_checar(jogo.build.estado.occupied(Grade.PISO, Vector3i(10, 0, 10)), "piso apareceu no cliente, sob os pés")
+	_checar(jogo._status["materials"][0] == madeira - 10, "custou 10 de madeira")
+	_checar(cli.swings == golpes_antes and jogo._status["slots"][0]["mag"] == balas_antes, "Atirar no modo construção não usou a arma nem a picareta")
+	_apertar("slot_1")
+	jogo.camera.pitch = 0.0
+	await tree.process_frame
+	Input.action_press("fire")
+	for i in 3:
+		await tree.physics_frame
+	Input.action_release("fire")
+	for i in 70:
+		await tree.physics_frame
+	var parede: int = jogo.build.estado.por_slot.get(Grade.key(Grade.PAREDE_X, Vector3i(10, 0, 10)), -1)
+	_checar(parede >= 0, "parede construída à frente (Grade.target)")
+	# edição: G mirando na parede, Atirar no ladrilho do meio, G confirma
+	_apertar("edit_mode")
+	await _quadros_tree(tree, 3)
+	_checar(jogo.modo_build.editando == parede, "G entra na edição da própria parede (mira: %s)" % str(jogo.modo_build.aimed_piece()))
+	jogo.modo_build.toggle_tile_index(4)
+	jogo.modo_build.toggle_tile_index(1)
+	_apertar("edit_mode")
+	for i in 12:
+		await tree.physics_frame
+	_checar(jogo.build.estado.pecas.has(parede) and jogo.build.estado.pecas[parede].mask == 511 & ~((1 << 1) | (1 << 4)), "porta confirmada pelo servidor e aplicada no cliente")
+	_apertar("build_mode")
+	await _quadros_tree(tree, 3)
+	_checar(not jogo.modo_build.ativo and not jogo.sampler.modo_construcao, "Q desliga o modo construção")
+	# picareta na parede (madeira 150 = 3 golpes) até cair
+	_apertar("pickaxe")
+	for i in 20:
+		await tree.physics_frame
+	var destruidas: int = jogo.fx.pecas_destruidas
+	jogo.camera.pitch = 38.0        # parte de cima da parede (o meio agora é a porta)
+	Input.action_press("fire")
+	for i in Combat.melee_swing_steps() * 4:
+		await tree.physics_frame
+	Input.action_release("fire")
+	for i in 15:
+		await tree.physics_frame
+	_checar(not jogo.build.estado.pecas.has(parede), "a picareta derrubou a parede (vida %s)" % str(jogo.server.build.estado.pecas[parede].hp if jogo.server.build.estado.pecas.has(parede) else 0))
+	_checar(jogo.fx.pecas_destruidas > destruidas, "efeito de destruição no cliente")
 
 
 ## Battle Royale local na Ilha Ventania: mapa vindo do servidor, contagem, início

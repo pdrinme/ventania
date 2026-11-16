@@ -112,6 +112,7 @@ func _iniciar() -> void:
 	vencedor = 0
 	var semente := int(Time.get_unix_time_from_system()) + partidas * 7919 if not config.has("semente") else int(config["semente"]) + partidas
 	server.loot.reset(semente)
+	server.build.reset()                # mapa intacto e sem construções da partida anterior
 	var mundo := server.world
 	tormenta = Tormenta.new(config["tormenta"], semente, func(c: Vector2): return mundo.ground_height(c.x, c.y) > 1.0)
 	var pontos: Array = mundo.match_spawn_points().duplicate()

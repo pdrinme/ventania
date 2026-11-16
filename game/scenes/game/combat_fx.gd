@@ -278,6 +278,7 @@ func melee_impact(pos: Vector3, normal: Vector3, material: int) -> void:
 	p.global_position = pos + normal * 0.04
 	p.direction = normal if normal != Vector3.ZERO else Vector3.UP
 	p.color_ramp = _grad_golpe[material]
+	p.spread = 70.0
 	p.initial_velocity_min = g[2]
 	p.initial_velocity_max = g[3]
 	p.scale_amount_min = 0.6 * g[4]
@@ -289,6 +290,21 @@ func melee_impact(pos: Vector3, normal: Vector3, material: int) -> void:
 	(f.mesh as QuadMesh).material.albedo_color = g[5]
 	f.visible = true
 	_clarao_t[i] = 0.10
+
+
+var pecas_destruidas := 0           # testes/diagnóstico
+
+
+## Peça de construção destruída: rajada de fragmentos maiores do material.
+func destroy_piece(pos: Vector3, material: int) -> void:
+	pecas_destruidas += 1
+	for k in 2:
+		melee_impact(pos + Vector3(randf_range(-1.0, 1.0), randf_range(-0.8, 0.8), randf_range(-1.0, 1.0)), Vector3.UP, material)
+		var p := _impactos[(_prox_imp + POOL_IMPACTO - 1) % POOL_IMPACTO]
+		p.initial_velocity_max *= 1.6
+		p.scale_amount_max *= 2.2
+		p.spread = 140.0
+	melee_impacts -= 2
 
 
 func damage_number(pos: Vector3, dano: int, cabeca: bool, escudo: bool) -> void:

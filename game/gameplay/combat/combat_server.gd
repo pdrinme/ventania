@@ -171,7 +171,8 @@ func _golpe(c: GameServer.Cliente, cmd: Protocol.InputCmd) -> void:
 		return
 	c.melee_hits += 1
 	server.broadcast(Protocol.pack_melee({"swinger": c.id, "pos": mundo["pos"], "normal": mundo["normal"], "material": mundo["material"]}), true)
-	# Etapa 5: vida das peças, dano progressivo e coleta de materiais se ligam aqui
+	# Etapa 5: dano nas construções e coleta de materiais
+	server.build.on_pickaxe(c, mundo["collider"], mundo["material"])
 	server.melee_hit.emit(c.id, mundo["collider"], mundo["material"], mundo["pos"])
 
 
@@ -336,6 +337,7 @@ func _disparar(c: GameServer.Cliente, cmd: Protocol.InputCmd, s: Inventory.Slot,
 	var espaco := server.world.get_world_3d().direct_space_state
 	var alvos := _alvos(c, cmd.view_tick)
 	var danos := {}                       # alvo_id -> {"dano", "cabeca", "pos"}
+	var danos_pecas := {}                 # peca_id -> dano (tiros destroem construções)
 	var fins := []
 	for d: Vector3 in dirs:
 		var origem: Vector3 = raio["origin"]
@@ -343,6 +345,9 @@ func _disparar(c: GameServer.Cliente, cmd: Protocol.InputCmd, s: Inventory.Slot,
 		var q := PhysicsRayQueryParameters3D.create(origem, fim, Pawn.LAYER_WORLD)
 		var parede := espaco.intersect_ray(q)
 		var t_parede := origem.distance_to(parede["position"]) if not parede.is_empty() else alcance
+		var peca := -1
+		if not parede.is_empty() and parede["collider"] is Node and (parede["collider"] as Node).has_meta("peca_id"):
+			peca = int((parede["collider"] as Node).get_meta("peca_id"))
 		var melhor: Dictionary = {}
 		for a in alvos:
 			var h := Hitbox.test(origem, d, a["pos"], a["crouched"])
@@ -351,6 +356,8 @@ func _disparar(c: GameServer.Cliente, cmd: Protocol.InputCmd, s: Inventory.Slot,
 				melhor["alvo"] = a
 		if melhor.is_empty():
 			fins.append({"end": origem + d * t_parede, "hit": false})
+			if peca >= 0:
+				danos_pecas[peca] = int(danos_pecas.get(peca, 0)) + Combat.pellet_damage(s.item, s.rarity, false)
 			continue
 		var ponto: Vector3 = origem + d * float(melhor["t"])
 		fins.append({"end": ponto, "hit": true})
@@ -362,6 +369,8 @@ func _disparar(c: GameServer.Cliente, cmd: Protocol.InputCmd, s: Inventory.Slot,
 	server.broadcast_except(c.peer_id, Protocol.pack_shot(c.id, raio["origin"], fins), false)
 	for reg in danos.values():
 		_aplicar_dano(c, reg["alvo"], reg["dano"], reg["cabeca"], reg["pos"], s.item)
+	for pid in danos_pecas:
+		server.build.damage(pid, danos_pecas[pid] * float(Grade.config()["dano_armas"]), c)
 
 
 ## Alvos possíveis (outros jogadores vivos e bonecos), na posição que o atirador via.

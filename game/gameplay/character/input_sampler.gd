@@ -14,6 +14,7 @@ var selected := 0                  # espaço atual (vem do servidor); Inventory.
 var _slot_pendente := 0            # 1..5; Protocol.SLOT_PICKAXE = picareta
 var bloqueado := false             # pausa
 var inventario_aberto := false     # tela de inventário: anda, mas não atira/mira/recarrega
+var modo_construcao := false       # construção/edição: Atirar/Recarregar/1-5 são do BuildMode
 var _pulo_pendente := false
 var _agachar_alterna := false      # controle: R3 alterna agachar
 var _agachar_segurado := false     # teclado/mouse: segurar agacha
@@ -24,7 +25,7 @@ func _unhandled_input(e: InputEvent) -> void:
 		return
 	if e.is_action_pressed("jump"):
 		_pulo_pendente = true
-	if inventario_aberto:
+	if inventario_aberto or modo_construcao:
 		return
 	for i in 5:
 		if e.is_action_pressed("slot_%d" % (i + 1)):
@@ -80,12 +81,14 @@ func make_cmd(seq: int, yaw: float, pitch: float) -> Protocol.InputCmd:
 		touch_reload = false
 		c.move = Input.get_vector("move_left", "move_right", "move_back", "move_forward").limit_length(1.0)
 		return c
-	if Input.is_action_pressed("fire") or touch_fire:
-		c.buttons |= Protocol.BTN_FIRE
-	if Input.is_action_pressed("aim"):
-		c.buttons |= Protocol.BTN_AIM
-	if Input.is_action_pressed("reload") or touch_reload:
-		c.buttons |= Protocol.BTN_RELOAD
+	# construção: anda, pula e corre normalmente; Atirar/Mirar/Recarregar ficam com o BuildMode
+	if not modo_construcao:
+		if Input.is_action_pressed("fire") or touch_fire:
+			c.buttons |= Protocol.BTN_FIRE
+		if Input.is_action_pressed("aim"):
+			c.buttons |= Protocol.BTN_AIM
+		if Input.is_action_pressed("reload") or touch_reload:
+			c.buttons |= Protocol.BTN_RELOAD
 	touch_reload = false
 	if Input.is_action_pressed("interact") or touch_interact:
 		c.buttons |= Protocol.BTN_INTERACT

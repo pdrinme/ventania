@@ -4,7 +4,7 @@ extends RefCounted
 ## Cliente envia ENTRADAS (não posições); servidor envia SNAPSHOTS do estado.
 ## Ver ARCHITECTURE §4.
 
-const GAME_PROTOCOL := 5
+const GAME_PROTOCOL := 6
 const DEFAULT_PORT := 24800
 const TICK_RATE := 30            # simulação (Hz)
 const SNAPSHOT_EVERY := 2        # snapshot a cada N ticks (15 Hz)
@@ -20,6 +20,8 @@ const CH_SNAPSHOT := 2
 const C_HELLO := 1
 const C_INPUT := 2
 const C_INV := 3             # operação de inventário (trocar, dividir, largar, pegar); o servidor valida
+const C_BUILD := 4           # construir uma peça num slot da grade
+const C_EDIT := 5            # editar (ladrilhos) uma peça própria
 # servidor -> cliente
 const S_WELCOME := 10
 const S_REJECT := 11
@@ -39,6 +41,15 @@ const S_MELEE := 24          # para todos: impacto de um golpe de picareta (efei
 const S_MATCH := 25          # para todos: estado da partida BR (espera, contagem, jogo, fim), vivos, vencedor
 const S_STORM := 26          # para todos: Tormenta (fase, círculos de/para, tempos, dano)
 const S_RESULT := 27         # para um jogador: colocação, eliminações e tempo vivo (ao ser eliminado ou vencer)
+const S_PIECE := 28          # para todos: peça criada ou alterada (edição)
+const S_PIECE_GONE := 29     # para todos: peça destruída (motivo: dano, desabou, partida nova)
+const S_PIECES_HP := 30      # para todos: vida/obra das peças que mudaram (lote)
+const S_BUILD_RESET := 31    # para todos: construções voltam ao estado do mapa (partida nova)
+
+const OP_BUILD := 7          # resultado (S_INV_RESULT) de C_BUILD
+const OP_EDIT := 8           # resultado (S_INV_RESULT) de C_EDIT
+const GONE_DESTRUIDA := 0
+const GONE_DESABOU := 1
 
 # estados da partida (S_MATCH)
 const MATCH_TREINO := 0
@@ -665,3 +676,127 @@ static func unpack_result(data: PackedByteArray) -> Dictionary:
 	var b := _reader(data)
 	b.seek(1)
 	return {"colocacao": b.get_u8(), "total": b.get_u8(), "eliminacoes": b.get_u8(), "tempo_s": b.get_u16(), "vencedor": b.get_u16()}
+
+
+# ---------- construção ----------
+
+## {"req","escolha"(0..3),"material","cell": Vector3i,"rot"}
+static func pack_build(b_: Dictionary) -> PackedByteArray:
+	var b := _buf()
+	b.put_u8(C_BUILD)
+	b.put_u16(int(b_.get("req", 0)) & 0xFFFF)
+	b.put_u8(b_["escolha"])
+	b.put_u8(b_["material"])
+	var c: Vector3i = b_["cell"]
+	b.put_16(c.x)
+	b.put_16(c.y)
+	b.put_16(c.z)
+	b.put_u8(b_["rot"])
+	return b.data_array
+
+
+static func unpack_build(data: PackedByteArray) -> Dictionary:
+	if data.size() != 12 or data[0] != C_BUILD:
+		return {}
+	var b := _reader(data)
+	b.seek(1)
+	var r := {"req": b.get_u16(), "escolha": b.get_u8(), "material": b.get_u8()}
+	r["cell"] = Vector3i(b.get_16(), b.get_16(), b.get_16())
+	r["rot"] = b.get_u8()
+	if r["escolha"] > 3 or r["material"] > 2 or r["rot"] > 3:
+		return {}
+	return r
+
+
+static func pack_edit(req: int, id: int, mask: int) -> PackedByteArray:
+	var b := _buf()
+	b.put_u8(C_EDIT)
+	b.put_u16(req & 0xFFFF)
+	b.put_u32(id)
+	b.put_u16(mask)
+	return b.data_array
+
+
+static func unpack_edit(data: PackedByteArray) -> Dictionary:
+	if data.size() != 9 or data[0] != C_EDIT:
+		return {}
+	var b := _reader(data)
+	b.seek(1)
+	return {"req": b.get_u16(), "id": b.get_u32(), "mask": b.get_u16()}
+
+
+## Construcoes.Peca.to_dict()
+static func pack_piece(p: Dictionary) -> PackedByteArray:
+	var b := _buf()
+	b.put_u8(S_PIECE)
+	b.put_u32(p["id"])
+	b.put_u8(p["tipo"])
+	b.put_u8(p["material"])
+	b.put_16(p["cell"].x)
+	b.put_16(p["cell"].y)
+	b.put_16(p["cell"].z)
+	b.put_u8(p["rot"])
+	b.put_u16(p["mask"])
+	b.put_u16(clampi(roundi(p["hp"]), 0, 65535))
+	b.put_u16(clampi(roundi(p["hp_max"]), 0, 65535))
+	b.put_u8(clampi(roundi(p["obra"] * 255.0), 0, 255))
+	b.put_u16(p["dono"])
+	return b.data_array
+
+
+static func unpack_piece(data: PackedByteArray) -> Dictionary:
+	if data.size() != 23 or data[0] != S_PIECE:
+		return {}
+	var b := _reader(data)
+	b.seek(1)
+	var r := {"id": b.get_u32(), "tipo": b.get_u8(), "material": b.get_u8()}
+	r["cell"] = Vector3i(b.get_16(), b.get_16(), b.get_16())
+	r["rot"] = b.get_u8()
+	r["mask"] = b.get_u16()
+	r["hp"] = float(b.get_u16())
+	r["hp_max"] = float(b.get_u16())
+	r["obra"] = b.get_u8() / 255.0
+	r["dono"] = b.get_u16()
+	return r
+
+
+static func pack_piece_gone(id: int, motivo: int) -> PackedByteArray:
+	var b := _buf()
+	b.put_u8(S_PIECE_GONE)
+	b.put_u32(id)
+	b.put_u8(motivo)
+	return b.data_array
+
+
+static func unpack_piece_gone(data: PackedByteArray) -> Array:
+	if data.size() != 6:
+		return []
+	var b := _reader(data)
+	b.seek(1)
+	return [b.get_u32(), b.get_u8()]
+
+
+## lista: [[id, hp, obra 0..1], ...]
+static func pack_pieces_hp(lista: Array) -> PackedByteArray:
+	var b := _buf()
+	b.put_u8(S_PIECES_HP)
+	b.put_u16(lista.size())
+	for e in lista:
+		b.put_u32(e[0])
+		b.put_u16(clampi(roundi(e[1]), 0, 65535))
+		b.put_u8(clampi(roundi(e[2] * 255.0), 0, 255))
+	return b.data_array
+
+
+static func unpack_pieces_hp(data: PackedByteArray) -> Array:
+	if data.size() < 3:
+		return []
+	var b := _reader(data)
+	b.seek(1)
+	var n := b.get_u16()
+	if data.size() != 3 + n * 7:
+		return []
+	var out := []
+	for i in n:
+		out.append([b.get_u32(), float(b.get_u16()), b.get_u8() / 255.0])
+	return out

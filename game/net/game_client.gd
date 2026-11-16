@@ -23,6 +23,10 @@ signal melee_impact(m: Dictionary)
 signal match_state(m: Dictionary)
 signal storm(t: Dictionary)
 signal result(r: Dictionary)
+signal piece(d: Dictionary)
+signal piece_gone(id: int, motivo: int)
+signal pieces_hp(lista: Array)
+signal build_reset
 
 const TEMPO_CONEXAO_S := 6.0
 
@@ -128,6 +132,18 @@ func _receber(dados: PackedByteArray) -> void:
 			var r := Protocol.unpack_result(dados)
 			if not r.is_empty():
 				result.emit(r)
+		Protocol.S_PIECE:
+			var pc := Protocol.unpack_piece(dados)
+			if not pc.is_empty():
+				piece.emit(pc)
+		Protocol.S_PIECE_GONE:
+			var g := Protocol.unpack_piece_gone(dados)
+			if not g.is_empty():
+				piece_gone.emit(g[0], g[1])
+		Protocol.S_PIECES_HP:
+			pieces_hp.emit(Protocol.unpack_pieces_hp(dados))
+		Protocol.S_BUILD_RESET:
+			build_reset.emit()
 		Protocol.S_MELEE:
 			var m := Protocol.unpack_melee(dados)
 			if not m.is_empty():
@@ -150,6 +166,22 @@ func send_inventory(op: Dictionary) -> int:
 	_req = (_req % 65000) + 1
 	op["req"] = _req
 	_enviar(Protocol.pack_inv(op), true, Protocol.CH_RELIABLE)
+	return _req
+
+
+func send_build(escolha: int, material: int, cell: Vector3i, rot: int) -> int:
+	if not connected:
+		return -1
+	_req = (_req % 65000) + 1
+	_enviar(Protocol.pack_build({"req": _req, "escolha": escolha, "material": material, "cell": cell, "rot": rot}), true, Protocol.CH_RELIABLE)
+	return _req
+
+
+func send_edit(id: int, mask: int) -> int:
+	if not connected:
+		return -1
+	_req = (_req % 65000) + 1
+	_enviar(Protocol.pack_edit(_req, id, mask), true, Protocol.CH_RELIABLE)
 	return _req
 
 

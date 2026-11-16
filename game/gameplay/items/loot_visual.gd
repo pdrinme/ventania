@@ -12,6 +12,8 @@ const DURACAO_SALTO := 0.45
 
 
 static func model_path(l: Dictionary) -> String:
+	if l.get("mat", 0) != 0:
+		return Grade.asset_path(Grade.PISO, l["mat"] - 1)    # pilha de material: placa da peça, reduzida
 	if l["ammo"] != 0:
 		return "res://assets/baus_coletaveis/municao_01.glb"
 	var id := ItemDB.id_of(l["item"])
@@ -39,7 +41,7 @@ func setup(l: Dictionary, origem := Vector3.INF) -> void:
 	m.rings = 1
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.albedo_color = ItemDB.rarity_color(l["rarity"]) if l["ammo"] == 0 else Color("9a9a9a")
+	mat.albedo_color = ItemDB.rarity_color(l["rarity"]) if l["ammo"] == 0 and l.get("mat", 0) == 0 else Color("9a9a9a")
 	m.material = mat
 	anel.mesh = m
 	anel.position.y = 0.02
@@ -49,6 +51,8 @@ func setup(l: Dictionary, origem := Vector3.INF) -> void:
 	anel.visible = _salto_t >= 1.0          # o anel só aparece quando o item pousa
 	_modelo = (load(model_path(l)) as PackedScene).instantiate() as Node3D
 	_modelo.position.y = 0.35
+	if l.get("mat", 0) != 0:
+		_modelo.scale = Vector3.ONE * 0.14
 	add_child(_modelo)
 
 
@@ -66,6 +70,8 @@ func _process(delta: float) -> void:
 
 
 func label() -> String:
+	if data.get("mat", 0) != 0:
+		return "%s x%d" % [ItemDB.material(ItemDB.material_types()[data["mat"] - 1])["nome"], data["count"]]
 	if data["ammo"] != 0:
 		return ItemDB.ammo(ItemDB.ammo_types()[data["ammo"] - 1])["nome"]
 	var id := ItemDB.id_of(data["item"])

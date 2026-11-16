@@ -33,6 +33,11 @@ GPU integrada a partir de 2012 atende.
 | Picareta | F | ► (direcional direito) | Tocar no 1º espaço |
 | Inventário | Tab | Select / Back | Botão Mochila |
 | Mapa | M | ▲ (direcional cima) | — |
+| Modo construção | Q | B | Botão Construir |
+| Peça (no modo construção) | 1–4 ou roda | LB / RB | Botão Peça |
+| Material (no modo construção) | R | X | Botão Material |
+| Colocar peça (segurar = sequência) | Botão esquerdo | RT | Atirar |
+| Editar peça sua | G | ▼ (direcional baixo) | Botão Editar (Atirar troca o ladrilho) |
 | Pausa | Esc | Start | Botão II / voltar |
 
 Para testar: atire nos três **bonecos de treino** à frente do ponto inicial,

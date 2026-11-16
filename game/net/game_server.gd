@@ -15,6 +15,7 @@ const MAX_POR_TICK := 2      # recupera atraso sem permitir "speed hack"
 const ESPERA_MAX := 6        # ticks esperando entrada antes de simular sem ela (~200 ms)
 const DUMMY_ID_BASE := 60001
 const MAX_OPS_INV_S := 12    # operações de inventário por segundo (evita spam)
+const MAX_BUILD_S := 15      # peças/edições por segundo (construção rápida, sem spam)
 
 class Cliente:
 	var peer_id := 0
@@ -54,6 +55,8 @@ class Cliente:
 	var drops := 0           # itens largados (espalha no chão)
 	var ops_janela := 0      # tick em que a janela de 1 s começou
 	var ops_na_janela := 0
+	var build_janela := 0
+	var build_na_janela := 0
 	var dead := false
 	var respawn_tick := 0
 	var dirty := true
@@ -66,6 +69,7 @@ var tick := 0
 var clientes := {}           # peer_id -> Cliente
 var loot: LootServer
 var combat: CombatServer
+var build: BuildServer
 var bonecos: Array = []      # [{"id", "pawn", "vit", "last_hit"}]
 var kit_inicial := true      # treino: reaparece com uma pistola e munição
 var _proximo_id := 1
@@ -77,6 +81,7 @@ func _init(mundo: Mapa, semente_loot := 0, modo_partida := "treino", config_part
 	world = mundo
 	modo = modo_partida
 	combat = CombatServer.new(self)
+	build = BuildServer.new(self)
 	loot = LootServer.new(mundo, func(d): broadcast(d, true), semente_loot)
 	if modo == "br":
 		kit_inicial = false
@@ -86,6 +91,7 @@ func _init(mundo: Mapa, semente_loot := 0, modo_partida := "treino", config_part
 
 
 func _ready() -> void:
+	build.init_map()
 	if modo != "treino":
 		return
 	for i in world.dummies().size():
@@ -134,6 +140,7 @@ func _physics_process(dt: float) -> void:
 				_reviver(c)
 	combat.update_dummies()
 	loot.update(tick)
+	build.update()
 	if partida:
 		partida.update()
 	for c: Cliente in clientes.values():
@@ -200,6 +207,24 @@ func _receber(de: int, dados: PackedByteArray) -> void:
 			while c.fila.size() > MAX_FILA:
 				c.fila.pop_front()
 				c.descartados += 1
+		Protocol.C_BUILD, Protocol.C_EDIT:
+			if c == null or c.pawn == null:
+				return
+			if tick - c.build_janela >= Protocol.TICK_RATE:
+				c.build_janela = tick
+				c.build_na_janela = 0
+			c.build_na_janela += 1
+			var lim := c.build_na_janela > MAX_BUILD_S
+			if Protocol.msg_type(dados) == Protocol.C_BUILD:
+				var b := Protocol.unpack_build(dados)
+				if not b.is_empty():
+					var r := Inventory.Err.BUSY if lim else build.try_build(c, b)
+					send_to(de, Protocol.pack_inv_result(b["req"], Protocol.OP_BUILD, r), true)
+			else:
+				var ed := Protocol.unpack_edit(dados)
+				if not ed.is_empty():
+					var r := Inventory.Err.BUSY if lim else build.try_edit(c, ed["id"], ed["mask"])
+					send_to(de, Protocol.pack_inv_result(ed["req"], Protocol.OP_EDIT, r), true)
 		Protocol.C_INV:
 			if c == null or c.pawn == null:
 				return
@@ -238,6 +263,8 @@ func _entrar(de: int, nome: String) -> void:
 		send_to(de, Protocol.pack_player_info(bonecos[i]["id"], "Boneco %d" % (i + 1)), true)
 	for m in loot.full_state():
 		send_to(de, m, true)
+	for m in build.full_state():
+		send_to(de, m, true)
 	_log("entrou: %s (id %d)" % [nome, c.id])
 	player_joined.emit(c.id, nome)
 
@@ -248,6 +275,8 @@ func _dar_kit(c: Cliente) -> void:
 		c.inv.add_item("faisca", 0)
 		c.inv.add_ammo("leve", 48)
 		c.inv.select(0)
+		for t in ItemDB.material_types():
+			c.inv.add_material(t, int(Grade.config()["kit_treino"]))
 	c.dirty = true
 
 

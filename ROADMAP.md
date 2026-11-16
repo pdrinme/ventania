@@ -227,8 +227,61 @@ Começou automaticamente depois da picareta e do inventário validados, como ped
 - Partida com pessoas de verdade pela rede (só clientes simulados até agora).
 - As construções do mapa ainda não são destrutíveis (Etapa 5). Não há ônibus nem paraquedas (não fazia parte do plano da Etapa 4). Os bots (IA) são a Etapa 6.
 
-### Etapa 5 — Construção ⬜
+### Etapa 5 — Construção ✅ (v0.5.0; falta testar com pessoas e no seu hardware)
 Parede, piso, rampa e teto, com grade, edição, destruição, desabamento sem apoio e materiais, tudo sincronizado.
+
+**Implementado:**
+- **Grade de 4 m alinhada ao mundo** (`Grade`): slots por tipo (parede em dois planos, piso, rampa em 4 direções, teto em pirâmide). As peças se conectam por arestas da grade e se ancoram ao tocar o terreno. A escolha do slot segue o olhar (parede na borda da frente, piso à frente ou sob os pés, rampa subindo para onde se olha, teto em cima, um nível acima olhando para cima).
+- **As casas da ilha são peças do mesmo sistema:** os platôs e as casas foram alinhados à grade. São 466 peças do mapa, destrutíveis, nas quais dá para construir encostado, restauradas a cada partida e geradas iguais no servidor e no cliente (ids 1..466).
+- **Construção autoritativa** (`BuildServer`, `C_BUILD`):
+  - o servidor valida alcance (9 m), slot livre, apoio, material (10) e limite de peças;
+  - a peça nasce com 15% da vida e cresce até o máximo (madeira 150 em 1 s, pedra 300 em 1,6 s, metal 500 em 2,4 s);
+  - segurar Atirar constrói em sequência (até 15 peças/s).
+- **Edição** (`C_EDIT`): ladrilhos 3×3 na parede e 2×2 no piso (portas, janelas, cantos). Só o dono edita; o servidor valida a máscara. A colisão e o visual seguem os ladrilhos.
+- **Vida e destruição:**
+  - tiros danificam a peça atingida e a picareta tira 50;
+  - rachaduras progressivas (shader, por instância) e escurecimento com o dano;
+  - fragmentos e som por material ao destruir;
+  - quem perde o apoio **desaba** (busca de conexão até uma âncora, em lotes de 40 por tick);
+  - tudo sincronizado (`S_PIECE`, `S_PIECE_GONE`, `S_PIECES_HP` em lote a cada 3 ticks, `S_BUILD_RESET`).
+- **Coleta:** a picareta tira material de árvores e arbustos (madeira 7), rochas (pedra 6) e casas do mapa (4 do material da peça, +10 ao derrubar). Construções de jogadores não dão material. Os materiais vão para o inventário (máximo 999, com descarte como os outros itens; no chão aparecem como uma placa do material). O treino dá 300 de cada.
+- **Visual leve:** peças inteiras em MultiMesh dinâmico por (malha, região de 64 m), com dados por instância (dano e obra) lidos pelo shader do kit; peças editadas desenhadas por ladrilhos. São 24 grupos de desenho para 1200 peças.
+- **Controles:**
+  - Q / B / botão Construir: modo construção;
+  - 1–4 ou roda/LB-RB: peça; Recarregar: material; Atirar: colocar;
+  - G / ▼ / botão Editar: editar (Atirar troca o ladrilho, G confirma, Recarregar restaura, Esc cancela).
+  Prévia azul ou vermelha com o motivo, barra de peças e materiais no HUD. Andar, pular e correr continuam funcionando no modo construção.
+- **Protocolo v6.**
+
+**Aceite — executado:**
+- **Grade e conectividade:** 13 unitários novos. Cobrem arestas, desabamento de torre, ponte com dois pilares, apoio para colocar, ladrilhos, escolha do slot, e que as casas do mapa não começam flutuando nem têm slots repetidos. Também cobrem o protocolo e, com a física real, as regras do servidor, o crescimento da vida, o desabamento em lotes, a coleta, a edição só do dono e a porta deixando passar no meio.
+- **2 clientes construindo e editando sem divergência** (`test_construcao_rede.gd`), por ENet, cada um no próprio mundo físico:
+  - A construiu 5 peças e B construiu 3; slot ocupado recusado; materiais descontados;
+  - A abriu uma porta e B não pôde editar a parede de A;
+  - houve dano, desabamento e coleta numa casa do mapa;
+  - **servidor, A e B iguais peça a peça** (tipo, slot, rotação, material, ladrilhos e vida);
+  - **um terceiro cliente que entrou depois** ficou igual; depois do reset da partida, todos voltaram ao mapa original.
+- Fumaça pelas teclas reais: Q, tecla 2, piso sob os pés, parede à frente, G e porta, picareta derrubando a parede, sem disparar a arma no modo construção.
+- **Limite de peças medido** (`perf_construcao.gd`; servidor com 24 jogadores andando entre as peças):
+
+| Peças de jogadores | Criar (por peça) | Tick médio / pior | Derrubar torre de 6 andares (25 peças) | Grupos de desenho |
+|---|---|---|---|---|
+| 600 | 0,10 ms | 1,7 / 3,1 ms | pior tick 2,4 ms | 16 |
+| 1200 | 0,04 ms | 1,9 / 4,8 ms | pior tick 1,9 ms | 24 |
+| 2500 | 0,05 ms | 2,7 / 11,3 ms | pior tick 2,2 ms | 48 |
+| 4000 | 0,05 ms | 3,9 / 15,5 ms | pior tick 2,2 ms | 72 |
+
+  **Limite escolhido: 1200 peças de jogadores por partida** (além das 466 do mapa), com folga para um PC de servidor fraco e para o celular. Achado da medição: a contagem e o crescimento da vida percorriam todas as peças; agora usam contador e um conjunto das peças em obra, e o custo por peça ficou constante.
+- Capturas: `game/tests/capturar_construcao.gd` (prévia, obra, pronta, rachaduras, porta, grade de edição, desabamento).
+- **Benchmark da Ilha repetido** (as casas agora são desenhadas pelo sistema de construção): chamadas de desenho 67 / 136 / 165 e primitivas 56 / 116 / 139 mil (Desempenho / Equilibrado / Qualidade). Na v0.4.0 eram 73 / 161 / 191 e 57 / 127 / 158 mil: **melhorou nos três perfis**. O FPS por software aqui continua sem valor para o seu aparelho.
+
+**Pendente / não validado:**
+- Construir com outra pessoa de verdade (só clientes simulados) e o FPS com muitas construções no notebook e no celular.
+- As peças editadas usam caixas simples coloridas, e não a textura das peças inteiras.
+- Não há edição de rampa nem de teto.
+- O personagem não tem animação própria de construir.
+- O apoio considera só arestas compartilhadas (uma rampa encostada só pela lateral diagonal não segura nada).
+- Props (árvores e rochas) dão material, mas não são destruídos.
 **Requisitos registrados na preparação da picareta (v0.3.3):**
 - vida individual por peça de construção;
 - dano progressivo da picareta (`dano_construcao` em `itens.json`);
@@ -237,7 +290,7 @@ Parede, piso, rampa e teto, com grade, edição, destruição, desabamento sem a
 - fragmentos e partículas na destruição, e destruição completa com vida zero;
 - deterioração e destruição sincronizadas entre jogadores;
 - coleta de materiais na destruição e por golpe (`recursos_por_golpe`) e integração ao inventário (os materiais já existem lá).
-- O ponto de ligação é o sinal `GameServer.melee_hit`.
+- O ponto de ligação é o sinal `GameServer.melee_hit`. *(Todos implementados na v0.5.0, acima.)*
 **Aceite:** testes de grade e conectividade, 2 clientes construindo e editando sem divergência, e o limite de peças medido.
 
 ### Etapa 6 — Inteligência artificial ⬜

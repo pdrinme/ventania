@@ -154,6 +154,14 @@ O item comanda as mãos, nunca o contrário. Os marcadores ficam nos modelos (`g
 - **Mensagens (v5):** `S_MATCH` (estado, vivos, total, tempo restante, vencedor; a cada mudança e 1×/s), `S_STORM` (círculos de/para e tempos; o cliente interpola o fechamento) e `S_RESULT` (colocação, eliminações e tempo vivo, para o próprio jogador). O loot ganhou o campo `mat` (materiais no chão).
 - **Cliente:** `StormVisual` (parede roxa animada), `MatchHud` (estado, aviso e tela roxa na Tormenta, minimapa gerado do relevo, mapa completo com os POIs, espectador e resultado). O espectador segue o visual interpolado do jogador assistido (`PlayerCamera.alvo` aceita qualquer `Node3D`).
 
+### 4.5 Construção (Etapa 5, protocolo v6)
+- **`Grade`** (matemática pura, igual no servidor e no cliente): slots `Vector4i(tipo, cx, cy, cz)` numa grade de 4 m alinhada ao mundo, transformações dos assets do kit, arestas para conexões, ancoragem no terreno, ladrilhos de edição e escolha do slot pelo olhar.
+- **`Construcoes`**: as peças e os índices por slot e por aresta. `unsupported()` faz uma busca em largura a partir dos vizinhos das peças removidas, parando ao encontrar uma âncora. O servidor e cada cliente têm uma cópia; `snapshot()` permite comparar as duas.
+- **`BuildServer`**: valida pedidos, cria um StaticBody3D por peça (formas do kit compartilhadas ou caixas dos ladrilhos; metas `peca_id` e `material`), aplica dano de tiros e da picareta, coleta e desabamento em lotes. As peças do mapa vêm de `Mapa.building_pieces()` (ids 1..N determinísticos), e o cliente as gera sozinho: na rede só vão as diferenças.
+- **`BuildClient`**: aplica as mensagens, mantém a colisão para a predição e desenha. As peças inteiras ficam em MultiMesh com `use_custom_data` (x = dano, y = obra); o `toon_paleta.gdshader` desenha rachaduras (bordas de Voronoi que se alargam com o dano) e o tom de obra. Fora de MultiMesh com dados, esses valores são 0, e personagens e armas não mudam. As peças editadas são malhas de caixas por ladrilho.
+- **`BuildMode`** (cliente): prévia, construção em sequência e edição. Só pede ao servidor; o `InputSampler` deixa de enviar Atirar/Mirar/Recarregar enquanto a construção está ativa.
+- **Limite:** 1200 peças de jogadores (`data/construcao.json`), medido em `perf_construcao.gd` (ROADMAP, Etapa 5).
+
 ## 5. Meta-servidor **[ADR-3]**
 
 - Python 3.11+ e **somente a biblioteca padrão**: `asyncio` (servidor HTTP próprio e enxuto), `sqlite3`, `hashlib` (PBKDF2), `hmac`, `secrets`, `json`, `unittest`.

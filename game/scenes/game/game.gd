@@ -30,6 +30,9 @@ var touch: TouchControls
 var fx: CombatFx
 var chests: ChestsClient
 var inventario: InventoryScreen
+var build: BuildClient
+var modo_build: BuildMode
+var build_hud: BuildHud
 
 var _seq := 0
 var _pendentes: Array = []          # InputCmd ainda não confirmados pelo servidor
@@ -99,6 +102,15 @@ func _ready() -> void:
 	combat_hud.theme = tema
 	camada.add_child(combat_hud)
 	combat_hud.slot_tapped.connect(func(i): sampler.select_slot(i))
+	modo_build = BuildMode.new()
+	modo_build.jogo = self
+	add_child(modo_build)
+	touch.construcao = modo_build
+	modo_build.changed.connect(touch.queue_redraw)
+	build_hud = BuildHud.new()
+	build_hud.theme = tema
+	build_hud.modo = modo_build
+	camada.add_child(build_hud)
 	inventario = InventoryScreen.new()
 	inventario.theme = tema
 	camada.add_child(inventario)
@@ -144,6 +156,10 @@ func _ready() -> void:
 	client.chest_changed.connect(_on_chest)
 	client.inventory_result.connect(_on_inv_result)
 	client.melee_impact.connect(_on_melee)
+	client.piece.connect(func(d): if build: build.on_piece(d))
+	client.piece_gone.connect(func(id, m): if build: build.on_gone(id, m))
+	client.pieces_hp.connect(func(l): if build: build.on_hp(l))
+	client.build_reset.connect(func(): if build: build.on_reset())
 
 	var host: String = p.get("host", "127.0.0.1")
 	var porta: int = p.get("porta", Protocol.DEFAULT_PORT)
@@ -192,6 +208,10 @@ func _on_welcome(info: Dictionary) -> void:
 	add_child(mundo)
 	move_child(mundo, 0)
 	chests.setup(mundo)
+	build = BuildClient.new()
+	add_child(build)
+	build.setup(mundo)
+	build.piece_destroyed.connect(_on_peca_destruida)
 	match_hud.setup(mundo, tormenta)
 	pawn = Pawn.new()
 	pawn.entity_id = info["id"]
@@ -214,6 +234,7 @@ func _physics_process(dt: float) -> void:
 	cmd.view_tick = maxi(0, int(_tick_render))
 	Movement.step(pawn, cmd, dt)
 	_prever_tiro(cmd)
+	modo_build.physics_step(not _morto and (Input.is_action_pressed("fire") or sampler.touch_fire))
 	_pendentes.append(cmd)
 	if _pendentes.size() > 90:
 		_pendentes.pop_front()       # servidor muito atrasado: não acumula sem limite
@@ -480,6 +501,14 @@ func _impacto_local(cmd: Protocol.InputCmd) -> void:
 		Audio.play_at(_som_golpe(mundo["material"]), mundo["pos"], 0.0, randf_range(0.94, 1.06))
 
 
+## Peça destruída (dano) ou desabada: fragmentos do material e som.
+func _on_peca_destruida(pos: Vector3, material: int, motivo: int) -> void:
+	var m: int = [ImpactMaterial.MADEIRA, ImpactMaterial.PEDRA, ImpactMaterial.METAL][material]
+	fx.destroy_piece(pos, m)
+	if pawn and pos.distance_to(pawn.global_position) < 80.0:
+		Audio.play_at("desabar" if motivo == Protocol.GONE_DESABOU else _som_golpe(m), pos, -2.0, randf_range(0.85, 1.0))
+
+
 static func _som_golpe(material: int) -> String:
 	match material:
 		ImpactMaterial.MADEIRA:
@@ -583,6 +612,7 @@ func _set_morto(v: bool) -> void:
 	visual.visible = not v
 	if v:
 		_inventario(false)
+		modo_build.set_active(false)
 		_golpe_ini = -1
 		if _em_partida():
 			get_tree().create_timer(2.0).timeout.connect(func():
@@ -711,6 +741,7 @@ func _inventario(abrir: bool) -> void:
 	if abrir and (_morto or pawn == null or hud.is_paused()):
 		return
 	if abrir:
+		modo_build.set_active(false)
 		inventario.open()
 		_atualizar_proximos()
 	else:
@@ -740,6 +771,10 @@ func _on_inv_result(r: Dictionary) -> void:
 		return
 	inventario.show_result(Inventory.Err.OK)
 	match r["op"]:
+		Protocol.OP_BUILD:
+			Audio.play_sfx("construir", -4.0, randf_range(0.95, 1.05))
+		Protocol.OP_EDIT:
+			Audio.play_sfx("inv_mover", -2.0)
 		Protocol.OP_DROP, Protocol.OP_DROP_AMMO, Protocol.OP_DROP_MATERIAL:
 			Audio.play_sfx("largar", -3.0)
 		Protocol.OP_SWAP, Protocol.OP_SPLIT:
