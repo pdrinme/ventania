@@ -108,6 +108,66 @@
       "nome": "Recruta (personagem-base)",
       "categoria": "personagens",
       "notas": "Esqueleto padrão humanoide (nomes Godot), animações idle e acenar"
+    },
+    {
+      "id": "rajada_01",
+      "nome": "Rajada (fuzil)",
+      "categoria": "armas",
+      "notas": "Etapa 3"
+    },
+    {
+      "id": "trovao_01",
+      "nome": "Trovão (escopeta)",
+      "categoria": "armas",
+      "notas": "Etapa 3"
+    },
+    {
+      "id": "zumbido_01",
+      "nome": "Zumbido (submetralhadora)",
+      "categoria": "armas",
+      "notas": "Etapa 3"
+    },
+    {
+      "id": "faisca_01",
+      "nome": "Faísca (pistola)",
+      "categoria": "armas",
+      "notas": "Etapa 3"
+    },
+    {
+      "id": "gaviao_01",
+      "nome": "Gavião (precisão)",
+      "categoria": "armas",
+      "notas": "Etapa 3"
+    },
+    {
+      "id": "municao_01",
+      "nome": "Caixa de munição",
+      "categoria": "baus_coletaveis",
+      "notas": "Etapa 3"
+    },
+    {
+      "id": "curativo_01",
+      "nome": "Curativo",
+      "categoria": "baus_coletaveis",
+      "notas": "Etapa 3"
+    },
+    {
+      "id": "kit_cura_01",
+      "nome": "Kit de cura",
+      "categoria": "baus_coletaveis",
+      "notas": "Etapa 3"
+    },
+    {
+      "id": "celula_escudo_p_01",
+      "nome": "Célula de escudo pequena",
+      "categoria": "baus_coletaveis",
+      "notas": "Etapa 3"
+    },
+    {
+      "id": "celula_escudo_g_01",
+      "nome": "Célula de escudo grande",
+      "categoria": "baus_coletaveis",
+      "notas": "Etapa 3"
     }
   ]
 }

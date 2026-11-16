@@ -229,6 +229,24 @@ def _no_ar(t):
     }
 
 
+# Pose de braços segurando uma arma com as duas mãos (sobrepõe os braços da locomoção).
+BRACOS_ARMA = {
+    "RightUpperArm": [(Z, 70), (X, 28)],
+    "RightLowerArm": [(Z, 55), (X, -10)],
+    "RightHand": [(X, -10)],
+    "LeftUpperArm": [(Z, -55), (X, 22)],
+    "LeftLowerArm": [(Z, -70), (X, -15)],
+}
+
+
+def _com_arma(pose_fn):
+    def f(t):
+        pose = dict(pose_fn(t))
+        pose.update(BRACOS_ARMA)
+        return pose
+    return f
+
+
 def _acao_ciclo(arm, nome, quadros, pose_fn, chaves=8):
     """Cria uma ação em loop: `chaves` amostras uniformes + a última igual à primeira."""
     acao = bpy.data.actions.new(nome)
@@ -267,6 +285,14 @@ def animar(arm):
     acoes.append(_acao_ciclo(arm, "agachado-loop", 60, lambda t: _agachado(t, 0.0), chaves=2))
     acoes.append(_acao_ciclo(arm, "agachado_andar-loop", 30, lambda t: _agachado(t, 22.0)))
     acoes.append(_acao_ciclo(arm, "no_ar-loop", 30, _no_ar, chaves=4))
+
+    # variantes segurando arma (mesmas pernas/tronco, braços apontando a arma)
+    acoes.append(_acao_ciclo(arm, "arma_idle-loop", 60, _com_arma(_pose_idle), chaves=6))
+    acoes.append(_acao_ciclo(arm, "arma_andar-loop", 30, _com_arma(lambda t: _ciclo(t, 28, 40, 0, 4))))
+    acoes.append(_acao_ciclo(arm, "arma_correr-loop", 20, _com_arma(lambda t: _ciclo(t, 45, 75, 0, 14, -0.04, 70, 0.06))))
+    acoes.append(_acao_ciclo(arm, "arma_agachado-loop", 60, _com_arma(lambda t: _agachado(t, 0.0)), chaves=2))
+    acoes.append(_acao_ciclo(arm, "arma_agachado_andar-loop", 30, _com_arma(lambda t: _agachado(t, 22.0))))
+    acoes.append(_acao_ciclo(arm, "arma_no_ar-loop", 30, _com_arma(_no_ar), chaves=4))
 
     for a in acoes:
         a.use_fake_user = True

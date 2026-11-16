@@ -1,1 +1,42 @@
-[]
+[
+  {
+    "file": "rajada_01.glb",
+    "asset_id": "rajada_01",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "trovao_01.glb",
+    "asset_id": "trovao_01",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "zumbido_01.glb",
+    "asset_id": "zumbido_01",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "faisca_01.glb",
+    "asset_id": "faisca_01",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "gaviao_01.glb",
+    "asset_id": "gaviao_01",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  }
+]

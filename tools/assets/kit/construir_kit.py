@@ -22,7 +22,7 @@ RAIZ = os.path.abspath(os.path.join(AQUI, "..", "..", ".."))
 sys.path.insert(0, os.path.join(RAIZ, "tools", "assets"))
 import catalog  # noqa: E402
 
-GERADORES = ["gerar_construcoes.py", "gerar_cenario.py", "gerar_bau.py", "gerar_personagem.py"]
+GERADORES = ["gerar_construcoes.py", "gerar_cenario.py", "gerar_bau.py", "gerar_personagem.py", "gerar_armas.py", "gerar_itens.py"]
 
 
 def manifesto():
