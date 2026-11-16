@@ -12,17 +12,31 @@ const PROFILES := {
 }
 
 
+## No PC o perfil Desempenho limita em 60 FPS (medição: HD Graphics 3000 faz ~106 FPS
+## nele); no celular fica em 30 para poupar bateria e calor.
+const MOBILE_OVERRIDES := {"performance": {"fps_limit": 30}}
+const PC_OVERRIDES := {"performance": {"fps_limit": 60}}
+
+
+## Valores de um perfil para a plataforma.
+static func values(nome: String, is_mobile: bool) -> Dictionary:
+	var v: Dictionary = PROFILES[nome].duplicate()
+	v.merge((MOBILE_OVERRIDES if is_mobile else PC_OVERRIDES).get(nome, {}), true)
+	return v
+
+
 static func default_for(is_mobile: bool) -> String:
 	return "performance" if is_mobile else "balanced"
 
 
 ## Qual perfil corresponde exatamente aos valores (ou "custom").
-static func match_profile(values: Dictionary) -> String:
+static func match_profile(atuais: Dictionary, is_mobile := false) -> String:
 	for nome in PROFILES:
+		var perfil := values(nome, is_mobile)
 		var ok := true
 		for k in KEYS:
-			var esperado: Variant = PROFILES[nome][k]
-			var atual: Variant = values.get(k)
+			var esperado: Variant = perfil[k]
+			var atual: Variant = atuais.get(k)
 			if esperado is float:
 				ok = (atual is float or atual is int) and is_equal_approx(float(atual), esperado)
 			else:

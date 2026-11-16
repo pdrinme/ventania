@@ -49,7 +49,7 @@ func set_value(section: String, key: String, value: Variant, emit := true) -> Va
 	if emit:
 		changed.emit(section, key, limpo)
 	if section == "graphics" and key in GraphicsProfiles.KEYS:
-		var novo := GraphicsProfiles.match_profile(_data["graphics"])
+		var novo := GraphicsProfiles.match_profile(_data["graphics"], is_mobile)
 		if novo != _data["graphics"]["profile"]:
 			_data["graphics"]["profile"] = novo
 			if emit:
@@ -62,8 +62,9 @@ func apply_profile(nome: String, emit := true) -> void:
 		if nome == "custom":
 			_data["graphics"]["profile"] = "custom"
 		return
+	var valores := GraphicsProfiles.values(nome, is_mobile)
 	for k in GraphicsProfiles.KEYS:
-		_data["graphics"][k] = GraphicsProfiles.PROFILES[nome][k]
+		_data["graphics"][k] = valores[k]
 		if emit:
 			changed.emit("graphics", k, _data["graphics"][k])
 	_data["graphics"]["profile"] = nome
@@ -94,7 +95,7 @@ func from_dict(d: Dictionary) -> void:
 			if section == "graphics" and key == "profile":
 				continue  # o perfil é deduzido dos valores
 			_data[section][key] = SettingsSchema.sanitize(section, key, d[section][key])
-	_data["graphics"]["profile"] = GraphicsProfiles.match_profile(_data["graphics"])
+	_data["graphics"]["profile"] = GraphicsProfiles.match_profile(_data["graphics"], is_mobile)
 
 
 func save(path: String) -> Error:

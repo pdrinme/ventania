@@ -67,7 +67,12 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 | 2026-11-16 | idem | Equilibrado | 60 / 60 | Preso no limite de 60 / vsync |
 | 2026-11-16 | idem | Qualidade | 39,6 / 37,8 | Limitado pela GPU (sombras altas + MSAA 2x + 100%) |
 
-A v0.1.1 mede sem limite de FPS. Os testes de densidade 2×2 e 3×3 e o celular ainda estão pendentes.
+| 2026-11-16 | i5-2415M + HD Graphics 3000, Linux (v0.1.1, sem limite) | Desempenho | 105,9 / 90,3 | Folga grande |
+| 2026-11-16 | idem | Equilibrado | 69,9 / 51,3 | No limite; "1% pior" abaixo de 60 |
+| 2026-11-16 | idem | Qualidade | 38,1 / 35,0 | Limitado pela GPU |
+
+**Decisões:** no PC, o perfil Desempenho passa a limitar em 60 FPS (no celular continua em 30). O padrão do PC continua Equilibrado por enquanto, mas deve ser revisto quando o gameplay existir: se máquinas como esta caírem abaixo de 60, o padrão vira Desempenho, ou entra uma detecção automática de perfil no primeiro uso.
+**Pendente:** densidade 2×2 e 3×3, e o celular.
 
 ### Etapa 2 — Personagem e gameplay básico ⬜
 Personagem em terceira pessoa (esqueleto padrão), câmera, movimentação, corrida, pulo, agachamento, colisões, animações (placeholders originais), controles de PC e controles touch básicos. Movimento via servidor em processo, com predição e reconciliação.

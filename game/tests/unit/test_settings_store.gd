@@ -80,3 +80,13 @@ func test_perfis_usam_chaves_validas() -> void:
 		for k in GraphicsProfiles.KEYS:
 			var v: Variant = GraphicsProfiles.PROFILES[nome][k]
 			assert_eq(SettingsSchema.sanitize("graphics", k, v), v, "%s.%s" % [nome, k])
+
+
+func test_desempenho_limite_por_plataforma() -> void:
+	var pc := SettingsStore.new(false)
+	pc.set_value("graphics", "profile", "performance")
+	assert_eq(pc.get_value("graphics", "fps_limit"), 60)
+	assert_eq(pc.get_value("graphics", "profile"), "performance")
+	var cel := SettingsStore.new(true)
+	assert_eq(cel.get_value("graphics", "fps_limit"), 30)
+	assert_eq(cel.get_value("graphics", "profile"), "performance")
