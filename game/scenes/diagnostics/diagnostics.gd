@@ -133,13 +133,13 @@ func _process(delta: float) -> void:
 	if _acumulado < 0.5:
 		return
 	_acumulado = 0.0
-	_stats.text = "FPS %d  (%.1f ms)\nDraw calls %d\nPrimitivas %s\nMemória vídeo %s\nMemória estática %s\n%s" % [
+	_stats.text = "FPS %d  (%.1f ms)\nDraw calls %d\nPrimitivas %s\nMemória vídeo %s\nRAM livre %s\n%s" % [
 		Engine.get_frames_per_second(), 1000.0 / maxf(Engine.get_frames_per_second(), 1.0),
 		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
 		_milhares(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)),
 		String.humanize_size(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_VIDEO_MEM_USED)),
-		String.humanize_size(OS.get_static_memory_usage()),
-		"TESTE EM ANDAMENTO…" if _bench_ativo else ""]
+		String.humanize_size(int(OS.get_memory_info().get("available", 0))),
+		"TESTE EM ANDAMENTO (sem limite de FPS)…" if _bench_ativo else ""]
 
 
 func _iniciar_bench() -> void:
@@ -148,6 +148,12 @@ func _iniciar_bench() -> void:
 	_frames.clear()
 	_draws.clear()
 	_prims.clear()
+	# mede a capacidade real: sem limite de FPS e sem vsync (restaurados no fim)
+	var fps_antes := Engine.max_fps
+	var vsync_antes := DisplayServer.window_get_vsync_mode() if DisplayServer.get_name() != "headless" else DisplayServer.VSYNC_ENABLED
+	Engine.max_fps = 0
+	if DisplayServer.get_name() != "headless":
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	_bench_ativo = true
 	_camera.automatico = true
 	_b_bench.disabled = true
@@ -157,6 +163,9 @@ func _iniciar_bench() -> void:
 	_draws.clear()
 	_prims.clear()
 	await get_tree().create_timer(DURACAO_BENCH).timeout
+	Engine.max_fps = fps_antes
+	if DisplayServer.get_name() != "headless":
+		DisplayServer.window_set_vsync_mode(vsync_antes)
 	_bench_ativo = false
 	_camera.automatico = false
 	_b_bench.disabled = false
@@ -169,6 +178,7 @@ func _finalizar_bench() -> void:
 	r["resolucao_3d"] = Settings.get_value("graphics", "render_scale")
 	r["sombras"] = Settings.get_value("graphics", "shadows")
 	r["msaa"] = Settings.get_value("graphics", "msaa")
+	r["limite_fps_jogo"] = Settings.get_value("graphics", "fps_limit")
 	r["densidade"] = "%dx%d" % [_vitrine.densidade, _vitrine.densidade]
 	r["tela"] = "%dx%d" % [get_viewport().get_visible_rect().size.x, get_viewport().get_visible_rect().size.y]
 	r.merge(Benchmark.device_info())

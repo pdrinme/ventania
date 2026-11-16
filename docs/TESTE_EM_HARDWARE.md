@@ -7,8 +7,8 @@ para calibrar perfis gráficos e orçamentos antes do gameplay (Etapa 2).
 
 | Plataforma | Arquivo | Como abrir |
 |---|---|---|
-| Windows 10/11 (64 bits) | `Ventania-0.1.0-windows.zip` | Extraia e abra `Ventania.exe`. O Windows pode avisar "aplicativo não reconhecido": clique em **Mais informações → Executar assim mesmo** (o executável não tem assinatura digital). |
-| Linux (64 bits) | `Ventania-0.1.0-linux.zip` | Extraia, rode `chmod +x ventania.x86_64` e depois `./ventania.x86_64`. |
+| Windows 10/11 (64 bits) | `Ventania-0.1.1-windows.zip` | Extraia e abra `Ventania.exe`. O Windows pode avisar "aplicativo não reconhecido": clique em **Mais informações → Executar assim mesmo** (o executável não tem assinatura digital). |
+| Linux (64 bits) | `Ventania-0.1.1-linux.zip` | Extraia, rode `chmod +x ventania.x86_64` e depois `./ventania.x86_64`. |
 | Android | ainda não disponível | Veja a seção 5. |
 
 Requisito gráfico: OpenGL 3.3 (PC) ou OpenGL ES 3.0 (celular). Quase qualquer
@@ -30,6 +30,7 @@ Os resultados também ficam salvos (JSON + CSV, frame a frame) em:
 
 ## 3. O que observar
 
+- O teste roda **sem limite de FPS e sem vsync** (as suas configurações são restauradas no fim), para medir a folga real. Se no Linux o resultado parar exatamente em 60, o driver está forçando o vsync: rode `vblank_mode=0 ./ventania.x86_64`.
 - **FPS médio** e **1% pior**. O "1% pior" mostra os engasgos. A meta é de 30 FPS ou mais no celular e 60 FPS no PC, com "1% pior" acima de 20.
 - Se esquentar muito ou travar, anote depois de quanto tempo.
 - Se algo aparecer errado (cores, peças faltando, texto cortado), tire uma captura de tela.

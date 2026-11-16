@@ -24,3 +24,10 @@ func test_salva_json_e_csv() -> void:
 	assert_true(FileAccess.file_exists(caminho))
 	assert_true(FileAccess.file_exists(caminho.replace(".json", ".csv")))
 	assert_true(SafeFile.read_text(caminho.replace(".json", ".csv")).begins_with("frame,ms"))
+
+
+func test_info_do_aparelho_tem_ram() -> void:
+	var info := Benchmark.device_info()
+	assert_true(info.has("ram_total") and info.has("ram_livre"))
+	assert_false(info.has("memoria_estatica"), "memória estática é 0 em builds de release")
+	assert_true(Benchmark.text_summary(info).contains("sem limite de FPS"))

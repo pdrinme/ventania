@@ -6,7 +6,7 @@ config_version=5
 [application]
 
 config/name="Ventania"
-config/version="0.1.0"
+config/version="0.1.1"
 config/description="Battle Royale cartunesco original, leve, para jogar com amigos."
 run/main_scene="res://scenes/boot/boot.tscn"
 config/features=PackedStringArray("4.7")

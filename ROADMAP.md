@@ -60,6 +60,15 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 - ⚠️ Não testado: a build de Windows (não há Windows nem Wine no ambiente de desenvolvimento).
 - ⬜ Pendente: APK Android (depende do Android SDK e do aceite da licença do Google, ver `docs/TESTE_EM_HARDWARE.md`), medições em hardware real, e layout de toque (Etapa 2).
 
+### Medições em hardware real
+| Data | Aparelho | Perfil | FPS médio / 1% pior | Observação |
+|---|---|---|---|---|
+| 2026-11-16 | i5-2415M + Intel HD Graphics 3000, Linux (v0.1.0) | Desempenho | 30 / 30 | Preso no limite de 30 FPS do perfil |
+| 2026-11-16 | idem | Equilibrado | 60 / 60 | Preso no limite de 60 / vsync |
+| 2026-11-16 | idem | Qualidade | 39,6 / 37,8 | Limitado pela GPU (sombras altas + MSAA 2x + 100%) |
+
+A v0.1.1 mede sem limite de FPS. Os testes de densidade 2×2 e 3×3 e o celular ainda estão pendentes.
+
 ### Etapa 2 — Personagem e gameplay básico ⬜
 Personagem em terceira pessoa (esqueleto padrão), câmera, movimentação, corrida, pulo, agachamento, colisões, animações (placeholders originais), controles de PC e controles touch básicos. Movimento via servidor em processo, com predição e reconciliação.
 **Aceite:** cena de teste jogável no PC, build Android executando num dispositivo do grupo, e medição de FPS e memória registrada.

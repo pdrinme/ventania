@@ -38,19 +38,21 @@ static func device_info() -> Dictionary:
 		"gpu_fabricante": RenderingServer.get_video_adapter_vendor(),
 		"api": RenderingServer.get_video_adapter_api_version(),
 		"memoria_video": String.humanize_size(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_VIDEO_MEM_USED)),
-		"memoria_estatica": String.humanize_size(OS.get_static_memory_usage()),
+		# memória estática do processo só é medida em builds de depuração; usamos a RAM do aparelho
+		"ram_total": String.humanize_size(int(OS.get_memory_info().get("physical", 0))),
+		"ram_livre": String.humanize_size(int(OS.get_memory_info().get("available", 0))),
 		"data": Time.get_datetime_string_from_system(),
 	}
 
 
 static func text_summary(r: Dictionary) -> String:
-	return "Ventania %s — teste de desempenho\nFPS médio %.1f · 1%% pior %.1f · frame mais lento %.1f ms\nDraw calls %d · primitivas %d\nPerfil %s · resolução 3D %d%% · sombras %s · MSAA %s · densidade %s · tela %s\n%s · %s\nCPU %s\nGPU %s (%s)\nMemória: vídeo %s, estática %s" % [
+	return "Ventania %s — teste de desempenho (sem limite de FPS)\nFPS médio %.1f · 1%% pior %.1f · frame mais lento %.1f ms\nDraw calls %d · primitivas %d\nPerfil %s · resolução 3D %d%% · sombras %s · MSAA %s · densidade %s · tela %s\n%s · %s\nCPU %s\nGPU %s (%s)\nMemória: vídeo %s · RAM %s (livre %s)" % [
 		r.get("versao_jogo", ""), r.get("fps_medio", 0.0), r.get("fps_1pct", 0.0), r.get("frame_max_ms", 0.0),
 		r.get("draw_calls_medio", 0), r.get("primitivas_medio", 0),
 		r.get("perfil", ""), roundi(float(r.get("resolucao_3d", 1.0)) * 100), r.get("sombras", ""), r.get("msaa", ""),
 		r.get("densidade", ""), r.get("tela", ""),
 		r.get("so", ""), r.get("modelo", ""), r.get("cpu", ""), r.get("gpu", ""), r.get("api", ""),
-		r.get("memoria_video", ""), r.get("memoria_estatica", "")]
+		r.get("memoria_video", ""), r.get("ram_total", ""), r.get("ram_livre", "")]
 
 
 ## Grava resumo (JSON) e frames (CSV). Retorna o caminho do JSON.
