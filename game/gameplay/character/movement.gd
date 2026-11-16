@@ -17,9 +17,23 @@ const MAX_FALL_SPEED := 45.0
 const SPRINT_MIN_FORWARD := 0.5        # só corre andando para a frente
 
 
+# queda depois de saltar do ônibus
+const QUEDA_TERMINAL := 26.0           # m/s (queda livre)
+const QUEDA_HORIZONTAL := 10.0         # m/s de controle na queda livre
+const PLANADOR_DESCIDA := 6.5          # m/s descendo com o planador aberto
+const PLANADOR_HORIZONTAL := 12.0
+const PLANADOR_ALTURA := 38.0          # abre sozinho abaixo desta altura sobre o chão
+const QUEDA_ACCEL := 12.0
+
+
 ## Simula um passo. Modifica pawn.velocity, posição (move_and_slide) e agachamento.
 static func step(pawn: Pawn, cmd: Protocol.InputCmd, dt: float) -> void:
 	pawn.yaw = cmd.yaw
+	if pawn.queda == Pawn.NO_ONIBUS:
+		return                              # a posição vem do ônibus (servidor)
+	if pawn.queda != 0:
+		_queda(pawn, cmd, dt)
+		return
 	# agachar / levantar (levantar só se houver espaço acima)
 	var quer_agachar := cmd.has(Protocol.BTN_CROUCH)
 	if quer_agachar and not pawn.crouched:
@@ -61,3 +75,30 @@ static func step(pawn: Pawn, cmd: Protocol.InputCmd, dt: float) -> void:
 	if no_chao_agora and pawn.velocity.y < 0.0:
 		pawn.velocity.y = 0.0
 	pawn.grounded = no_chao_agora
+
+
+
+## Queda livre (rápida, pouco controle) e planador (abre sozinho perto do chão:
+## desce devagar e anda mais). Ao tocar o chão volta ao movimento normal.
+static func _queda(pawn: Pawn, cmd: Protocol.InputCmd, dt: float) -> void:
+	if pawn.queda == Pawn.QUEDA_LIVRE:
+		var q := PhysicsRayQueryParameters3D.create(pawn.global_position, pawn.global_position + Vector3(0, -PLANADOR_ALTURA, 0), Pawn.LAYER_WORLD)
+		if not pawn.get_world_3d().direct_space_state.intersect_ray(q).is_empty():
+			pawn.queda = Pawn.PLANADOR
+	var planando := pawn.queda == Pawn.PLANADOR
+	var mov := cmd.move.limit_length(1.0)
+	var alvo := Basis(Vector3.UP, cmd.yaw) * Vector3(mov.x, 0.0, -mov.y) * (PLANADOR_HORIZONTAL if planando else QUEDA_HORIZONTAL)
+	var horizontal := Vector3(pawn.velocity.x, 0.0, pawn.velocity.z).move_toward(alvo, QUEDA_ACCEL * dt)
+	var vy := pawn.velocity.y
+	if planando:
+		vy = move_toward(vy, -PLANADOR_DESCIDA, GRAVITY * dt)
+	else:
+		vy = maxf(vy - GRAVITY * dt, -QUEDA_TERMINAL)
+	pawn.velocity = Vector3(horizontal.x, vy, horizontal.z)
+	pawn.move_and_slide()
+	if pawn.is_on_floor():
+		pawn.queda = 0
+		pawn.grounded = true
+		pawn.velocity.y = 0.0
+	else:
+		pawn.grounded = false

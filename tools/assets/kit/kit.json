@@ -174,6 +174,96 @@
       "nome": "Célula de escudo grande",
       "categoria": "baus_coletaveis",
       "notas": "Etapa 3"
+    },
+    {
+      "id": "poste_01",
+      "nome": "Poste de rua",
+      "categoria": "cenario",
+      "notas": "Revisão da Etapa 4"
+    },
+    {
+      "id": "banco_01",
+      "nome": "Banco de praça",
+      "categoria": "cenario",
+      "notas": "Revisão da Etapa 4"
+    },
+    {
+      "id": "lixeira_01",
+      "nome": "Lixeira",
+      "categoria": "cenario",
+      "notas": "Revisão da Etapa 4"
+    },
+    {
+      "id": "cerca_01",
+      "nome": "Cerca de madeira (4 m)",
+      "categoria": "cenario",
+      "notas": "Revisão da Etapa 4"
+    },
+    {
+      "id": "placa_01",
+      "nome": "Placa de sinalização",
+      "categoria": "cenario",
+      "notas": "Revisão da Etapa 4"
+    },
+    {
+      "id": "conteiner_01",
+      "nome": "Contêiner coral",
+      "categoria": "cenario",
+      "notas": "Revisão da Etapa 4"
+    },
+    {
+      "id": "conteiner_02",
+      "nome": "Contêiner teal",
+      "categoria": "cenario",
+      "notas": "Revisão da Etapa 4"
+    },
+    {
+      "id": "conteiner_03",
+      "nome": "Contêiner amarelo",
+      "categoria": "cenario",
+      "notas": "Revisão da Etapa 4"
+    },
+    {
+      "id": "tronco_01",
+      "nome": "Tronco caído",
+      "categoria": "cenario",
+      "notas": "Revisão da Etapa 4"
+    },
+    {
+      "id": "girassol_01",
+      "nome": "Girassol",
+      "categoria": "cenario",
+      "notas": "Revisão da Etapa 4"
+    },
+    {
+      "id": "silo_01",
+      "nome": "Silo",
+      "categoria": "cenario",
+      "notas": "Revisão da Etapa 4"
+    },
+    {
+      "id": "carrinho_01",
+      "nome": "Carrinho de mina",
+      "categoria": "cenario",
+      "notas": "Revisão da Etapa 4"
+    },
+    {
+      "id": "tenda_01",
+      "nome": "Barraca",
+      "categoria": "cenario",
+      "notas": "Revisão da Etapa 4"
+    },
+    {
+      "id": "onibus_01",
+      "nome": "Ônibus dos Ventos (Ônibus de Batalha)",
+      "categoria": "cenario",
+      "notas": "Revisão da Etapa 4"
+    },
+    {
+      "id": "planador_01",
+      "nome": "Planador de descida",
+      "categoria": "cenario",
+      "notas": "Revisão da Etapa 4"
     }
   ]
 }

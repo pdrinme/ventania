@@ -409,10 +409,37 @@ func _jogar_br(tree: SceneTree) -> void:
 		await tree.physics_frame
 		var e: int = jogo._partida.get("estado", -1)
 		viu_contagem = viu_contagem or e == Protocol.MATCH_CONTAGEM
-		if e == Protocol.MATCH_JOGO:
+		if e == Protocol.MATCH_ONIBUS:
 			break
 	_checar(viu_contagem, "contagem regressiva antes da partida")
-	_checar(jogo._partida.get("estado", -1) == Protocol.MATCH_JOGO, "partida começou")
+	_checar(jogo._partida.get("estado", -1) == Protocol.MATCH_ONIBUS, "partida começou no Ônibus de Batalha")
+	for i in 20:
+		await tree.physics_frame
+		await tree.process_frame
+	_checar(jogo.pawn.queda == Pawn.NO_ONIBUS and not jogo.visual.visible, "jogador dentro do ônibus (invisível, câmera no ônibus)")
+	_checar(jogo._onibus_vis != null and jogo._onibus_vis.visible and jogo.camera.alvo == jogo._onibus_vis, "ônibus desenhado e seguido pela câmera")
+	var ab: float = jogo.onibus.abre
+	for i in 30 * 30:
+		await tree.physics_frame
+		if jogo.server_tick_now() > ab + 5:
+			break
+	_apertar("jump")
+	var viu_queda := false
+	var viu_planador := false
+	for i in 30 * 40:
+		await tree.physics_frame
+		viu_queda = viu_queda or jogo.pawn.queda == Pawn.QUEDA_LIVRE
+		viu_planador = viu_planador or jogo.pawn.queda == Pawn.PLANADOR
+		if jogo.pawn.queda == 0 and viu_queda:
+			break
+	_checar(viu_queda, "Pular com as portas abertas: saltou (queda livre)")
+	_checar(viu_planador, "planador abriu perto do chão")
+	_checar(jogo.pawn.queda == 0 and jogo.pawn.grounded, "pousou na ilha (y %.1f, chão %.1f)" % [jogo.pawn.global_position.y, jogo.mundo.ground_height(jogo.pawn.global_position.x, jogo.pawn.global_position.z)])
+	for i in 30 * 40:
+		await tree.physics_frame
+		if jogo._partida.get("estado", -1) == Protocol.MATCH_JOGO:
+			break
+	_checar(jogo._partida.get("estado", -1) == Protocol.MATCH_JOGO, "o ônibus partiu e a partida seguiu")
 	for i in 20:
 		await tree.physics_frame
 		await tree.process_frame

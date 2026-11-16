@@ -58,6 +58,12 @@ func action_of(c: GameServer.Cliente) -> Array:
 # ---------- por entrada ----------
 
 func process(c: GameServer.Cliente, cmd: Protocol.InputCmd) -> void:
+	if c.pawn.queda != 0:
+		# no ônibus, em queda ou planando: sem tiro, golpe, interação ou troca de item
+		c.prev_fire = cmd.has(Protocol.BTN_FIRE)
+		c.prev_reload = cmd.has(Protocol.BTN_RELOAD)
+		c.prev_interact = cmd.has(Protocol.BTN_INTERACT)
+		return
 	var passos := float(c.simulados)
 	var inv := c.inv
 	var pedido := Inventory.PICKAXE if cmd.slot == Protocol.SLOT_PICKAXE else cmd.slot - 1

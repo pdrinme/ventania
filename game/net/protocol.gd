@@ -4,7 +4,7 @@ extends RefCounted
 ## Cliente envia ENTRADAS (não posições); servidor envia SNAPSHOTS do estado.
 ## Ver ARCHITECTURE §4.
 
-const GAME_PROTOCOL := 6
+const GAME_PROTOCOL := 7
 const DEFAULT_PORT := 24800
 const TICK_RATE := 30            # simulação (Hz)
 const SNAPSHOT_EVERY := 2        # snapshot a cada N ticks (15 Hz)
@@ -45,6 +45,7 @@ const S_PIECE := 28          # para todos: peça criada ou alterada (edição)
 const S_PIECE_GONE := 29     # para todos: peça destruída (motivo: dano, desabou, partida nova)
 const S_PIECES_HP := 30      # para todos: vida/obra das peças que mudaram (lote)
 const S_BUILD_RESET := 31    # para todos: construções voltam ao estado do mapa (partida nova)
+const S_BUS := 32            # para todos: rota do Ônibus de Batalha (o cliente calcula a posição pelo tick)
 
 const OP_BUILD := 7          # resultado (S_INV_RESULT) de C_BUILD
 const OP_EDIT := 8           # resultado (S_INV_RESULT) de C_EDIT
@@ -57,6 +58,7 @@ const MATCH_ESPERA := 1
 const MATCH_CONTAGEM := 2
 const MATCH_JOGO := 3
 const MATCH_FIM := 4
+const MATCH_ONIBUS := 5      # ônibus atravessando a ilha (saltos); a Tormenta começa quando ele sai
 
 # operações de inventário (C_INV)
 const OP_SWAP := 1           # a, b: espaços 0..4
@@ -132,6 +134,7 @@ class EntityState:
 	var pitch := 0.0             # inclinação da mira (rad)
 	var action := 0              # ACT_*
 	var progress := 0.0          # 0..1 da ação
+	var queda := 0               # Pawn.QUEDA_LIVRE / PLANADOR / NO_ONIBUS
 
 
 static func _buf() -> StreamPeerBuffer:
@@ -287,7 +290,7 @@ static func unpack_player_left(data: PackedByteArray) -> int:
 	return b.get_u16()
 
 
-const ENTITY_SIZE := 2 + 12 + 12 + 2 + 1 + 1 + 1 + 1 + 1
+const ENTITY_SIZE := 2 + 12 + 12 + 2 + 1 + 1 + 1 + 1 + 1 + 1
 
 
 static func pack_snapshot(tick: int, ack_seq: int, entities: Array) -> PackedByteArray:
@@ -310,6 +313,7 @@ static func pack_snapshot(tick: int, ack_seq: int, entities: Array) -> PackedByt
 		b.put_8(clampi(roundi(rad_to_deg(e.pitch) / 0.75), -120, 120))
 		b.put_u8(e.action)
 		b.put_u8(clampi(roundi(e.progress * 255.0), 0, 255))
+		b.put_u8(e.queda)
 	return b.data_array
 
 
@@ -336,6 +340,7 @@ static func unpack_snapshot(data: PackedByteArray) -> Dictionary:
 		e.pitch = deg_to_rad(b.get_8() * 0.75)
 		e.action = b.get_u8()
 		e.progress = b.get_u8() / 255.0
+		e.queda = b.get_u8()
 		lista.append(e)
 	return {"tick": tick, "ack": ack, "entities": lista}
 
@@ -800,3 +805,25 @@ static func unpack_pieces_hp(data: PackedByteArray) -> Array:
 	for i in n:
 		out.append([b.get_u32(), float(b.get_u16()), b.get_u8() / 255.0])
 	return out
+
+
+# ---------- Ônibus de Batalha ----------
+
+static func pack_bus(o: Dictionary) -> PackedByteArray:
+	var b := _buf()
+	b.put_u8(S_BUS)
+	_put_v3(b, o["inicio"])
+	_put_v3(b, o["fim"])
+	b.put_u32(o["tick0"])
+	b.put_u32(o["duracao"])
+	b.put_u32(o["abre"])
+	b.put_u32(o["fecha"])
+	return b.data_array
+
+
+static func unpack_bus(data: PackedByteArray) -> Dictionary:
+	if data.size() != 41:
+		return {}
+	var b := _reader(data)
+	b.seek(1)
+	return {"inicio": _get_v3(b), "fim": _get_v3(b), "tick0": b.get_u32(), "duracao": b.get_u32(), "abre": b.get_u32(), "fecha": b.get_u32()}

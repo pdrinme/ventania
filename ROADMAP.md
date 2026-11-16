@@ -227,6 +227,51 @@ Começou automaticamente depois da picareta e do inventário validados, como ped
 - Partida com pessoas de verdade pela rede (só clientes simulados até agora).
 - As construções do mapa ainda não são destrutíveis (Etapa 5). Não há ônibus nem paraquedas (não fazia parte do plano da Etapa 4). Os bots (IA) são a Etapa 6.
 
+### Etapa 4 — Revisão complementar (v0.5.1): ilha, cidades, Ônibus de Batalha e Tormenta 🟡
+**Diagnóstico:**
+- **Ilha quadrada:** o litoral era um rebaixamento por `max(|x|,|z|)`, com malha e paredes quadradas.
+- **Terreno e cidades:** o terreno era só cor por vértice, sem estradas, e as casas ficavam espalhadas sem ruas.
+- **Entrada na partida:** não havia ônibus; os jogadores apareciam direto no chão.
+- **Tormenta:** os valores conferiam com o Game Design, mas a 1ª fase ficava 60 s sem nenhum aviso. Ela começava junto com o aparecimento e o centro das zonas era limitado por um quadrado.
+
+**Implementado:**
+- **Silhueta real:** o litoral é uma função de raio por ângulo, com cabos, enseadas, penínsulas e praias de larguras variadas (raio de ~190 a 288 m), e garante os 6 POIs em terra (Porto e Coral junto ao mar). O relevo, a malha visual (sem os quadrados do fundo do mar) e o limite de movimento (anel de colisão a ~9 m da costa) seguem esse mesmo litoral. As paredes quadradas foram removidas.
+- **Geografia:** Serra Cinza (norte), morro do Mirante, colinas, Vale do Vento e praias.
+- **Terreno com shader próprio** (grama em dois tons, areia, rocha e terra), com transições suaves.
+- **Estradas:**
+  - asfalto com bordas brancas e faixa central amarela tracejada;
+  - ruas de bairro com calçadas, meio-fio e faixas de pedestres;
+  - caminhos de terra;
+  - o terreno é aplainado sob a pista.
+- **Cidades planejadas:** a Vila Brisa tem avenida e rua cruzando, quarteirões, lojas com vitrine, um prédio de 3 andares e uma praça. Portas, janelas e portões usam ladrilhos da Etapa 5, recortados da malha do kit e com moldura: tudo continua destrutível.
+- **Ambientação:** 15 assets novos originais (postes, bancos, lixeiras, cercas, placas, 3 contêineres, tronco, girassol, silo, carrinho de mina, barraca, Ônibus dos Ventos e planador). A vegetação é distribuída por regiões (bosques densos e campos abertos).
+- **Loot:** exatamente 37 baús e 102 pontos de loot, com cotas para dentro de construções, área externa dos POIs e natureza.
+- **Ônibus de Batalha:**
+  - rota sorteada pelo servidor, atravessando a ilha a 120 m de altitude;
+  - portas abertas só sobre terra; Pular salta, cada um no seu momento;
+  - quem fica é ejetado antes de o ônibus sair da ilha;
+  - queda livre e planador automático abaixo de 38 m, com controle de direção;
+  - sem dano entre jogadores durante a fase do ônibus;
+  - HUD com o estado da entrada e a rota no minimapa e no mapa.
+- **Tormenta:**
+  - começa quando o ônibus sai;
+  - faixas e som em cada mudança (zona marcada, avançando, zona final);
+  - zonas validadas em terra e longe do mar (sem o limite quadrado);
+  - balanceamento original preservado.
+- **Protocolo v7** (`S_BUS`, estado de queda no snapshot).
+
+**Testado (executado):**
+- Capturas aéreas antes/depois (`docs/art/ilha_topo_0.5.1.png`): silhueta irregular confirmada.
+- Fumaça completa: ônibus, salto, queda livre, planador, pouso e Tormenta.
+- Partida BR completa com 6 clientes simulados: os 6 saltaram em momentos diferentes e todos abriram o planador; a Tormenta só começou depois do ônibus; houve vencedor e colocações 1–6.
+- 103 unitários anteriores passando com a nova ilha.
+
+**Não executado nesta entrega (a pedido, para sair a versão):**
+- os novos unitários de `test_ilha_revisao.gd` (silhueta, costa com física, rotas do ônibus, queda, tabela da Tormenta);
+- a bateria completa (`run_tests.sh`), incluindo a partida no servidor dedicado e a construção em rede com o mapa novo;
+- o benchmark da ilha nos 3 perfis comparado com a v0.5.0.
+Ficam para a próxima rodada, antes da Etapa 6.
+
 ### Etapa 5 — Construção ✅ (v0.5.0; falta testar com pessoas e no seu hardware)
 Parede, piso, rampa e teto, com grade, edição, destruição, desabamento sem apoio e materiais, tudo sincronizado.
 

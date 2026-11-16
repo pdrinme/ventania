@@ -20,6 +20,12 @@ var tormenta := {}
 var partida := {}
 var resultado := {}
 var morto := false
+var queda := 0
+var onibus: OnibusBatalha
+var ultimo_tick := 0
+var saltou := false
+var atraso_salto := 0                 # cada cliente salta num momento diferente
+var viu_planador := false
 var atirou := 0
 var pegou := 0
 var golpes := 0
@@ -39,6 +45,8 @@ func _ready() -> void:
 	client.storm.connect(func(t): tormenta = t)
 	client.match_state.connect(func(m): partida = m)
 	client.result.connect(func(r): resultado = r)
+	client.bus.connect(func(d): onibus = OnibusBatalha.from_dict(d))
+	atraso_salto = _rng.randi_range(0, 160)
 
 
 func conectar(porta: int) -> void:
@@ -46,12 +54,15 @@ func conectar(porta: int) -> void:
 
 
 func _snap(s: Dictionary) -> void:
+	ultimo_tick = s["tick"]
 	entidades.clear()
 	for e: Protocol.EntityState in s["entities"]:
 		if e.id == client.my_id:
 			pos = e.position
 			vel = e.velocity
 			morto = e.flags & Protocol.F_DEAD != 0
+			queda = e.queda
+			viu_planador = viu_planador or queda == Pawn.PLANADOR
 		else:
 			entidades[e.id] = {"pos": e.position, "flags": e.flags}
 
@@ -115,9 +126,32 @@ func _physics_process(_dt: float) -> void:
 	var c := Protocol.InputCmd.new()
 	c.seq = seq
 	_alterna = not _alterna
-	if partida.get("estado", 0) == Protocol.MATCH_JOGO and not morto and not status.is_empty():
+	var estado: int = partida.get("estado", 0)
+	if queda == Pawn.NO_ONIBUS and onibus:
+		# no ônibus: salta quando as portas estão abertas, cada um no seu momento
+		if onibus.doors_open(ultimo_tick) and ultimo_tick >= onibus.abre + atraso_salto:
+			c.buttons |= Protocol.BTN_JUMP
+			saltou = true
+	elif queda != 0:
+		_cair(c)
+	elif (estado == Protocol.MATCH_JOGO or estado == Protocol.MATCH_ONIBUS) and not morto and not status.is_empty():
 		_decidir(c)
 	client.send_inputs([c])
+
+
+## Em queda/planando: direciona para a arma mais próxima no chão (ou o centro).
+func _cair(c: Protocol.InputCmd) -> void:
+	var alvo := Vector3.ZERO
+	var dist := 1e9
+	for l in loot.values():
+		if l["ammo"] == 0 and l.get("mat", 0) == 0 and ItemDB.is_weapon(ItemDB.id_of(l["item"])):
+			var d := Vector2(pos.x - l["pos"].x, pos.z - l["pos"].z).length()
+			if d < dist:
+				dist = d
+				alvo = l["pos"]
+	var d3 := alvo - pos
+	c.yaw = atan2(-d3.x, -d3.z)
+	c.move = Vector2(0, 1) if dist > 3.0 else Vector2.ZERO
 
 
 func _decidir(c: Protocol.InputCmd) -> void:

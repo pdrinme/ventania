@@ -53,7 +53,8 @@ func _init() -> void:
 		bots.append(b)
 	Engine.time_scale = 4.0
 	var inicio := Time.get_ticks_msec()
-	var viu := {"espera": false, "contagem": false, "jogo": false, "fim": false, "reiniciou": false}
+	var viu := {"espera": false, "contagem": false, "onibus": false, "jogo": false, "fim": false, "reiniciou": false}
+	var tormenta_no_onibus := false
 	var fases_vistas := {}
 	var vivos_min := 99
 	while Time.get_ticks_msec() - inicio < 420000:
@@ -62,6 +63,8 @@ func _init() -> void:
 		viu["espera"] = viu["espera"] or e == Protocol.MATCH_ESPERA
 		viu["contagem"] = viu["contagem"] or e == Protocol.MATCH_CONTAGEM
 		viu["jogo"] = viu["jogo"] or e == Protocol.MATCH_JOGO
+		viu["onibus"] = viu["onibus"] or e == Protocol.MATCH_ONIBUS
+		tormenta_no_onibus = tormenta_no_onibus or (e == Protocol.MATCH_ONIBUS and server.partida.tormenta != null)
 		if e == Protocol.MATCH_JOGO:
 			fases_vistas[server.partida.tormenta.fase] = true
 			if server.partida.tormenta.fechando:
@@ -74,7 +77,8 @@ func _init() -> void:
 			break
 	Engine.time_scale = 1.0
 	var segundos := (Time.get_ticks_msec() - inicio) / 1000.0
-	_checar(viu["espera"] and viu["contagem"] and viu["jogo"] and viu["fim"], "passou por espera, contagem, jogo e fim")
+	_checar(viu["espera"] and viu["contagem"] and viu["onibus"] and viu["jogo"] and viu["fim"], "passou por espera, contagem, ônibus, jogo e fim")
+	_checar(not tormenta_no_onibus, "a Tormenta só começou depois de o ônibus partir")
 	_checar(viu["reiniciou"], "depois do fim, voltou à espera (nova partida)")
 	_checar(server.partida.historico.size() == 1, "uma partida registrada")
 	if server.partida.historico.is_empty():
@@ -83,6 +87,10 @@ func _init() -> void:
 	var h: Dictionary = server.partida.historico[0]
 	print("  partida: %d jogadores, %.0f s de jogo, Tormenta na fase %d, vencedor %d" % [h["total"], h["duracao_s"], h["fase_tormenta"], h["vencedor"]])
 	_checar(h["total"] == n, "todos os %d clientes participaram" % n)
+	print("  ônibus: %d saltaram por conta própria, %d ejetados no fim da rota" % [h["saltaram"], h["ejetados"]])
+	_checar(h["saltaram"] + h["ejetados"] == n, "todos deixaram o ônibus (saltando ou ejetados)")
+	_checar(h["saltaram"] >= n / 2, "saltos individuais, cada um no seu momento (%d)" % h["saltaram"])
+	_checar(bots.filter(func(b): return b.viu_planador).size() == n, "todos abriram o planador antes de pousar")
 	_checar(h["vencedor"] != 0, "há um vencedor")
 	var colocacoes := []
 	var elim_total := 0

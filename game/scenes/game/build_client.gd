@@ -53,7 +53,7 @@ func _mapa() -> void:
 		p.material = d["material"]
 		p.hp_max = Construcoes.max_hp(p.material)
 		p.hp = p.hp_max
-		p.mask = Grade.full_mask(p.tipo)
+		p.mask = d.get("mask", Grade.full_mask(p.tipo))
 		p.ancorada = Grade.anchored(p.tipo, p.cell, p.rot, _altura())
 		_adicionar(p)
 
@@ -69,36 +69,65 @@ func _adicionar(p: Construcoes.Peca) -> void:
 
 func _visual(p: Construcoes.Peca) -> void:
 	var xf := Grade.transform(p.tipo, p.cell, p.rot)
-	if p.edited():
-		var mi := MeshInstance3D.new()
-		mi.mesh = _malha_ladrilhos(p)
-		mi.transform = xf
-		mi.material_override = _mat_tiles[p.material]
-		mi.visibility_range_end = 320.0
-		add_child(mi)
-		_editadas[p.id] = mi
-		return
-	var malhas: Array = Grade.kit(Grade.asset_path(p.tipo, p.material))["malhas"]
+	var caminho := Grade.asset_path(p.tipo, p.material)
+	var regiao := "%d|%d" % [floori(xf.origin.x / REGIAO), floori(xf.origin.z / REGIAO)]
 	var lugares := []
-	for i in malhas.size():
-		var chave := "%s|%d|%d|%d" % [Grade.asset_path(p.tipo, p.material), i, floori(xf.origin.x / REGIAO), floori(xf.origin.z / REGIAO)]
-		var g: Grupo = _grupos.get(chave)
-		if g == null:
-			g = Grupo.new()
-			g.mmi = MultiMeshInstance3D.new()
-			var mm := MultiMesh.new()
-			mm.transform_format = MultiMesh.TRANSFORM_3D
-			mm.use_custom_data = true
-			mm.mesh = malhas[i][0]
-			g.mmi.multimesh = mm
-			g.mmi.visibility_range_end = 320.0
-			add_child(g.mmi)
-			_grupos[chave] = g
-		g.ids.append(p.id)
-		g.xforms.append(xf * malhas[i][1])
-		g.sujo = true
-		lugares.append(chave)
+	if p.edited():
+		# ladrilhos recortados da própria malha do kit + molduras nas aberturas
+		var malhas := Grade.tile_meshes(p.tipo, p.material)
+		var t := Grade.tiles_of(p.tipo)
+		for k in t.x * t.y:
+			if p.mask & (1 << k) != 0 and malhas[k] != null:
+				lugares.append(_instancia("%s|t%d|%s" % [caminho, k, regiao], malhas[k], xf, p.id))
+		for f in Grade.frame_boxes(p.tipo, p.mask):
+			var xf_f := xf * Transform3D(Basis.from_scale(f[1]), f[0])
+			lugares.append(_instancia("moldura|%d|%s" % [p.material, regiao], _moldura(p.material), xf_f, p.id))
+	else:
+		var malhas: Array = Grade.kit(caminho)["malhas"]
+		for i in malhas.size():
+			lugares.append(_instancia("%s|%d|%s" % [caminho, i, regiao], malhas[i][0], xf * malhas[i][1], p.id))
 	_onde[p.id] = lugares
+
+
+func _instancia(chave: String, malha: Mesh, xf: Transform3D, id: int) -> String:
+	var g: Grupo = _grupos.get(chave)
+	if g == null:
+		g = Grupo.new()
+		g.mmi = MultiMeshInstance3D.new()
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_custom_data = true
+		mm.mesh = malha
+		g.mmi.multimesh = mm
+		g.mmi.visibility_range_end = 320.0
+		add_child(g.mmi)
+		_grupos[chave] = g
+	g.ids.append(id)
+	g.xforms.append(xf)
+	g.sujo = true
+	return chave
+
+
+static var _molduras := {}
+
+
+## Caixa unitária com o material do kit numa cor escura da paleta (moldura).
+static func _moldura(material: int) -> Mesh:
+	if _molduras.has(material):
+		return _molduras[material]
+	var kit_mat: Material = (Grade.kit(Grade.asset_path(Grade.PAREDE_X, material))["malhas"][0][0] as Mesh).surface_get_material(0)
+	var celula: int = [2, 5, 7][material]       # madeira_escura, pedra_escura, metal_escuro (paleta 8×8)
+	var uv := Vector2((celula % 8 + 0.5) / 8.0, (celula / 8 + 0.5) / 8.0)
+	var arr := BoxMesh.new().get_mesh_arrays()
+	var uvs := PackedVector2Array()
+	uvs.resize((arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size())
+	uvs.fill(uv)
+	arr[Mesh.ARRAY_TEX_UV] = uvs
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	m.surface_set_material(0, kit_mat)
+	_molduras[material] = m
+	return m
 
 
 func _tirar_visual(id: int) -> void:
@@ -107,23 +136,12 @@ func _tirar_visual(id: int) -> void:
 		_editadas.erase(id)
 	for chave in _onde.get(id, []):
 		var g: Grupo = _grupos[chave]
-		var k := g.ids.find(id)
+		var k := g.ids.rfind(id)
 		if k >= 0:
 			g.ids.remove_at(k)
 			g.xforms.remove_at(k)
 			g.sujo = true
 	_onde.erase(id)
-
-
-static func _malha_ladrilhos(p: Construcoes.Peca) -> ArrayMesh:
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for t in Grade.tile_boxes(p.tipo, p.mask):
-		var bx := BoxMesh.new()
-		bx.size = (t[1] as Vector3) - Vector3(0.04, 0.0, 0.0) if p.tipo != Grade.PISO else (t[1] as Vector3) - Vector3(0.04, 0, 0.04)
-		st.append_from(bx, 0, Transform3D(Basis(), t[0]))
-	st.generate_normals()
-	return st.commit()
 
 
 ## Dados por instância: dano (rachaduras) e obra.

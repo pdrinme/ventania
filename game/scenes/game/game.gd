@@ -20,6 +20,10 @@ var match_hud: MatchHud
 var _partida := {}                  # último S_MATCH
 var _assistindo := -1               # id do jogador assistido (espectador)
 var resultado := {}                 # último S_RESULT (testes)
+var onibus: OnibusBatalha           # rota do Ônibus de Batalha da partida atual
+var _onibus_vis: Node3D
+var _queda_antes := 0
+var _tormenta_antes := {}
 var pawn: Pawn
 var visual: PawnVisual
 var camera: PlayerCamera
@@ -141,7 +145,8 @@ func _ready() -> void:
 		_nomes[id] = nome
 		match_hud.set_names(_nomes))
 	client.match_state.connect(_on_match)
-	client.storm.connect(func(t): tormenta.set_state(t))
+	client.storm.connect(_on_storm)
+	client.bus.connect(_on_bus)
 	client.result.connect(_on_result)
 	client.player_left.connect(_remover_remoto)
 	client.status_received.connect(_on_status)
@@ -295,7 +300,7 @@ func _amostra_remoto(e: Protocol.EntityState, tick: int) -> void:
 		_remotos[e.id] = {"visual": v, "amostras": [], "rotulo": nome}
 	var amostras: Array = _remotos[e.id]["amostras"]
 	amostras.append({"tick": tick, "pos": e.position, "vel": e.velocity, "yaw": e.yaw, "flags": e.flags, "weapon": e.weapon,
-			"pitch": e.pitch, "action": e.action, "progress": e.progress})
+			"pitch": e.pitch, "action": e.action, "progress": e.progress, "queda": e.queda})
 	while amostras.size() > 20:
 		amostras.pop_front()
 
@@ -311,6 +316,7 @@ func _process(delta: float) -> void:
 		_atualizar_visual_proprio(delta)
 		_atualizar_aviso()
 		match_hud.yaw = camera.yaw_rad()
+		_atualizar_onibus(delta)
 		if _morto and _assistindo >= 0:
 			_seguir_assistido()
 	_interpolar_remotos()
@@ -352,7 +358,8 @@ func _interpolar_remotos() -> void:
 		v.global_position = (anterior["pos"] as Vector3).lerp(proxima["pos"], t)
 		var yaw := lerp_angle(anterior["yaw"], proxima["yaw"], t)
 		r["boneco"] = proxima["flags"] & Protocol.F_DUMMY != 0
-		v.visible = proxima["flags"] & Protocol.F_DEAD == 0
+		v.visible = proxima["flags"] & Protocol.F_DEAD == 0 and proxima.get("queda", 0) != Pawn.NO_ONIBUS
+		v.set_fall(proxima.get("queda", 0))
 		v.set_held(proxima["weapon"])
 		v.update_state(proxima["vel"], proxima["flags"], yaw)
 		v.set_aim(lerp_angle(anterior["pitch"], proxima["pitch"], t), proxima["flags"] & Protocol.F_AIMING != 0)
@@ -900,9 +907,84 @@ func _exit_tree() -> void:
 
 # ---------- partida Battle Royale ----------
 
+## Tick do servidor estimado agora (para o ônibus, que anda pelo relógio do servidor).
+func server_tick_now() -> float:
+	return _ultimo_tick + (Time.get_ticks_msec() / 1000.0 - _ultimo_tick_t) * Protocol.TICK_RATE
+
+
+func _on_bus(d: Dictionary) -> void:
+	onibus = OnibusBatalha.from_dict(d)
+	match_hud.onibus = onibus
+	if _onibus_vis == null:
+		_onibus_vis = (load("res://assets/cenario/onibus_01.glb") as PackedScene).instantiate() as Node3D
+		_onibus_vis.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+		add_child(_onibus_vis)
+	_onibus_vis.visible = true
+	Audio.play_sfx("onibus", -2.0)
+
+
+## Ônibus (visual pela rota), câmera no ônibus/queda e avisos da entrada.
+func _atualizar_onibus(_delta: float) -> void:
+	var tick := server_tick_now()
+	var ativo := onibus != null and tick <= onibus.tick0 + onibus.duracao + 30
+	if _onibus_vis:
+		_onibus_vis.visible = ativo
+		if ativo:
+			var p := onibus.position_at(tick)
+			var dir := onibus.direction()
+			_onibus_vis.global_position = p + Vector3(0, sin(tick * 0.08) * 0.25 - 1.2, 0)
+			_onibus_vis.global_transform.basis = Basis.looking_at(-dir, Vector3.UP).rotated(Vector3.UP, 0.0)
+	var q := pawn.queda
+	visual.set_fall(q)
+	if q == Pawn.NO_ONIBUS and _onibus_vis and not _morto:
+		visual.visible = false
+		camera.alvo = _onibus_vis
+		camera.distancia_extra = 15.0
+		var falta := maxf(0.0, (onibus.abre - tick) / Protocol.TICK_RATE)
+		var tecla := "Pular" if Settings.is_mobile or InputManager.device == "toque" else ("A" if InputManager.device == "controle" else "Espaço")
+		match_hud.set_entry("Ônibus dos Ventos — portas abrem em %d s" % ceili(falta) if falta > 0.0 \
+				else "[%s] Saltar do ônibus · portas fecham em %d s" % [tecla, ceili(maxf(0.0, (onibus.fecha - tick) / Protocol.TICK_RATE))])
+	elif q == Pawn.QUEDA_LIVRE or q == Pawn.PLANADOR:
+		if _queda_antes == Pawn.NO_ONIBUS:
+			Audio.play_sfx("salto", -2.0)
+			visual.visible = true
+			camera.alvo = pawn
+		if q == Pawn.PLANADOR and _queda_antes != Pawn.PLANADOR:
+			Audio.play_sfx("planador", -3.0)
+		camera.distancia_extra = 3.0
+		match_hud.set_entry("Planador aberto — direcione com %s até o chão" % ("o joystick" if Settings.is_mobile else "WASD") if q == Pawn.PLANADOR \
+				else "Em queda livre — direcione com %s · o planador abre sozinho perto do chão" % ("o joystick" if Settings.is_mobile else "WASD"))
+	else:
+		if _queda_antes != 0 and _queda_antes != Pawn.NO_ONIBUS:
+			hud.flash("No chão! Pegue armas e fique de olho na Tormenta.", 2.5)
+		if not _morto and camera.alvo != pawn and _assistindo < 0:
+			camera.alvo = pawn
+		camera.distancia_extra = 0.0
+		match_hud.set_entry("")
+	_queda_antes = q
+
+
+## Mudanças de estado da Tormenta: aviso e som (zona marcada, fechando, fase concluída).
+func _on_storm(t: Dictionary) -> void:
+	var antes := _tormenta_antes
+	tormenta.set_state(t)
+	_tormenta_antes = t
+	var fase: int = t["fase"] + 1
+	if t["terminou"]:
+		if not antes.get("terminou", false):
+			match_hud.banner("Zona final! A Tormenta não para mais de causar dano.", Color("e2b8ff"))
+			Audio.play_sfx("tormenta_alerta", 0.0)
+		return
+	if antes.is_empty() or t["fase"] != antes["fase"]:
+		match_hud.banner("Fase %d de %d: nova zona segura marcada — fecha em %d s" % [fase, t["fases"], roundi(t["resta_ms"] / 1000.0)], Color.WHITE)
+		Audio.play_sfx("tormenta_alerta", -4.0)
+	elif t["fechando"] and not antes.get("fechando", false):
+		match_hud.banner("A Tormenta está avançando! (fase %d, −%d/s)" % [fase, t["dano"]], Color("e2b8ff"))
+		Audio.play_sfx("tormenta_alerta", 0.0)
+
 func _em_partida() -> bool:
 	var e: int = _partida.get("estado", Protocol.MATCH_TREINO)
-	return e == Protocol.MATCH_JOGO or e == Protocol.MATCH_FIM
+	return e == Protocol.MATCH_JOGO or e == Protocol.MATCH_FIM or e == Protocol.MATCH_ONIBUS
 
 
 func _on_match(m: Dictionary) -> void:
@@ -914,10 +996,14 @@ func _on_match(m: Dictionary) -> void:
 			Protocol.MATCH_CONTAGEM:
 				hud.flash("Prepare-se!", 2.0)
 			Protocol.MATCH_JOGO:
-				hud.flash("A partida começou! Pegue armas e fique longe da Tormenta.", 3.5)
-				Audio.play_sfx("bau_abrir", -6.0)
+				hud.flash("O ônibus partiu: a Tormenta se formou!", 3.0)
+			Protocol.MATCH_ONIBUS:
+				hud.flash("Embarque! Salte do ônibus quando quiser.", 3.0)
 			Protocol.MATCH_ESPERA:
 				tormenta.clear()
+				_tormenta_antes = {}
+				onibus = null
+				match_hud.onibus = null
 				match_hud.hide_result()
 				if antes == Protocol.MATCH_FIM:
 					hud.flash("Nova partida: área de espera", 2.5)

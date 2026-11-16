@@ -15,13 +15,13 @@ var c_para := Vector2.ZERO
 var r_para := 0.0
 var terminou := false
 var _rng := RandomNumberGenerator.new()
-var _valido: Callable               # (Vector2) -> bool: centro aceitável (ex.: em terra)
+var _valido: Callable               # (centro: Vector2, raio: float) -> bool: zona aceitável (em terra)
 var _margem := 230.0
 
 
 func _init(config: Dictionary, semente: int, valido := Callable()) -> void:
 	fases = config["fases"]
-	_margem = float(config.get("margem_terra", 230.0))
+	_margem = float(config.get("margem_terra", 230.0))     # distância máxima do centro do mapa (círculo)
 	_rng.seed = semente
 	_valido = valido
 	r_de = float(config["raio_inicial"])
@@ -43,9 +43,9 @@ func _sortear_proxima() -> void:
 		var ang := _rng.randf() * TAU
 		var d := sqrt(_rng.randf()) * folga
 		var c := c_de + Vector2(cos(ang), sin(ang)) * d
-		if absf(c.x) > _margem or absf(c.y) > _margem:
+		if c.length() > _margem:
 			continue
-		if _valido.is_valid() and not _valido.call(c):
+		if _valido.is_valid() and not _valido.call(c, r_para):
 			continue
 		c_para = c
 		return

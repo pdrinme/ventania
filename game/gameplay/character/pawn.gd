@@ -14,6 +14,11 @@ var yaw := 0.0
 var crouched := false
 var grounded := false     # resultado do último passo (vem do servidor na reconciliação)
 var sprinting := false
+## Entrada na partida: 0 normal, QUEDA_LIVRE, PLANADOR, NO_ONIBUS (viaja no ônibus).
+var queda := 0
+const QUEDA_LIVRE := 1
+const PLANADOR := 2
+const NO_ONIBUS := 3
 var _shape: CollisionShape3D
 var _capsula: CapsuleShape3D
 
@@ -73,6 +78,7 @@ func to_state() -> Protocol.EntityState:
 	e.velocity = velocity
 	e.yaw = yaw
 	e.flags = flags()
+	e.queda = queda
 	return e
 
 
@@ -86,3 +92,4 @@ func apply_state(e: Protocol.EntityState) -> void:
 	if agachado != crouched:
 		set_crouched(agachado)
 	sprinting = e.flags & Protocol.F_SPRINTING != 0
+	queda = e.queda

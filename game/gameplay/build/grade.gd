@@ -293,3 +293,126 @@ static func _coletar(n: Node, acumulado: Transform3D, d: Dictionary) -> void:
 		elif c is CollisionShape3D and (c as CollisionShape3D).shape:
 			d["formas"].append([(c as CollisionShape3D).shape, t])
 		_coletar(c, t, d)
+
+
+# ---------------- ladrilhos com a malha do kit (edição) ----------------
+
+static var _ladrilhos := {}          # caminho -> Array[Mesh] (um por ladrilho; null se vazio)
+
+
+## Limites (espaço local da peça) do ladrilho t: [eixo1 min, max, eixo2 min, max];
+## eixo1 = x; eixo2 = y (parede) ou z (piso). Bordas externas vão ao infinito para
+## não cortar chanfros e detalhes que passam um pouco da grade.
+static func _limites(tipo_slot: int, t: int) -> Array:
+	var tl := tiles_of(tipo_slot)
+	var i := t % tl.x
+	var j := t / tl.x
+	var s := T / float(tl.x)
+	var x0 := -2.0 + i * s
+	var a0 := (j * s) if tipo_slot != PISO else (-2.0 + j * s)
+	var inf := 1e6
+	return [-inf if i == 0 else x0, inf if i == tl.x - 1 else x0 + s,
+			-inf if j == 0 else a0, inf if j == tl.y - 1 else a0 + s]
+
+
+## Recorta um polígono (vértices [pos, normal, uv]) pelo semiplano eixo >= valor (ou <=).
+static func _cortar(poly: Array, eixo: int, valor: float, maior: bool) -> Array:
+	var out := []
+	var n := poly.size()
+	for k in n:
+		var a: Array = poly[k]
+		var b: Array = poly[(k + 1) % n]
+		var da: float = (a[0][eixo] - valor) * (1.0 if maior else -1.0)
+		var db: float = (b[0][eixo] - valor) * (1.0 if maior else -1.0)
+		if da >= 0.0:
+			out.append(a)
+		if (da >= 0.0) != (db >= 0.0):
+			var f := da / (da - db)
+			out.append([(a[0] as Vector3).lerp(b[0], f), (a[1] as Vector3).lerp(b[1], f).normalized(), (a[2] as Vector2).lerp(b[2], f)])
+	return out
+
+
+## Malhas dos ladrilhos de uma peça do kit (recorte geométrico dos triângulos pelos
+## limites de cada ladrilho, com UV e normais interpolados). Cache por asset.
+static func tile_meshes(tipo_slot: int, material: int) -> Array:
+	var caminho := asset_path(tipo_slot, material)
+	if _ladrilhos.has(caminho):
+		return _ladrilhos[caminho]
+	var tl := tiles_of(tipo_slot)
+	var eixo2 := 1 if tipo_slot != PISO else 2
+	var tris := []
+	var mat_kit: Material = null
+	for m in kit(caminho)["malhas"]:
+		var malha: Mesh = m[0]
+		var xf: Transform3D = m[1]
+		for sfc in malha.get_surface_count():
+			mat_kit = malha.surface_get_material(sfc)
+			var arr := malha.surface_get_arrays(sfc)
+			var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var ns: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+			var uvs: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV] if arr[Mesh.ARRAY_TEX_UV] != null else PackedVector2Array()
+			var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX] if arr[Mesh.ARRAY_INDEX] != null else PackedInt32Array(range(vs.size()))
+			for k in range(0, idx.size(), 3):
+				var tri := []
+				for q in 3:
+					var v := idx[k + q]
+					tri.append([xf * vs[v], (xf.basis * ns[v]).normalized(), uvs[v] if uvs.size() > v else Vector2.ZERO])
+				tris.append(tri)
+	var out := []
+	for t in tl.x * tl.y:
+		var lim := _limites(tipo_slot, t)
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		var algum := false
+		for tri in tris:
+			var poly: Array = tri
+			poly = _cortar(poly, 0, lim[0], true)
+			if poly.size() >= 3:
+				poly = _cortar(poly, 0, lim[1], false)
+			if poly.size() >= 3:
+				poly = _cortar(poly, eixo2, lim[2], true)
+			if poly.size() >= 3:
+				poly = _cortar(poly, eixo2, lim[3], false)
+			if poly.size() < 3:
+				continue
+			algum = true
+			for k in range(1, poly.size() - 1):
+				for v in [poly[0], poly[k], poly[k + 1]]:
+					st.set_normal(v[1])
+					st.set_uv(v[2])
+					st.add_vertex(v[0])
+		if algum:
+			if mat_kit:
+				st.set_material(mat_kit)
+			out.append(st.commit())
+		else:
+			out.append(null)
+	_ladrilhos[caminho] = out
+	return out
+
+
+## Molduras das aberturas: para cada ladrilho presente, as bordas que dão para um
+## ladrilho removido viram uma tira [centro local, tamanho] (fecha a espessura da
+## parede e marca portas e janelas).
+static func frame_boxes(tipo_slot: int, mask: int) -> Array:
+	var out := []
+	var tl := tiles_of(tipo_slot)
+	if tl.x == 0 or tipo_slot == PISO:
+		return out
+	var s := T / 3.0
+	for j in tl.y:
+		for i in tl.x:
+			if mask & (1 << (j * 3 + i)) == 0:
+				continue
+			var cx := -2.0 + (i + 0.5) * s
+			var cy := (j + 0.5) * s
+			for d in [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1)]:
+				var ni: int = i + d.x
+				var nj: int = j + d.y
+				if ni < 0 or ni > 2 or nj < 0 or nj > 2 or mask & (1 << (nj * 3 + ni)) != 0:
+					continue
+				if d.x != 0:
+					out.append([Vector3(cx + d.x * (s * 0.5 - 0.05), cy, 0.0), Vector3(0.1, s, 0.32)])
+				else:
+					out.append([Vector3(cx, cy + d.y * (s * 0.5 - 0.05), 0.0), Vector3(s, 0.1, 0.32)])
+	return out

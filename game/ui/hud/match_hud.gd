@@ -11,6 +11,10 @@ const TAM_MINI := 176.0
 
 var mapa: Mapa
 var tormenta: StormVisual
+var onibus: OnibusBatalha           # rota no minimapa/mapa durante a fase do ônibus
+var _entrada: Label
+var _faixa: Label
+var _faixa_t := 0.0
 var jogador: Node3D                 # para posição/direção no mapa
 var yaw := 0.0
 var _textura: ImageTexture
@@ -72,6 +76,19 @@ func _ready() -> void:
 	_grande.draw.connect(func(): _desenhar(_grande, true))
 	_grande.visible = false
 	add_child(_grande)
+
+	_entrada = _rotulo("Subtitulo")
+	_entrada.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 96)
+	_entrada.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_entrada.add_theme_color_override("font_color", Color("ffd27a"))
+	add_child(_entrada)
+	_faixa = _rotulo("Subtitulo")
+	_faixa.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_faixa.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_faixa.position.y -= 150
+	_faixa.add_theme_font_size_override("font_size", 30)
+	_faixa.visible = false
+	add_child(_faixa)
 
 	_espectador = _rotulo("Subtitulo")
 	_espectador.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 150)
@@ -181,6 +198,19 @@ func result_visible() -> bool:
 	return _resultado.visible
 
 
+## Aviso da entrada na partida (no ônibus, em queda, planando). Vazio = esconder.
+func set_entry(texto: String) -> void:
+	_entrada.text = texto
+
+
+## Faixa grande e temporária no meio da tela (fases da Tormenta).
+func banner(texto: String, cor := Color.WHITE, segundos := 4.0) -> void:
+	_faixa.text = texto
+	_faixa.add_theme_color_override("font_color", cor)
+	_faixa.visible = true
+	_faixa_t = segundos
+
+
 func set_spectating(nome: String) -> void:
 	_espectador.visible = not nome.is_empty()
 	_espectador.text = "Assistindo %s  ·  Atirar: próximo  ·  Esc: menu" % nome if not nome.is_empty() else ""
@@ -211,6 +241,9 @@ func _process(_delta: float) -> void:
 		Protocol.MATCH_CONTAGEM:
 			_topo.text = "A partida começa em %d" % ceili(maxf(0.0, resta))
 			_sub.text = "Você vai aparecer num ponto do mapa, só com a picareta."
+		Protocol.MATCH_ONIBUS:
+			_topo.text = "Ônibus de Batalha · %d jogadores" % _estado["total"]
+			_sub.text = "Salte sobre a ilha · a Tormenta se forma quando o ônibus partir (%s)" % _tempo(resta)
 		Protocol.MATCH_JOGO:
 			_topo.text = "Vivos %d / %d" % [_estado["vivos"], _estado["total"]]
 			if tormenta and tormenta.active():
@@ -232,6 +265,10 @@ func _process(_delta: float) -> void:
 	if fora:
 		_aviso.text = "Você está na Tormenta! (−%d/s)" % int(tormenta.dados.get("dano", 0))
 	_roxo.color.a = move_toward(_roxo.color.a, 0.22 if fora else 0.0, get_process_delta_time() * 0.8)
+	if _faixa_t > 0.0:
+		_faixa_t -= get_process_delta_time()
+		_faixa.modulate.a = clampf(_faixa_t / 0.6, 0.0, 1.0)
+		_faixa.visible = _faixa_t > 0.0
 	if _mini.visible:
 		_mini.queue_redraw()
 	if _grande.visible:
@@ -269,6 +306,14 @@ func _desenhar(c: Control, inteiro: bool) -> void:
 		var prox := tormenta.next_zone()
 		c.draw_arc(para_tela.call(prox[0]), float(prox[1]) * escala, 0, TAU, 64, Color.WHITE, 2.0, true)
 		c.draw_arc(para_tela.call(atual[0]), float(atual[1]) * escala, 0, TAU, 96, Color("b15cff"), 3.0, true)
+	# rota do Ônibus de Batalha (tracejada, com seta no sentido do voo)
+	if onibus and int(_estado.get("estado", 0)) == Protocol.MATCH_ONIBUS:
+		var a: Vector2 = para_tela.call(Vector2(onibus.inicio.x, onibus.inicio.z))
+		var b: Vector2 = para_tela.call(Vector2(onibus.fim.x, onibus.fim.z))
+		c.draw_dashed_line(a, b, Color("ffc93c"), 3.0, 10.0)
+		var dir := a.direction_to(b)
+		var meio := a.lerp(b, 0.5)
+		c.draw_colored_polygon(PackedVector2Array([meio + dir * 10, meio - dir * 6 + Vector2(-dir.y, dir.x) * 7, meio - dir * 6 - Vector2(-dir.y, dir.x) * 7]), Color("ffc93c"))
 	if inteiro:
 		var f := get_theme_default_font()
 		for p in mapa.points_of_interest():

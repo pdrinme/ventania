@@ -38,6 +38,7 @@ func init_map() -> void:
 	for i in lista.size():
 		var d: Dictionary = lista[i]
 		var p := _nova(i + 1, d["tipo"], d["cell"], d["rot"], d["material"], 0)
+		p.mask = d.get("mask", p.mask)      # portas e janelas das casas do mapa
 		p.hp = p.hp_max
 		p.obra = 0.0
 		estado.add(p)

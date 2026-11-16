@@ -34,6 +34,8 @@ var _flash_t := 0.0
 var _cano: Node3D                 # marcador "muzzle" da arma atual (ou null)
 var _anim_estado := "idle"
 var com_arma := false
+var queda := 0                    # Pawn.QUEDA_LIVRE / PLANADOR / NO_ONIBUS
+var _planador: Node3D
 
 
 func _ready() -> void:
@@ -315,6 +317,25 @@ func _process(delta: float) -> void:
 		if _flash_t <= 0.0:
 			_flash.visible = false
 	_anim_estado = _estado(h)
+
+
+## Entrada na partida: no ônibus (invisível), queda livre (sem item na mão) e
+## planador (asa delta sobre a cabeça).
+func set_fall(q: int) -> void:
+	if q == queda or _sk == null:
+		return
+	queda = q
+	rig.holder.visible = q == 0
+	if q == Pawn.PLANADOR and _planador == null:
+		_planador = (load("res://assets/cenario/planador_01.glb") as PackedScene).instantiate() as Node3D
+		_planador.position = Vector3(0, 2.45, 0)
+		_planador.rotation.y = PI
+		add_child(_planador)
+	if _planador:
+		_planador.visible = q == Pawn.PLANADOR
+	if q == Pawn.PLANADOR:
+		# segura a barra do planador com as duas mãos
+		set_reach(global_position + Vector3(0, 1.45, 0), 1.0)
 
 
 func set_crouched(v: bool) -> void:

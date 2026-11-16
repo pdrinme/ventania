@@ -173,6 +173,8 @@ func _simular(c: Cliente, dt: float) -> void:
 			var cmd: Protocol.InputCmd = c.fila.pop_front()
 			c.ultimo_seq = cmd.seq
 			c.ultimo_cmd = cmd
+			if c.pawn.queda == Pawn.NO_ONIBUS and partida:
+				partida.on_bus_input(c, cmd)     # Pular com as portas abertas = saltar
 			Movement.step(c.pawn, cmd, dt)
 			c.simulados += 1
 			if not c.dead:

@@ -14,6 +14,7 @@ const FOV_MIRA := 55.0
 const PITCH_MIN := -80.0
 const PITCH_MAX := 70.0
 
+var distancia_extra := 0.0        # ônibus (longe) e queda (um pouco mais aberta)
 var alvo: Node3D             # Pawn (jogando) ou PawnVisual de outro jogador (espectador)
 var yaw := 0.0
 var pitch := -10.0          # graus
@@ -77,7 +78,7 @@ func _process(delta: float) -> void:
 	_altura = lerpf(_altura, altura_alvo, minf(1.0, delta * 12.0))
 	global_position = alvo.get_global_transform_interpolated().origin + Vector3(0, _altura, 0)
 	rotation = Vector3(deg_to_rad(pitch), deg_to_rad(yaw), 0)
-	_braco.spring_length = lerpf(_braco.spring_length, DIST_MIRA if mirando else DIST, minf(1.0, delta * 10.0))
+	_braco.spring_length = lerpf(_braco.spring_length, (DIST_MIRA if mirando else DIST) + distancia_extra, minf(1.0, delta * 4.0 if distancia_extra > 1.0 else delta * 10.0))
 	_braco.position = Vector3(OMBRO, 0, 0)
 	_cam.fov = lerpf(_cam.fov, FOV_MIRA if mirando else FOV, minf(1.0, delta * 10.0))
 	if alvo is CollisionObject3D:

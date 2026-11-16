@@ -4,8 +4,13 @@ extends RefCounted
 ##  ESPERA   — jogadores na área de espera (Mirante); sem dano; quem cai volta.
 ##             Com min_jogadores (ou depois de espera_maxima_s com 1+), começa a contagem.
 ##  CONTAGEM — contagem regressiva; quem entra ainda participa.
-##  JOGO     — loot novo, todos espalhados pelo mapa com inventário vazio (só a
-##             picareta), Tormenta ativa, sem reaparecer. Eliminado = espectador.
+##  ONIBUS   — loot novo, inventário vazio (só a picareta); todos no Ônibus de
+##             Batalha, que atravessa a ilha. Cada um salta quando quiser (Pular,
+##             com as portas abertas sobre terra); quem fica é ejetado antes de o
+##             ônibus sair da ilha. Queda livre → planador → chão. Sem dano entre
+##             jogadores nesta fase (proteção de pouso).
+##  JOGO     — começa quando o ônibus sai: a Tormenta nasce aqui (fase 1: anúncio
+##             da zona, espera, fechamento…). Sem reaparecer. Eliminado = espectador.
 ##  FIM      — vencedor anunciado; depois de fim_s, nova partida (volta à ESPERA).
 ## Vitória: sobra 1 (partida com 2+); sozinho: sobreviver até a Tormenta terminar.
 
@@ -16,6 +21,9 @@ var config: Dictionary
 var estado := Protocol.MATCH_ESPERA
 var t := 0                          # ticks no estado atual
 var tormenta: Tormenta
+var onibus: OnibusBatalha
+var saltaram := 0                   # diagnóstico/testes
+var ejetados := 0
 var participantes := {}             # id -> {"nome","eliminacoes","colocacao","inicio","fim"}
 var vivos: Array[int] = []
 var total_inicial := 0
@@ -44,7 +52,7 @@ func dano_ativo() -> bool:
 
 
 func em_jogo() -> bool:
-	return estado == Protocol.MATCH_JOGO
+	return estado == Protocol.MATCH_JOGO or estado == Protocol.MATCH_ONIBUS
 
 
 func jogadores() -> Array:
@@ -66,6 +74,8 @@ func update() -> void:
 				_mudar(Protocol.MATCH_ESPERA)
 			elif t >= _ticks(float(config.get("contagem_s", 10))):
 				_iniciar()
+		Protocol.MATCH_ONIBUS:
+			_atualizar_onibus()
 		Protocol.MATCH_JOGO:
 			if tormenta.update():
 				server.broadcast(Protocol.pack_storm(tormenta.to_dict()), true)
@@ -97,11 +107,14 @@ func match_dict() -> Dictionary:
 			resta = maxi(0, _ticks(float(config.get("espera_maxima_s", 90))) - t)
 		Protocol.MATCH_CONTAGEM:
 			resta = maxi(0, _ticks(float(config.get("contagem_s", 10))) - t)
+		Protocol.MATCH_ONIBUS:
+			resta = maxi(0, onibus.fecha - server.tick)
 		Protocol.MATCH_JOGO:
 			resta = tormenta.ticks_left()
 		Protocol.MATCH_FIM:
 			resta = maxi(0, _ticks(float(config.get("fim_s", 15))) - t)
-	return {"estado": estado, "vivos": vivos.size() if estado >= Protocol.MATCH_JOGO else jogadores().size(),
+	var na_partida := estado == Protocol.MATCH_JOGO or estado == Protocol.MATCH_FIM or estado == Protocol.MATCH_ONIBUS
+	return {"estado": estado, "vivos": vivos.size() if na_partida else jogadores().size(),
 			"total": total_inicial, "resta_ms": roundi(resta * 1000.0 / Protocol.TICK_RATE), "vencedor": vencedor}
 
 
@@ -114,32 +127,81 @@ func _iniciar() -> void:
 	server.loot.reset(semente)
 	server.build.reset()                # mapa intacto e sem construções da partida anterior
 	var mundo := server.world
-	tormenta = Tormenta.new(config["tormenta"], semente, func(c: Vector2): return mundo.ground_height(c.x, c.y) > 1.0)
-	var pontos: Array = mundo.match_spawn_points().duplicate()
-	var rng := RandomNumberGenerator.new()
-	rng.seed = semente
-	for i in range(pontos.size() - 1, 0, -1):
-		var j := rng.randi_range(0, i)
-		var tmp = pontos[i]
-		pontos[i] = pontos[j]
-		pontos[j] = tmp
+	tormenta = null
+	saltaram = 0
+	ejetados = 0
+	var terra := func(x: float, z: float) -> bool: return mundo.ground_height(x, z) > 0.4
+	onibus = OnibusBatalha.sortear(semente, server.tick + Protocol.TICK_RATE, mundo.limit(), terra)
 	var k := 0
 	for c: GameServer.Cliente in jogadores():
 		c.inv = Inventory.new()
 		c.vit.reset()
 		c.dead = false
 		server.combat.cancel(c)
-		var p: Vector3 = pontos[k % pontos.size()] if not pontos.is_empty() else mundo.spawn_point(k)
-		c.pawn.global_position = p
+		c.pawn.queda = Pawn.NO_ONIBUS
 		c.pawn.velocity = Vector3.ZERO
-		participantes[c.id] = {"nome": c.nome, "eliminacoes": 0, "colocacao": 0, "inicio": server.tick, "fim": 0}
+		c.pawn.global_position = _no_onibus(k)
+		participantes[c.id] = {"nome": c.nome, "eliminacoes": 0, "colocacao": 0, "inicio": server.tick, "fim": 0, "assento": k}
 		vivos.append(c.id)
 		c.dirty = true
 		k += 1
 	total_inicial = vivos.size()
-	_mudar(Protocol.MATCH_JOGO)
-	server.broadcast(Protocol.pack_storm(tormenta.to_dict()), true)
-	server.log_msg("partida %d começou com %d jogador(es)" % [partidas, total_inicial])
+	_mudar(Protocol.MATCH_ONIBUS)
+	server.broadcast(Protocol.pack_bus(onibus.to_dict()), true)
+	server.log_msg("partida %d começou com %d jogador(es): Ônibus de Batalha saindo" % [partidas, total_inicial])
+
+
+## Posição de um jogador dentro do ônibus (assentos ao longo do corredor).
+func _no_onibus(assento: int) -> Vector3:
+	var p := onibus.position_at(server.tick)
+	var ao_longo := onibus.direction() * ((assento % 6) - 2.5) * 1.2
+	return p + ao_longo + Vector3(0, 0.6, 0)
+
+
+## Pular dentro do ônibus com as portas abertas: salta (só este jogador).
+func on_bus_input(c: GameServer.Cliente, cmd: Protocol.InputCmd) -> void:
+	if estado == Protocol.MATCH_ONIBUS and cmd.has(Protocol.BTN_JUMP) and onibus.doors_open(server.tick):
+		_saltar(c)
+		saltaram += 1
+
+
+func _saltar(c: GameServer.Cliente) -> void:
+	c.pawn.queda = Pawn.QUEDA_LIVRE
+	c.pawn.global_position = onibus.position_at(server.tick) + Vector3(0, -3.0, 0)
+	c.pawn.velocity = onibus.direction() * 6.0 + Vector3(0, -2.0, 0)
+	c.pawn.grounded = false
+	c.dirty = true
+
+
+func _atualizar_onibus() -> void:
+	var ainda := 0
+	for c: GameServer.Cliente in jogadores():
+		if c.pawn.queda != Pawn.NO_ONIBUS:
+			continue
+		if onibus.finished(server.tick):
+			_saltar(c)                  # portas fechando: ejetado, ainda sobre a ilha
+			ejetados += 1
+		else:
+			c.pawn.global_position = _no_onibus(int(participantes.get(c.id, {}).get("assento", 0)))
+			c.pawn.velocity = onibus.direction() * OnibusBatalha.VELOCIDADE
+			ainda += 1
+	if ainda == 0 and onibus.finished(server.tick):
+		# o ônibus saiu da ilha: a Tormenta começa agora (fase 1: zona marcada + espera)
+		var mundo := server.world
+		var semente := int(onibus.tick0) * 31 + partidas
+		tormenta = Tormenta.new(config["tormenta"], semente, func(c: Vector2, r: float) -> bool: return _zona_valida(mundo, c, r))
+		_mudar(Protocol.MATCH_JOGO)
+		server.broadcast(Protocol.pack_storm(tormenta.to_dict()), true)
+		server.log_msg("partida %d: ônibus saiu (%d saltaram, %d ejetados); Tormenta fase 1" % [partidas, saltaram, ejetados])
+
+
+## Centro de zona aceitável: em terra e longe o bastante do mar para a zona ser jogável.
+static func _zona_valida(mundo: Mapa, c: Vector2, r: float) -> bool:
+	if mundo.ground_height(c.x, c.y) <= 1.0:
+		return false
+	if mundo.has_method("inland"):
+		return mundo.inland(c.x, c.y) >= minf(r * 0.35, 60.0) + 8.0
+	return true
 
 
 func _reiniciar() -> void:
@@ -148,11 +210,13 @@ func _reiniciar() -> void:
 	total_inicial = 0
 	vencedor = 0
 	tormenta = null
+	onibus = null
 	for c: GameServer.Cliente in jogadores():
 		c.inv = Inventory.new()
 		c.vit.reset()
 		c.dead = false
 		server.combat.cancel(c)
+		c.pawn.queda = 0
 		server.respawn_lobby(c)
 		c.dirty = true
 	server.loot.reset(0, true)
@@ -163,12 +227,14 @@ func _reiniciar() -> void:
 
 ## Jogador entrou: na espera/contagem participa; com a partida em andamento, assiste.
 func on_join(c: GameServer.Cliente) -> void:
-	if estado == Protocol.MATCH_JOGO or estado == Protocol.MATCH_FIM:
+	if estado == Protocol.MATCH_JOGO or estado == Protocol.MATCH_FIM or estado == Protocol.MATCH_ONIBUS:
 		c.dead = true
 		c.dirty = true
 	server.send_to(c.peer_id, Protocol.pack_match(match_dict()), true)
 	if tormenta:
 		server.send_to(c.peer_id, Protocol.pack_storm(tormenta.to_dict()), true)
+	if onibus and estado == Protocol.MATCH_ONIBUS:
+		server.send_to(c.peer_id, Protocol.pack_bus(onibus.to_dict()), true)
 
 
 func on_leave(c: GameServer.Cliente) -> void:
@@ -178,7 +244,7 @@ func on_leave(c: GameServer.Cliente) -> void:
 
 ## Chamado pelo CombatServer.eliminate. Retorna true se o jogador deve reaparecer (espera).
 func on_elimination(v: GameServer.Cliente, quem: int) -> bool:
-	if estado != Protocol.MATCH_JOGO:
+	if estado != Protocol.MATCH_JOGO and estado != Protocol.MATCH_ONIBUS:
 		return true                 # espera/contagem/fim: só caiu do mapa, volta
 	if not vivos.has(v.id):
 		return false
@@ -242,7 +308,7 @@ func _checar_vitoria() -> void:
 	if vencedor:
 		participantes[vencedor]["colocacao"] = 1
 		participantes[vencedor]["fim"] = server.tick
-	historico.append({"partida": partidas, "total": total_inicial, "vencedor": vencedor,
+	historico.append({"partida": partidas, "total": total_inicial, "vencedor": vencedor, "saltaram": saltaram, "ejetados": ejetados,
 			"fase_tormenta": tormenta.fase, "duracao_s": t / float(Protocol.TICK_RATE),
 			"colocacoes": participantes.duplicate(true)})
 	server.log_msg("partida %d terminou: vencedor %d (%d jogador[es])" % [partidas, vencedor, total_inicial])

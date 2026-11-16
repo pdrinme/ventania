@@ -27,6 +27,7 @@ signal piece(d: Dictionary)
 signal piece_gone(id: int, motivo: int)
 signal pieces_hp(lista: Array)
 signal build_reset
+signal bus(d: Dictionary)
 
 const TEMPO_CONEXAO_S := 6.0
 
@@ -144,6 +145,10 @@ func _receber(dados: PackedByteArray) -> void:
 			pieces_hp.emit(Protocol.unpack_pieces_hp(dados))
 		Protocol.S_BUILD_RESET:
 			build_reset.emit()
+		Protocol.S_BUS:
+			var o := Protocol.unpack_bus(dados)
+			if not o.is_empty():
+				bus.emit(o)
 		Protocol.S_MELEE:
 			var m := Protocol.unpack_melee(dados)
 			if not m.is_empty():

@@ -4,7 +4,7 @@ extends RefCounted
 ## PROTOCOL e CONTENT no handshake; versões diferentes são recusadas.
 
 const NAME := "Ventania"
-const GAME := "0.5.0"
+const GAME := "0.5.1"
 const PROTOCOL := 1
 const CONTENT := 1
 
