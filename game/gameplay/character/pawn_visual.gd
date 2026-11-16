@@ -29,6 +29,7 @@ var _vel := Vector3.ZERO
 var _flags := Protocol.F_ON_FLOOR
 var _flash: MeshInstance3D
 var _flash_t := 0.0
+var _cano: Node3D                 # marcador "muzzle" da arma atual (ou null)
 var _anim_estado := "idle"
 var com_arma := false
 
@@ -132,6 +133,11 @@ func _montar_modificadores() -> void:
 	_flash.mesh = q
 	_flash.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_flash.visible = false
+	# SEMPRE na árvore (filho do personagem). Um nó visual fora da árvore nunca é
+	# liberado e deixa uma instância no RenderingServer depois que o mundo 3D some:
+	# era o que derrubava a build de release ao fechar o jogo.
+	_flash.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+	add_child(_flash)
 
 
 func _ik(lado: String, alvo: Node3D, polo: Node3D) -> TwoBoneIK3D:
@@ -176,8 +182,8 @@ func set_held(indice: int) -> void:
 	if rig.item_node:
 		rig.item_node.queue_free()
 		rig.item_node = null
-	if _flash.get_parent():
-		_flash.get_parent().remove_child(_flash)
+	_cano = null
+	_flash.visible = false
 	var id := ItemDB.id_of(indice)
 	rig.item = id
 	com_arma = ItemDB.is_weapon(id)
@@ -189,9 +195,7 @@ func set_held(indice: int) -> void:
 	if not caminho.is_empty():
 		rig.item_node = (load(caminho) as PackedScene).instantiate() as Node3D
 		rig.holder.add_child(rig.item_node)
-		var cano := rig.item_node.find_child("muzzle", true, false) as Node3D
-		if cano:
-			cano.add_child(_flash)
+		_cano = rig.item_node.find_child("muzzle", true, false) as Node3D
 	rig.equip = 0.0
 
 
@@ -220,7 +224,8 @@ func set_reach(ponto_mundo: Vector3, peso: float) -> void:
 func fire() -> void:
 	var cat := ItemRig.categoria(rig.item)
 	rig.recoil = minf(rig.recoil + (1.4 if rig.item == "trovao" or rig.item == "gaviao" else 0.7), 2.0)
-	if _flash.get_parent():
+	if _cano:
+		_flash.global_position = _cano.global_position
 		_flash.visible = true
 		_flash.rotation.z = randf() * TAU
 		_flash.scale = Vector3.ONE * (1.6 if cat == ItemRig.Cat.RIFLE and rig.item == "trovao" else randf_range(0.8, 1.2))
@@ -264,6 +269,8 @@ func _process(delta: float) -> void:
 	rig.equip = move_toward(rig.equip, 1.0, delta / DURACAO_TROCA)
 	rig.recoil = move_toward(rig.recoil, 0.0, delta / DURACAO_RECUO * maxf(rig.recoil, 0.3))
 	if _flash_t > 0.0:
+		if _cano:
+			_flash.global_position = _cano.global_position
 		_flash_t -= delta
 		if _flash_t <= 0.0:
 			_flash.visible = false

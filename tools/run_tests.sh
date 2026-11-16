@@ -39,6 +39,11 @@ passo "Godot: teste de fumaça (jogo completo)"
 FILTRO="FUMACA|FALHOU"
 rodar_godot timeout 150 "$GODOT" --headless --path game -- --teste-fumaca; checar $? "fumaça"
 
+passo "Encerramento limpo depois de jogar (exit code)"
+# Fechar o jogo depois de uma partida não pode travar (bug real da 0.3.1: nó visual órfão)
+for i in 1 2 3; do timeout 90 "$GODOT" --headless --path game -- --sair-apos=game,menu >/dev/null 2>&1; c=$?; [ $c -ne 0 ] && break; done
+echo "exit=$c"; checar $c "encerramento"
+
 passo "Integração cliente <-> meta-servidor"
 PORTA=$(python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()")
 TMPDB=$(mktemp -d)

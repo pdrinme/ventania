@@ -26,6 +26,11 @@ func _ready() -> void:
 	add_child(titulo)
 
 	Meta.refresh()
+	for a in args:
+		# diagnóstico: --sair-apos=cena1,cena2,... abre cada cena por 2 s e fecha o jogo
+		if a.begins_with("--sair-apos="):
+			SairApos.new().run(get_tree(), a.trim_prefix("--sair-apos=").split(","))
+			return
 	if "--teste-fumaca" in args:
 		SmokeTest.new().run(get_tree())
 		return

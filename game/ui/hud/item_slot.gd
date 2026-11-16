@@ -17,7 +17,6 @@ var selecionado := false
 var _icone: Texture2D
 var _t := 0.0
 var _escala := 1.0
-static var _cache_icones := {}
 
 
 func _ready() -> void:
@@ -29,13 +28,13 @@ func _ready() -> void:
 			tapped.emit())
 
 
+## Sem cache estático próprio: o ResourceLoader já reaproveita o recurso carregado
+## (e recursos em variáveis estáticas sobrevivem até depois da limpeza do motor).
 static func icone_de(id: String) -> Texture2D:
 	if id.is_empty():
 		return null
-	if not _cache_icones.has(id):
-		var c := "res://assets/ui/icones/%s.png" % id
-		_cache_icones[id] = load(c) if ResourceLoader.exists(c) else null
-	return _cache_icones[id]
+	var c := "res://assets/ui/icones/%s.png" % id
+	return load(c) if ResourceLoader.exists(c) else null
 
 
 func set_item(id: String, rar: int, qtd: String, sel: bool) -> void:
