@@ -34,6 +34,18 @@ for i in $(seq 1 50); do grep -q "ouvindo" "$TMPDB/server.log" 2>/dev/null && br
 timeout 60 "$GODOT" --headless --path game -s res://tests/integration/test_meta_health.gd -- "http://127.0.0.1:$PORTA" 2>&1 | grep -E "INTEGRACAO|FALHA"; checar "${PIPESTATUS[0]}" "integração"
 kill "$PID" 2>/dev/null; wait "$PID" 2>/dev/null; rm -rf "$TMPDB"
 
+passo "Servidor dedicado de partida (outro processo) + 2 clientes"
+PORTA=$(python3 -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()")
+LOGSRV=$(mktemp)
+"$GODOT" --headless --path game -- --servidor --porta="$PORTA" >"$LOGSRV" 2>&1 &
+PID=$!
+for i in $(seq 1 100); do grep -q "servidor dedicado pronto" "$LOGSRV" 2>/dev/null && break; sleep 0.1; done
+timeout 60 "$GODOT" --headless --path game -s res://tests/integration/test_dedicated_server.gd -- 127.0.0.1 "$PORTA" 2>&1 | grep -E "DEDICADO|FALHA"; checar "${PIPESTATUS[0]}" "servidor dedicado"
+kill "$PID" 2>/dev/null; wait "$PID" 2>/dev/null; rm -f "$LOGSRV"
+
+passo "Desempenho do servidor (24 jogadores)"
+"$GODOT" --headless --path game -s res://tests/perf/perf_server.gd -- 24 300 2>&1 | grep PERF_SERVIDOR
+
 echo
 if [ "$FALHAS" -eq 0 ]; then echo "TODOS OS TESTES PASSARAM"; else echo "$FALHAS GRUPO(S) FALHARAM"; fi
 exit "$FALHAS"

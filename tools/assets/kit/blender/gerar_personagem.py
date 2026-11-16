@@ -1,5 +1,5 @@
 """Gera o personagem-base do projeto ("recruta_base_01") com esqueleto padrão
-e as animações "idle-loop" e "acenar".
+e as animações idle, acenar, andar, correr, agachado, agachado_andar e no_ar.
 
 Design original: proporções cartunescas (cabeça ~1/4,5 da altura), cachecol
 coral (tema vento), óculos de aviador na testa, luvas grossas, botas.
@@ -139,6 +139,7 @@ def _rot(arm, osso, eixo, graus):
 
 
 def _chave(arm, quadro, pose):
+    """pose: osso -> [(eixo, graus), ...]; a chave especial "_quadril_z" desce/sobe o quadril (m)."""
     for pb in arm.pose.bones:
         pb.rotation_mode = "QUATERNION"
         q = Quaternion()
@@ -146,6 +147,10 @@ def _chave(arm, quadro, pose):
             q = _rot(arm, pb.name, eixo, graus) @ q
         pb.rotation_quaternion = q
         pb.keyframe_insert("rotation_quaternion", frame=quadro)
+    # o osso Hips aponta para +Z: o eixo Y local do osso é o "para cima" da armadura
+    quadril = arm.pose.bones["Hips"]
+    quadril.location = (0.0, pose.get("_quadril_z", 0.0), 0.0)
+    quadril.keyframe_insert("location", frame=quadro)
 
 
 X, Y, Z = (1, 0, 0), (0, 1, 0), (0, 0, 1)
@@ -162,6 +167,75 @@ def _pose_idle(t):
         "LeftLowerArm": [(Z, -12)],
         "RightLowerArm": [(Z, 12)],
     }
+
+
+def _ciclo(t, perna, joelho, braco, inclinacao, quadril_base=0.0, cotovelo=12, balanco_quadril=0.03):
+    """Ciclo de passada. t em [0,1). Convenções (eixos da armadura, frente = -Y):
+    ossos que apontam para baixo (pernas, braços abaixados) vão para a frente com X negativo;
+    ossos que apontam para cima (tronco) inclinam para a frente com X positivo."""
+    f = t * 2 * math.pi
+    s_ = math.sin(f)
+    # joelho dobra mais quando a perna está passando por trás
+    joelho_e = joelho * (0.25 + 0.75 * max(0.0, math.sin(f + 1.2)))
+    joelho_d = joelho * (0.25 + 0.75 * max(0.0, math.sin(f + 1.2 + math.pi)))
+    return {
+        "_quadril_z": quadril_base - balanco_quadril * abs(math.cos(f)),
+        "Spine": [(Z, 4 * s_)],
+        "Chest": [(X, inclinacao), (Z, -6 * s_)],
+        "Head": [(X, -inclinacao * 0.6)],
+        "LeftUpperLeg": [(X, -perna * s_)],
+        "RightUpperLeg": [(X, perna * s_)],
+        "LeftLowerLeg": [(X, joelho_e)],
+        "RightLowerLeg": [(X, joelho_d)],
+        "LeftUpperArm": [(Y, 72), (X, braco * s_)],
+        "RightUpperArm": [(Y, -72), (X, -braco * s_)],
+        "LeftLowerArm": [(Z, -cotovelo)],
+        "RightLowerArm": [(Z, cotovelo)],
+    }
+
+
+def _agachado(t, passo=0.0):
+    f = t * 2 * math.pi
+    s_ = math.sin(f) * passo
+    return {
+        "_quadril_z": -0.42,
+        "Chest": [(X, 18)],
+        "Head": [(X, -14)],
+        "LeftUpperLeg": [(X, -70 - s_)],
+        "RightUpperLeg": [(X, -70 + s_)],
+        "LeftLowerLeg": [(X, 110 + 0.5 * s_)],
+        "RightLowerLeg": [(X, 110 - 0.5 * s_)],
+        "LeftFoot": [(X, -40)],
+        "RightFoot": [(X, -40)],
+        "LeftUpperArm": [(Y, 65), (X, -25 + 0.6 * s_)],
+        "RightUpperArm": [(Y, -65), (X, -25 - 0.6 * s_)],
+        "LeftLowerArm": [(Z, -35)],
+        "RightLowerArm": [(Z, 35)],
+    }
+
+
+def _no_ar(t):
+    onda = math.sin(t * 2 * math.pi) * 4
+    return {
+        "Chest": [(X, -4)],
+        "LeftUpperLeg": [(X, -38 + onda)],
+        "LeftLowerLeg": [(X, 55)],
+        "RightUpperLeg": [(X, -8 - onda)],
+        "RightLowerLeg": [(X, 25)],
+        "LeftUpperArm": [(Y, 40), (X, -15 + onda)],
+        "RightUpperArm": [(Y, -40), (X, 10 - onda)],
+        "LeftLowerArm": [(Z, -25)],
+        "RightLowerArm": [(Z, 25)],
+    }
+
+
+def _acao_ciclo(arm, nome, quadros, pose_fn, chaves=8):
+    """Cria uma ação em loop: `chaves` amostras uniformes + a última igual à primeira."""
+    acao = bpy.data.actions.new(nome)
+    arm.animation_data.action = acao
+    for i in range(chaves + 1):
+        _chave(arm, 1 + round(i * quadros / chaves), pose_fn((i % chaves) / chaves))
+    return acao
 
 
 def animar(arm):
@@ -187,6 +261,13 @@ def animar(arm):
     _chave(arm, 46, base)
     acoes.append(acenar)
 
+    # locomoção (30 fps): velocidades de referência no jogo — andar 4,5 m/s, correr 6,5 m/s, agachado 2,5 m/s
+    acoes.append(_acao_ciclo(arm, "andar-loop", 30, lambda t: _ciclo(t, 28, 40, 22, 4)))
+    acoes.append(_acao_ciclo(arm, "correr-loop", 20, lambda t: _ciclo(t, 45, 75, 40, 14, -0.04, 70, 0.06)))
+    acoes.append(_acao_ciclo(arm, "agachado-loop", 60, lambda t: _agachado(t, 0.0), chaves=2))
+    acoes.append(_acao_ciclo(arm, "agachado_andar-loop", 30, lambda t: _agachado(t, 22.0)))
+    acoes.append(_acao_ciclo(arm, "no_ar-loop", 30, _no_ar, chaves=4))
+
     for a in acoes:
         a.use_fake_user = True
         trilha = arm.animation_data.nla_tracks.new()
@@ -195,6 +276,7 @@ def animar(arm):
     arm.animation_data.action = None
     for pb in arm.pose.bones:
         pb.rotation_quaternion = Quaternion()
+        pb.location = (0.0, 0.0, 0.0)
 
 
 def recruta_base_01():

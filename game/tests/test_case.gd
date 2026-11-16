@@ -4,6 +4,7 @@ extends RefCounted
 ## por tests/run_tests.gd. Use os assert_* abaixo.
 
 var failures: PackedStringArray = []
+var tree: SceneTree
 var _atual := ""
 
 
@@ -46,3 +47,9 @@ func tmp_dir() -> String:
 	var d := "user://teste_tmp/%s" % _atual
 	DirAccess.make_dir_recursive_absolute(d)
 	return d
+
+
+## Espera n ticks de física (para testes que usam CharacterBody3D/colisões).
+func physics_frames(n: int) -> void:
+	for i in n:
+		await tree.physics_frame

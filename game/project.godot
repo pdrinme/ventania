@@ -6,7 +6,7 @@ config_version=5
 [application]
 
 config/name="Ventania"
-config/version="0.1.1"
+config/version="0.2.0"
 config/description="Battle Royale cartunesco original, leve, para jogar com amigos."
 run/main_scene="res://scenes/boot/boot.tscn"
 config/features=PackedStringArray("4.7")
@@ -57,6 +57,17 @@ texture={
 "compress/mode": 2,
 "mipmaps/generate": true
 }
+
+[physics]
+
+common/physics_ticks_per_second=30
+common/physics_interpolation=true
+3d/default_gravity=22.0
+
+[layer_names]
+
+3d_physics/layer_1="mundo"
+3d_physics/layer_2="jogadores"
 
 [rendering]
 

@@ -9,9 +9,13 @@ const SCENES := {
 	"menu": "res://scenes/menu/main_menu.tscn",
 	"settings": "res://scenes/settings/settings_menu.tscn",
 	"diagnostics": "res://scenes/diagnostics/diagnostics.tscn",
+	"game": "res://scenes/game/game.tscn",
+	"server": "res://scenes/server/server_main.tscn",
 }
 
 var current := ""
+var params := {}          # parâmetros para a próxima tela (ex.: modo da partida)
+var message := ""         # mensagem para mostrar na próxima tela (ex.: erro de conexão)
 var previous := ""
 var _carregando := false
 var _tela: CanvasLayer
@@ -27,9 +31,14 @@ func _ready() -> void:
 	_criar_fps()
 
 
-func go(key_or_path: String) -> bool:
+func go(key_or_path: String, p := {}) -> bool:
 	if _carregando:
 		return false
+	params = p
+	# camadas do SceneManager ficam fora da árvore de Controls: aplicar o tema atual
+	for c in _tela.get_children() + [_fps]:
+		if c is Control:
+			(c as Control).theme = get_tree().root.theme
 	var path: String = SCENES.get(key_or_path, key_or_path)
 	if not ResourceLoader.exists(path):
 		Log.error("cenas", "cena não encontrada: " + path)
@@ -103,12 +112,13 @@ func _criar_tela_carregamento() -> void:
 	add_child(_tela)
 	var fundo := ColorRect.new()
 	fundo.color = Color("167c84")
-	fundo.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fundo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_tela.add_child(fundo)
 	var caixa := VBoxContainer.new()
-	caixa.set_anchors_preset(Control.PRESET_CENTER)
 	caixa.custom_minimum_size = Vector2(420, 0)
-	caixa.position = Vector2(-210, -40)
+	caixa.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
+	caixa.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	caixa.grow_vertical = Control.GROW_DIRECTION_BOTH
 	_tela.add_child(caixa)
 	_texto = Label.new()
 	_texto.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

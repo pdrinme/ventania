@@ -74,9 +74,28 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 **Decisões:** no PC, o perfil Desempenho passa a limitar em 60 FPS (no celular continua em 30). O padrão do PC continua Equilibrado por enquanto, mas deve ser revisto quando o gameplay existir: se máquinas como esta caírem abaixo de 60, o padrão vira Desempenho, ou entra uma detecção automática de perfil no primeiro uso.
 **Pendente:** densidade 2×2 e 3×3, e o celular.
 
-### Etapa 2 — Personagem e gameplay básico ⬜
-Personagem em terceira pessoa (esqueleto padrão), câmera, movimentação, corrida, pulo, agachamento, colisões, animações (placeholders originais), controles de PC e controles touch básicos. Movimento via servidor em processo, com predição e reconciliação.
-**Aceite:** cena de teste jogável no PC, build Android executando num dispositivo do grupo, e medição de FPS e memória registrada.
+### Etapa 2 — Personagem e gameplay básico ✅
+- ✅ Personagem em terceira pessoa com a câmera por cima do ombro (mira com zoom, colisão da câmera com paredes, troca suave de altura ao agachar).
+- ✅ Movimento: andar 4,5 m/s, correr 6,5 m/s (só para a frente), agachar 2,5 m/s (sem levantar embaixo de teto), pulo de ~1,4 m e rampas de 45°.
+- ✅ Animações originais: idle, andar, correr, agachado, agachado andando, no ar e acenar, escolhidas pelo estado e com velocidade do ciclo ajustada.
+- ✅ **Rede desde o início**: servidor autoritativo (ENet, 30 Hz, snapshots a 15 Hz). O cliente prevê o próprio movimento e reconcilia a cada snapshot. Os outros jogadores são interpolados ~150 ms atrás.
+- ✅ Treino local (servidor no mesmo processo, num mundo físico separado), "Entrar em servidor" (IP:porta) e servidor dedicado (`-- --servidor`) no mesmo executável.
+- ✅ Controles de PC (teclado/mouse com mouse capturado, controle) e de toque (joystick flutuante, olhar arrastando, Pular, Agachar, corrida ao empurrar o joystick até a borda), com tamanho ajustável.
+- ✅ Campo de treino: cabana, torre de 8 m com rampas, caixa de metal, túnel baixo e 40 props, todos com colisão.
+- ✅ HUD (mira, ping, jogadores, dicas por dispositivo) e pausa (Esc, Start ou botão voltar do Android).
+- ✅ Testes:
+  - 38 unitários, incluindo o protocolo e o movimento (determinismo, altura do pulo, teto);
+  - fumaça jogando de verdade: andar, pular, predição sem correções, servidor sem perder entradas, 2º jogador entra e sai;
+  - servidor dedicado em outro processo com 2 clientes;
+  - desempenho do servidor: 24 jogadores em ~1 ms por tick (3% do orçamento).
+- ⚠️ Não validado em hardware real: o FPS jogando no seu notebook e no celular (o APK ainda depende do SDK).
+- ⬜ Pendente para etapas futuras: as animações ainda são provisórias e rígidas, não há suavização visual das correções (até agora não foram necessárias) e não há escolha de servidor por lista (só IP:porta).
+
+**Problemas encontrados e resolvidos nesta etapa:**
+1. O ENet limitava os pacotes não confiáveis a ~1/32 depois de 1 s (o ajuste de banda por host). Corrigido com `bandwidth_limit(0, 0)` nos dois lados e o throttle por conexão desligado.
+2. O "grudar no chão" nativo do CharacterBody3D depende de estado interno que não viaja pela rede e quebrava a predição. Agora o snap é feito manualmente e é determinístico.
+3. O servidor inventava passos quando uma entrada atrasava. Agora ele espera até ~200 ms e processa duas entradas por tick para recuperar o atraso.
+4. O HUD tinha tamanho zero (`set_anchors_preset` preserva o tamanho) e não herdava o tema dentro de CanvasLayer. Corrigido.
 
 ### Etapa 3 — Combate e inventário ⬜
 Armas (dados em .tres), disparo hitscan validado no servidor, munição, recarga, dano, vida, escudo, inventário de 5 slots, coleta, baús e raridade.

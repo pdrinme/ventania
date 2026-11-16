@@ -4,7 +4,7 @@ extends Control
 ## Layout por plataforma: o PC mostra janela, vsync, mouse, controle e atalhos;
 ## o celular mostra sensibilidade do toque e tamanho dos botões de toque.
 
-const ABAS := [["Gráficos", "graphics"], ["Áudio", "audio"], ["Controles", "controls"], ["Interface", "interface"], ["Servidor", "network"]]
+const ABAS := [["Gráficos", "graphics"], ["Áudio", "audio"], ["Controles", "controls"], ["Interface", "interface"], ["Rede", "network"]]
 
 var _widgets := {}          # "section/key" -> Control
 var _atualizando := false
@@ -18,11 +18,11 @@ var _abas: TabContainer
 func _ready() -> void:
 	var fundo := ColorRect.new()
 	fundo.color = VentaniaTheme.TEAL_ESCURO
-	fundo.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fundo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(fundo)
 
 	var margem := MarginContainer.new()
-	margem.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margem.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for lado in ["left", "right", "top", "bottom"]:
 		margem.add_theme_constant_override("margin_" + lado, 32)
 	add_child(margem)
@@ -166,7 +166,7 @@ func _formatar(key: String, v: Variant) -> String:
 	match key:
 		"render_scale", "master", "music", "sfx", "ui":
 			return "%d%%" % roundi(float(v) * 100)
-		"ui_scale", "mouse_sensitivity", "gamepad_sensitivity", "touch_sensitivity":
+		"ui_scale", "touch_button_scale", "mouse_sensitivity", "gamepad_sensitivity", "touch_sensitivity":
 			return "%.2fx" % float(v)
 		"view_distance":
 			return "%d m" % roundi(float(v))
@@ -269,7 +269,7 @@ func _criar_rede(pai: Control) -> void:
 	var l := Label.new()
 	l.theme_type_variation = "Pequeno"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.text = "Endereço do meta-servidor (ex.: http://192.168.0.10:8080 na sua rede local). Sem servidor, o jogo funciona offline."
+	l.text = "Servidor de partida: IP:porta de quem roda o servidor (ex.: 192.168.0.10:24800). Meta-servidor: contas e progresso (ex.: http://192.168.0.10:8080); sem ele o jogo funciona offline."
 	pai.add_child(l)
 	var b := Button.new()
 	b.text = "Testar conexão"

@@ -10,18 +10,17 @@ func _ready() -> void:
 
 	var args := OS.get_cmdline_user_args()
 	if OS.has_feature("dedicated_server") or "--servidor" in args:
-		Log.error("boot", "o servidor de partida ainda não existe (Etapa 7). Use o meta-servidor em backend/.")
-		get_tree().quit(2)
+		SceneManager.go("server")
 		return
 
 	var fundo := ColorRect.new()
 	fundo.color = VentaniaTheme.TEAL_ESCURO
-	fundo.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fundo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(fundo)
 	var titulo := Label.new()
 	titulo.theme_type_variation = "Titulo"
 	titulo.text = "VENTANIA"
-	titulo.set_anchors_preset(Control.PRESET_CENTER)
+	titulo.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	titulo.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	titulo.grow_vertical = Control.GROW_DIRECTION_BOTH
 	add_child(titulo)

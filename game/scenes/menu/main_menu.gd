@@ -9,7 +9,7 @@ var _tentar: Button
 func _ready() -> void:
 	_mundo_3d()
 	var margem := MarginContainer.new()
-	margem.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margem.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for lado in ["left", "right", "top", "bottom"]:
 		margem.add_theme_constant_override("margin_" + lado, 48 if Settings.is_mobile else 40)
 	add_child(margem)
@@ -32,7 +32,9 @@ func _ready() -> void:
 	coluna.add_child(espaco)
 
 	var alvo: int = get_tree().root.theme.get_meta("altura_alvo", 52)
-	var b1 := _botao(coluna, "Vitrine e teste de desempenho", alvo, func(): SceneManager.go("diagnostics"))
+	var b1 := _botao(coluna, "Jogar: campo de treino", alvo, func(): SceneManager.go("game", {"modo": "local"}))
+	_botao(coluna, "Entrar em servidor", alvo, _entrar_servidor)
+	_botao(coluna, "Vitrine e teste de desempenho", alvo, func(): SceneManager.go("diagnostics"))
 	_botao(coluna, "Configurações", alvo, func(): SceneManager.go("settings"))
 	if not Settings.is_mobile:
 		_botao(coluna, "Sair", alvo, func(): get_tree().quit())
@@ -56,6 +58,9 @@ func _ready() -> void:
 	linha.add_child(_tentar)
 	Meta.status_changed.connect(_on_status)
 	_on_status(Meta.state, Meta.info, Meta.last_error)
+	if not SceneManager.message.is_empty():
+		_aviso(SceneManager.message)
+		SceneManager.message = ""
 
 
 func _botao(pai: Control, texto: String, altura: int, acao: Callable) -> Button:
@@ -69,6 +74,30 @@ func _botao(pai: Control, texto: String, altura: int, acao: Callable) -> Button:
 	b.focus_entered.connect(func(): Audio.play_ui("foco"))
 	pai.add_child(b)
 	return b
+
+
+## Conecta no servidor de partida configurado (Configurações → Rede).
+func _entrar_servidor() -> void:
+	var alvo: String = Settings.get_value("network", "game_server")
+	var partes := alvo.rsplit(":", true, 1)
+	var host := partes[0].strip_edges()
+	var porta := Protocol.DEFAULT_PORT
+	if partes.size() == 2 and partes[1].is_valid_int():
+		porta = int(partes[1])
+	if host.is_empty():
+		_aviso("Configure o endereço em Configurações → Rede.")
+		return
+	SceneManager.go("game", {"modo": "remoto", "host": host, "porta": porta})
+
+
+func _aviso(texto: String) -> void:
+	var d := AcceptDialog.new()
+	d.title = "Aviso"
+	d.dialog_text = texto
+	d.dialog_autowrap = true
+	d.min_size = Vector2i(460, 0)
+	add_child(d)
+	d.popup_centered()
 
 
 func _on_status(estado: String, info: Dictionary, erro: String) -> void:
@@ -89,7 +118,7 @@ func _on_status(estado: String, info: Dictionary, erro: String) -> void:
 func _mundo_3d() -> void:
 	# o mundo 3D fica atrás da interface
 	var vp_cont := SubViewportContainer.new()
-	vp_cont.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vp_cont.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	vp_cont.stretch = true
 	vp_cont.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(vp_cont)

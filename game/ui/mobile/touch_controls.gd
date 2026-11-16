@@ -1,0 +1,115 @@
+class_name TouchControls
+extends Control
+## Controles de toque (layout próprio do celular, não é o HUD do PC reduzido).
+## - Joystick flutuante: toque em qualquer lugar da metade esquerda.
+## - Olhar: arrastar na metade direita (fora dos botões).
+## - Botões: Pular e Agachar (alterna). Empurrar o joystick até a borda = correr.
+## Tamanho dos botões: configuração interface/touch_button_scale.
+
+const RAIO_JOY := 90.0
+const RAIO_BOTAO := 62.0
+
+var sampler: InputSampler
+var camera: PlayerCamera
+
+var _joy_dedo := -1
+var _joy_centro := Vector2.ZERO
+var _joy_pos := Vector2.ZERO
+var _olhar_dedo := -1
+var _botoes := {}            # nome -> {"centro": Vector2, "raio": float, "dedo": int}
+var _escala := 1.0
+
+
+func _ready() -> void:
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	Settings.changed.connect(func(s, k, _v):
+		if s == "interface" and k == "touch_button_scale":
+			_layout())
+	resized.connect(_layout)
+	_layout()
+
+
+func _layout() -> void:
+	_escala = Settings.get_value("interface", "touch_button_scale")
+	var r := RAIO_BOTAO * _escala
+	var t := size
+	_botoes = {
+		"pular": {"centro": Vector2(t.x - r * 1.5, t.y - r * 1.6), "raio": r, "dedo": -1, "texto": "Pular"},
+		"agachar": {"centro": Vector2(t.x - r * 3.9, t.y - r * 1.1), "raio": r * 0.8, "dedo": -1, "texto": "Agachar"},
+	}
+	queue_redraw()
+
+
+func _input(e: InputEvent) -> void:
+	if not visible or sampler == null or sampler.bloqueado:
+		return
+	if e is InputEventScreenTouch:
+		_toque(e as InputEventScreenTouch)
+	elif e is InputEventScreenDrag:
+		_arrasto(e as InputEventScreenDrag)
+
+
+func _toque(e: InputEventScreenTouch) -> void:
+	if e.pressed:
+		for nome in _botoes:
+			var b: Dictionary = _botoes[nome]
+			if e.position.distance_to(b["centro"]) <= b["raio"] * 1.15:
+				b["dedo"] = e.index
+				_apertar(nome)
+				queue_redraw()
+				return
+		if e.position.x < size.x * 0.45 and _joy_dedo == -1:
+			_joy_dedo = e.index
+			_joy_centro = e.position
+			_joy_pos = e.position
+		elif _olhar_dedo == -1:
+			_olhar_dedo = e.index
+	else:
+		if e.index == _joy_dedo:
+			_joy_dedo = -1
+			sampler.touch_move = Vector2.ZERO
+		elif e.index == _olhar_dedo:
+			_olhar_dedo = -1
+		for nome in _botoes:
+			if _botoes[nome]["dedo"] == e.index:
+				_botoes[nome]["dedo"] = -1
+	queue_redraw()
+
+
+func _arrasto(e: InputEventScreenDrag) -> void:
+	if e.index == _joy_dedo:
+		var raio := RAIO_JOY * _escala
+		var d := (e.position - _joy_centro).limit_length(raio)
+		_joy_pos = _joy_centro + d
+		sampler.touch_move = Vector2(d.x, -d.y) / raio   # para cima = frente
+		queue_redraw()
+	elif e.index == _olhar_dedo and camera:
+		camera.add_look(e.relative * float(Settings.get_value("controls", "touch_sensitivity")) * 1.4)
+
+
+func _apertar(nome: String) -> void:
+	match nome:
+		"pular":
+			sampler.touch_jump = true
+		"agachar":
+			sampler.touch_crouch = not sampler.touch_crouch
+
+
+func _draw() -> void:
+	var fonte: Font = theme.default_font if theme and theme.default_font else get_theme_default_font()
+	if _joy_dedo != -1:
+		var raio := RAIO_JOY * _escala
+		draw_circle(_joy_centro, raio, Color(1, 1, 1, 0.18))
+		draw_arc(_joy_centro, raio, 0, TAU, 48, Color(1, 1, 1, 0.5), 3.0)
+		draw_circle(_joy_pos, raio * 0.42, Color(1, 0.79, 0.24, 0.85))
+	else:
+		var p := Vector2(size.x * 0.16, size.y * 0.72)
+		draw_arc(p, RAIO_JOY * _escala, 0, TAU, 48, Color(1, 1, 1, 0.25), 3.0)
+		draw_string(fonte, p + Vector2(-60, 6), "Mover", HORIZONTAL_ALIGNMENT_CENTER, 120, 20, Color(1, 1, 1, 0.5))
+	for nome in _botoes:
+		var b: Dictionary = _botoes[nome]
+		var ativo: bool = b["dedo"] != -1 or (nome == "agachar" and sampler and sampler.touch_crouch)
+		draw_circle(b["centro"], b["raio"], Color(0.13, 0.72, 0.66, 0.85) if ativo else Color(0.06, 0.31, 0.34, 0.6))
+		draw_arc(b["centro"], b["raio"], 0, TAU, 48, Color(1, 0.79, 0.24, 0.9), 3.0)
+		draw_string(fonte, b["centro"] + Vector2(-b["raio"], 7), b["texto"], HORIZONTAL_ALIGNMENT_CENTER, b["raio"] * 2, int(20 * _escala), Color.WHITE)

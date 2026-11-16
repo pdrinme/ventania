@@ -19,8 +19,9 @@ func _init() -> void:
 		for m in metodos:
 			var caso: TestCase = script.new()
 			caso._atual = "%s::%s" % [arq.get_basename(), m]
+			caso.tree = self
 			caso.before_each()
-			caso.call(m)
+			await caso.call(m)   # testes podem ser assíncronos (esperar ticks de física)
 			caso.after_each()
 			total += 1
 			if caso.failures.is_empty():

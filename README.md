@@ -13,7 +13,7 @@ para um pequeno grupo de amigos.
 
 ## Status
 
-**Etapa 1 (fundação): concluída.** Há uma versão executável com menu, configurações e vitrine com teste de desempenho. Ainda não há gameplay (Etapa 2).
+**Etapa 2 (personagem e gameplay básico): concluída.** Dá para correr, pular e agachar em terceira pessoa num campo de treino, sozinho ou com amigos via servidor dedicado. Ainda não há armas (Etapa 3).
 Veja [ROADMAP.md](ROADMAP.md).
 
 ## Documentos
@@ -63,7 +63,13 @@ Meta-servidor (opcional, Python 3.11+, sem dependências):
 cd backend && python3 -m meta_server
 ```
 
-Todos os testes (Python, Godot, fumaça e integração):
+Servidor de partida dedicado (o mesmo executável do jogo):
+
+```bash
+godot --headless --path game -- --servidor --porta=24800
+```
+
+Todos os testes (Python, Godot, fumaça, integração, servidor dedicado e desempenho):
 
 ```bash
 GODOT=/caminho/do/godot tools/run_tests.sh

@@ -26,7 +26,7 @@ var _prims: PackedInt32Array = []
 
 func _ready() -> void:
 	var vp_cont := SubViewportContainer.new()
-	vp_cont.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vp_cont.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	vp_cont.stretch = true
 	add_child(vp_cont)
 	var vp := SubViewport.new()
@@ -43,7 +43,7 @@ func _ready() -> void:
 			_aplicar_viewport(vp))
 
 	var margem := MarginContainer.new()
-	margem.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margem.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margem.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for lado in ["left", "right", "top", "bottom"]:
 		margem.add_theme_constant_override("margin_" + lado, 20)

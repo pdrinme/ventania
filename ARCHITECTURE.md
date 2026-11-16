@@ -106,6 +106,20 @@ apenas coordenam. A lógica fica em classes testáveis.
 > reconexão, do endurecimento e dos testes com vários clientes, em vez de "adicionar
 > rede". Veja o ROADMAP.
 
+### 4.1 Como a rede ficou na Etapa 2 (implementado e medido)
+
+| Item | Implementação |
+|---|---|
+| Arquivos | `net/protocol.gd` (formato binário), `net/game_server.gd`, `net/game_client.gd`, `scenes/game/game.gd` (predição/interpolação), `gameplay/character/movement.gd` (simulação compartilhada) |
+| Tick e snapshots | Física a 30 Hz com interpolação visual nativa da Godot; snapshot a cada 2 ticks (15 Hz) |
+| Entradas | Cada pacote leva as 3 últimas entradas (perda de pacote). O servidor processa **uma entrada por passo, na ordem**, espera até 6 ticks por uma entrada atrasada e recupera com até 2 por tick. Fila máxima de 8 (protege contra speed hack). |
+| Predição | O cliente aplica `Movement.step` com a mesma entrada que envia. No snapshot: aplica o estado do servidor (posição, velocidade, agachado, no chão) e reaplica as entradas ainda não confirmadas. |
+| Determinismo | O snap ao chão é manual e só depende de `Pawn.grounded`, que viaja no snapshot; o snap nativo do CharacterBody3D fica desligado. Jogadores não colidem entre si. |
+| ENet | `bandwidth_limit(0, 0)` nos dois hosts e throttle por conexão desligado. Sem isso, os pacotes não confiáveis caíam para ~1/32 depois de 1 s (medido). |
+| Mundo do servidor local | `SubViewport` com `own_world_3d` e renderização desligada: espaço físico separado do cliente no mesmo processo. |
+| Servidor dedicado | O mesmo executável com `--headless -- --servidor [--porta=24800]`. |
+| Custo medido | 24 jogadores: ~1 ms por tick de servidor (3% de 33 ms). Snapshot de 16 jogadores: ~470 bytes. |
+
 ## 5. Meta-servidor **[ADR-3]**
 
 - Python 3.11+ e **somente a biblioteca padrão**: `asyncio` (servidor HTTP próprio e enxuto), `sqlite3`, `hashlib` (PBKDF2), `hmac`, `secrets`, `json`, `unittest`.
