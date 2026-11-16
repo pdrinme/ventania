@@ -165,6 +165,7 @@ func _combate(tree: SceneTree, jogo) -> void:
 	Input.action_release("fire")
 	for i in 20:
 		await tree.physics_frame
+	_checar(jogo.fx.active_tracers() > 0 or jogo.hits_confirmed > antes, "traçante do disparo criado")
 	_checar(jogo.hits_confirmed > antes, "tiro acertou o boneco (acertos confirmados: %d)" % (jogo.hits_confirmed - antes))
 	_checar(jogo._status["slots"][0]["mag"] == mag_antes - 1, "pistola semiautomática gastou 1 bala (%d -> %d)" % [mag_antes, jogo._status["slots"][0]["mag"]])
 

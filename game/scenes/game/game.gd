@@ -358,24 +358,49 @@ func _prever_tiro(cmd: Protocol.InputCmd) -> void:
 	var raio := Combat.aim_ray(pawn.global_position, pawn.crouched, cmd.yaw, cmd.pitch)
 	var movendo := Vector2(pawn.velocity.x, pawn.velocity.z).length() > 0.5
 	var disp := Combat.spread_deg(w, cmd.has(Protocol.BTN_AIM), movendo, pawn.crouched, pawn.grounded)
-	var espaco := pawn.get_world_3d().direct_space_state
-	for d: Vector3 in Combat.pellet_dirs(raio["dir"], disp, int(w["projeteis"]), Combat.shot_seed(pawn.entity_id, cmd.seq)):
-		var fim: Vector3 = raio["origin"] + d * float(w["alcance"])
-		var q := PhysicsRayQueryParameters3D.create(raio["origin"], fim, Pawn.LAYER_WORLD)
-		var r := espaco.intersect_ray(q)
-		fx.tracer(raio["origin"] + d * 0.6, r["position"] if not r.is_empty() else fim)
 	visual.fire()
+	var cano := visual.muzzle_position()
+	var curto := int(w["projeteis"]) > 1
+	for d: Vector3 in Combat.pellet_dirs(raio["dir"], disp, int(w["projeteis"]), Combat.shot_seed(pawn.entity_id, cmd.seq)):
+		var fim := _fim_do_tiro(raio["origin"], d, float(w["alcance"]))
+		# o traçante sai do CANO e vai até onde a linha da mira bate
+		fx.tracer(cano, fim["pos"], fim["jogador"], curto, fim["normal"])
 	Audio.play_sfx(_som_tiro(id))
 
 
+## Onde a linha da mira termina (previsão local, só para o efeito; o servidor decide
+## o acerto): primeiro jogador/boneco no caminho ou o cenário.
+func _fim_do_tiro(origem: Vector3, d: Vector3, alcance: float) -> Dictionary:
+	var fim := origem + d * alcance
+	var q := PhysicsRayQueryParameters3D.create(origem, fim, Pawn.LAYER_WORLD)
+	var r := pawn.get_world_3d().direct_space_state.intersect_ray(q)
+	var t_parede := origem.distance_to(r["position"]) if not r.is_empty() else alcance
+	var melhor := t_parede
+	var jogador := false
+	for rr in _remotos.values():
+		var v: PawnVisual = rr["visual"]
+		if not v.visible:
+			continue
+		var agachado: bool = rr["amostras"].size() > 0 and rr["amostras"][-1]["flags"] & Protocol.F_CROUCHED != 0
+		var h := Hitbox.test(origem, d, v.global_position, agachado)
+		if not h.is_empty() and h["t"] < melhor:
+			melhor = h["t"]
+			jogador = true
+	var normal: Vector3 = r["normal"] if not r.is_empty() and not jogador else -d
+	return {"pos": origem + d * melhor, "jogador": jogador, "normal": normal}
+
+
 func _on_shot(sh: Dictionary) -> void:
-	for f in sh["ends"]:
-		fx.tracer(sh["origin"], f["end"], f["hit"])
 	var r: Dictionary = _remotos.get(sh["shooter"], {})
+	var origem: Vector3 = sh["origin"]
 	if not r.is_empty():
 		var v: PawnVisual = r["visual"]
 		v.fire()
-		Audio.play_at(_som_tiro(ItemDB.id_of(v._item_idx)), sh["origin"])
+		origem = v.muzzle_position()
+		Audio.play_at(_som_tiro(ItemDB.id_of(v._item_idx)), origem)
+	var curto: bool = sh["ends"].size() > 1
+	for f in sh["ends"]:
+		fx.tracer(origem, f["end"], f["hit"], curto)
 
 
 static func _som_tiro(id: String) -> String:

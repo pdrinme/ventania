@@ -147,6 +147,14 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 - O personagem remoto alcança o baú mais próximo, não necessariamente o exato.
 - O custo de CPU do visual em celular não foi medido no aparelho.
 
+### Etapa 3 — Traçantes visíveis (v0.3.2) ✅
+| Problema | Causa | Correção |
+|---|---|---|
+| Rastro das balas quase invisível | Caixa fixa de 3 cm que piscava por 0,09 s; mistura aditiva que some contra o céu claro; saía do ombro, e não do cano; sem impacto. | Traçante que **viaja** a 190 m/s do **cano** até o alvo: faixa voltada para a câmera, cabeça brilhante, cauda que esmaece e largura que cresce com a distância. Mistura com transparência (âmbar com miolo branco) e rastro curto que some em 0,28 s. **Impactos:** faíscas e clarão no cenário, vermelho no jogador. A previsão local para o traçante no inimigo. |
+| Faixa torta (ia para o lado do alvo) — achado na verificação | `Basis.scaled()` escala nos eixos do mundo. | Escala no eixo local (`base * Basis.from_scale`). |
+
+**Verificado** com capturas dentro do jogo (`game/tests/capturar_tracantes.gd`): rifle nos bonecos, alvo a 25 m, leque da espingarda com impactos e vista lateral saindo do cano.
+
 ### Etapa 4 — Mapa e sistemas Battle Royale ⬜
 Mapa pequeno (cerca de 600 m), construções ambientais, loot, Tormenta e zona segura, eliminações, espectador, vitória e encerramento.
 **Aceite:** partida completa do início ao fim (com clientes simulados), e benchmark do mapa nos 3 perfis.

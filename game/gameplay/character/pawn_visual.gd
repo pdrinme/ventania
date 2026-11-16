@@ -232,6 +232,13 @@ func fire() -> void:
 		_flash_t = 0.05
 
 
+## Posição do cano da arma na mão (origem dos traçantes); sem arma, à frente do peito.
+func muzzle_position() -> Vector3:
+	if _cano and is_instance_valid(_cano):
+		return _cano.global_position
+	return global_transform * Vector3(-0.2, 1.35, -0.4)
+
+
 func wave() -> void:
 	_tree.set("parameters/acenar/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 
