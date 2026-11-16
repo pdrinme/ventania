@@ -47,7 +47,8 @@ Eles ficam em arquivos de dados e serão ajustados com testes de jogo.
 
 ## 5. Combate
 
-- **Raridades** (cor e multiplicador de status): Comum (cinza), Incomum (verde), Raro (azul), Épico (roxo), Lendário (dourado).
+- **Raridades** (cor e multiplicador de status): Comum (cinza), Incomum (verde), Raro (azul), Épico (roxo), Lendário (dourado) e **Mítico** (degradê animado rosa→ciano; só por eventos e recompensas, nunca em sorteio).
+- **Nomes exibidos:** sempre tipo + nome próprio (ex.: Rifle de Assalto Rajada, Espingarda Trovão, Submetralhadora Zumbido, Pistola Faísca, Rifle de Precisão Gavião).
 - **Armas implementadas (Etapa 3)**, com valores em `game/data/itens.json`: **Rajada** (fuzil), **Trovão** (escopeta), **Zumbido** (submetralhadora), **Faísca** (pistola) e **Gavião** (precisão). Os explosivos ficam para depois.
 - **Arquétipos de arma:**
 

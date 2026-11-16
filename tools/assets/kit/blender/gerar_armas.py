@@ -18,9 +18,23 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kit_comum as k  # noqa: E402
 
 
+# Marcadores (posição no Blender; origem da arma = empunhadura da mão direita):
+#   grip_r: centro da mão direita no punho     grip_l: apoio da mão esquerda
+#   muzzle: saída do cano                       mag: carregador (recarga)
+MARCADORES = {
+    "rajada_01":  {"grip_r": (0, 0.0, -0.03), "grip_l": (0, -0.36, 0.01), "muzzle": (0, -0.65, 0.07), "mag": (0, -0.17, -0.10)},
+    "trovao_01":  {"grip_r": (0, 0.02, -0.03), "grip_l": (0, -0.33, -0.01), "muzzle": (0, -0.63, 0.08), "mag": (0, -0.10, 0.03)},
+    "zumbido_01": {"grip_r": (0, 0.03, -0.03), "grip_l": (0, -0.19, 0.02), "muzzle": (0, -0.36, 0.07), "mag": (0, -0.10, -0.06)},
+    "faisca_01":  {"grip_r": (0, 0.0, -0.01), "grip_l": (0.025, 0.02, -0.06), "muzzle": (0, -0.22, 0.075), "mag": (0, 0.0, -0.08)},
+    "gaviao_01":  {"grip_r": (0, 0.02, -0.03), "grip_l": (0, -0.30, 0.02), "muzzle": (0, -0.85, 0.07), "mag": (0, -0.14, -0.06)},
+}
+
+
 def _base(partes, asset_id):
     o = k.unir(partes, asset_id)
     o["tipo"] = "arma"
+    for nome, pos in MARCADORES[asset_id].items():
+        k.marcador(nome, pos, pai=o)
     return o
 
 

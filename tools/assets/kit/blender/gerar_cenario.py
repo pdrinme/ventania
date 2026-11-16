@@ -21,7 +21,7 @@ def arvore_redonda_01():
     o = k.unir([tronco, galho] + copa, "arvore_redonda_01")
     o["coleta"] = "madeira"
     o["visibilidade_m"] = 250.0
-    k.colisao_caixa("arvore_redonda_01", (0.6, 0.6, 3.0), (0, 0, 1.5))
+    k.colisao_caixa("arvore_redonda_01", (0.56, 0.56, 3.0), (0, 0, 1.5))   # tronco
 
 
 def pinheiro_01():
@@ -32,7 +32,7 @@ def pinheiro_01():
     o = k.unir([tronco] + camadas, "pinheiro_01")
     o["coleta"] = "madeira"
     o["visibilidade_m"] = 250.0
-    k.colisao_caixa("pinheiro_01", (0.5, 0.5, 4.0), (0, 0, 2.0))
+    k.colisao_caixa("pinheiro_01", (0.5, 0.5, 1.6), (0, 0, 0.8))   # só o tronco: dá para passar sob os galhos
 
 
 def pedra_01():
@@ -41,7 +41,7 @@ def pedra_01():
     o = k.unir([grande, pequena], "pedra_01")
     o["coleta"] = "pedra"
     o["visibilidade_m"] = 200.0
-    k.colisao_caixa("pedra_01", (2.6, 2.0, 1.2), (0.2, -0.1, 0.55))
+    k.colisao_da_malha(o, "pedra_01")   # forma convexa da própria pedra
 
 
 def arbusto_01():

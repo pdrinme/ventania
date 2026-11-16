@@ -154,6 +154,11 @@ def toro(nome, raio, espessura, pos, cor, rot=(0, 0, 0), seg=14, seg_menor=6):
 
 
 def unir(objs, nome):
+    """Junta as peças em um objeto com a ORIGEM NO CENTRO DO MUNDO (0,0,0).
+
+    Sem o transform_apply, o objeto herdaria a origem da primeira peça, e qualquer
+    rotação/deslocamento posterior seria feito em torno do ponto errado (era a causa
+    da tampa do baú solta e das construções desalinhadas com a colisão)."""
     bpy.ops.object.select_all(action="DESELECT")
     for o in objs:
         o.select_set(True)
@@ -162,17 +167,73 @@ def unir(objs, nome):
     o = bpy.context.active_object
     o.name = nome
     o.data.name = nome
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     return o
 
 
-def colisao_caixa(nome, tam, pos, rot=(0, 0, 0)):
-    """Malha de colisão simplificada (sufixo -colonly: a Godot cria só StaticBody3D)."""
+def origem_em(obj, ponto):
+    """Move a origem do objeto para `ponto` (mundo) sem mexer na geometria."""
+    from mathutils import Matrix, Vector
+    p = Vector(ponto) - obj.matrix_world.translation
+    obj.data.transform(Matrix.Translation(-p))
+    obj.location = obj.location + p
+
+
+def colisao_caixa(nome, tam, pos, rot=(0, 0, 0), sufixo=""):
+    """Caixa de colisão SÓLIDA (sufixo -convcolonly: a Godot cria um StaticBody3D com
+    forma convexa). Formas convexas são sólidas por dentro; malhas de triângulos
+    (-colonly) são ocas e deixam o personagem atravessar/prender em paredes finas."""
     bpy.ops.mesh.primitive_cube_add(size=1, location=pos, rotation=[math.radians(r) for r in rot])
     o = bpy.context.active_object
-    o.name = f"{nome}-colonly"
+    o.name = f"{nome}{sufixo}-convcolonly"
     o.scale = tam
-    _aplicar(o)
+    _ativo(o)
+    # grava tudo nos vértices (origem 0,0,0): não depende de como o importador
+    # trata o deslocamento do nó de colisão
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     return o
+
+
+def colisao_convexa(nome, vertices, sufixo=""):
+    """Colisão convexa a partir de pontos (ex.: pirâmide do telhado)."""
+    malha = bpy.data.meshes.new(f"{nome}{sufixo}-col")
+    malha.from_pydata([tuple(v) for v in vertices], [], [])
+    o = bpy.data.objects.new(f"{nome}{sufixo}-convcolonly", malha)
+    bpy.context.scene.collection.objects.link(o)
+    # casca convexa real (com faces), para a Godot gerar a forma
+    bpy.context.view_layer.objects.active = o
+    bpy.ops.object.select_all(action="DESELECT")
+    o.select_set(True)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.mesh.convex_hull()
+    bpy.ops.object.mode_set(mode="OBJECT")
+    return o
+
+
+def colisao_da_malha(obj, nome):
+    """Cópia convexa da própria malha visual (ex.: pedra)."""
+    c = obj.copy()
+    c.data = obj.data.copy()
+    c.name = f"{nome}-convcolonly"
+    for k in list(c.keys()):
+        del c[k]
+    bpy.context.scene.collection.objects.link(c)
+    return c
+
+
+def marcador(nome, pos, pai=None):
+    """Ponto de referência exportado como nó (ex.: empunhadura, cano, alça da tampa)."""
+    from mathutils import Vector
+    e = bpy.data.objects.new(nome, None)
+    e.empty_display_size = 0.03
+    bpy.context.scene.collection.objects.link(e)
+    if pai is not None:
+        e.parent = pai
+        e.location = Vector(pos) - pai.matrix_world.translation
+    else:
+        e.location = pos
+    return e
 
 
 def salvar(categoria, asset_id):

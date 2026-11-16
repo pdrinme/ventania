@@ -120,6 +120,22 @@ apenas coordenam. A lógica fica em classes testáveis.
 | Servidor dedicado | O mesmo executável com `--headless -- --servidor [--porta=24800]`. |
 | Custo medido | 24 jogadores: ~1 ms por tick de servidor (3% de 33 ms). Snapshot de 16 jogadores: ~470 bytes. |
 
+### 4.2 Visual do personagem (polimento da Etapa 3)
+Ordem por quadro:
+1. **AnimationTree:** locomoção em BlendSpace1D sincronizado, agachado, pulo/queda e aterrissagem em one-shot.
+2. **AimPoseModifier:** coluna, peito, pescoço e cabeça seguem a mira.
+3. **ItemRig:** item na pose da categoria mais as ações procedurais; define os alvos das mãos a partir dos marcadores do modelo.
+4. **TwoBoneIK3D** em cada braço.
+
+O item comanda as mãos, nunca o contrário. Os marcadores ficam nos modelos (`grip_r`, `grip_l`, `muzzle`, `mag`, `mao`, `alca_tampa`).
+
+**Padrões da grade de construção** (gerador `gerar_construcoes.py`, teste `test_construcoes.gd`):
+- piso com topo a 0,10 m;
+- parede de 0,24 m;
+- rampa do topo de um piso ao topo do próximo;
+- telhado em pirâmide de 1,6 m;
+- colisões convexas iguais ao visual.
+
 ## 5. Meta-servidor **[ADR-3]**
 
 - Python 3.11+ e **somente a biblioteca padrão**: `asyncio` (servidor HTTP próprio e enxuto), `sqlite3`, `hashlib` (PBKDF2), `hmac`, `secrets`, `json`, `unittest`.

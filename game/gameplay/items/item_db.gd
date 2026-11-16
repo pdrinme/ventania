@@ -91,9 +91,24 @@ static func reload_time(id: String, raridade: int) -> float:
 	return float(weapon(id)["recarga_s"]) * float(rarity(raridade)["recarga"])
 
 
+## Nome completo e consistente em todo o jogo. Armas: "<tipo> <nome>"
+## (ex.: "Rifle de Assalto Rajada"); com raridade: "Rifle de Assalto Rajada (Raro)".
 static func display_name(id: String, raridade := -1) -> String:
-	var n: String = def(id).get("nome", id)
-	return n if raridade < 0 or not is_weapon(id) else "%s (%s)" % [n, rarity(raridade)["nome"]]
+	if not is_weapon(id):
+		return def(id).get("nome", id)
+	var w := weapon(id)
+	var n := "%s %s" % [w["tipo"], w["nome"]]
+	return n if raridade < 0 else "%s (%s)" % [n, rarity(raridade)["nome"]]
+
+
+## Nome curto (espaço apertado do inventário): só o nome próprio.
+static func short_name(id: String) -> String:
+	return def(id).get("nome", id)
+
+
+## Raridades sorteáveis (as com peso > 0).
+static func rarity_count_droppable() -> int:
+	return rarities().filter(func(r): return float(r["peso_bau"]) > 0.0).size()
 
 
 # ---------- sorteios (servidor) ----------
@@ -103,11 +118,16 @@ static func _escolher_peso(rng: RandomNumberGenerator, opcoes: Array, campo: Str
 	for o in opcoes:
 		total += float(o[campo])
 	var x := rng.randf() * total
+	var ultimo_valido := 0
 	for i in opcoes.size():
-		x -= float(opcoes[i][campo])
+		var peso := float(opcoes[i][campo])
+		if peso <= 0.0:
+			continue          # peso zero nunca é sorteado (ex.: Mítico)
+		ultimo_valido = i
+		x -= peso
 		if x <= 0.0:
 			return i
-	return opcoes.size() - 1
+	return ultimo_valido
 
 
 static func roll_rarity(rng: RandomNumberGenerator, de_bau: bool) -> int:

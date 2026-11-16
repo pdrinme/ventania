@@ -4,7 +4,7 @@ extends RefCounted
 ## Cliente envia ENTRADAS (não posições); servidor envia SNAPSHOTS do estado.
 ## Ver ARCHITECTURE §4.
 
-const GAME_PROTOCOL := 2
+const GAME_PROTOCOL := 3
 const DEFAULT_PORT := 24800
 const TICK_RATE := 30            # simulação (Hz)
 const SNAPSHOT_EVERY := 2        # snapshot a cada N ticks (15 Hz)
@@ -51,7 +51,12 @@ const F_SPRINTING := 4
 const F_DEAD := 8
 const F_DUMMY := 16
 const F_AIMING := 32
-const F_RELOADING := 64
+
+# ação em andamento (EntityState.action): anima o personagem para todos
+const ACT_NONE := 0
+const ACT_RELOAD := 1
+const ACT_USE := 2
+const ACT_CHEST := 3
 
 const INPUT_REDUNDANCY := 3      # cada pacote repete as últimas N entradas (perda de pacote)
 
@@ -83,7 +88,10 @@ class EntityState:
 	var velocity := Vector3.ZERO
 	var yaw := 0.0
 	var flags := 0
-	var weapon := 0              # índice ItemDB da arma em mãos (0 = nenhuma)
+	var weapon := 0              # índice ItemDB do item na mão (arma ou consumível; 0 = nenhum)
+	var pitch := 0.0             # inclinação da mira (rad)
+	var action := 0              # ACT_*
+	var progress := 0.0          # 0..1 da ação
 
 
 static func _buf() -> StreamPeerBuffer:
@@ -239,7 +247,7 @@ static func unpack_player_left(data: PackedByteArray) -> int:
 	return b.get_u16()
 
 
-const ENTITY_SIZE := 2 + 12 + 12 + 2 + 1 + 1
+const ENTITY_SIZE := 2 + 12 + 12 + 2 + 1 + 1 + 1 + 1 + 1
 
 
 static func pack_snapshot(tick: int, ack_seq: int, entities: Array) -> PackedByteArray:
@@ -259,6 +267,9 @@ static func pack_snapshot(tick: int, ack_seq: int, entities: Array) -> PackedByt
 		b.put_u16(_yaw_u16(e.yaw))
 		b.put_u8(e.flags)
 		b.put_u8(e.weapon)
+		b.put_8(clampi(roundi(rad_to_deg(e.pitch) / 0.75), -120, 120))
+		b.put_u8(e.action)
+		b.put_u8(clampi(roundi(e.progress * 255.0), 0, 255))
 	return b.data_array
 
 
@@ -282,6 +293,9 @@ static func unpack_snapshot(data: PackedByteArray) -> Dictionary:
 		e.yaw = _u16_yaw(b.get_u16())
 		e.flags = b.get_u8()
 		e.weapon = b.get_u8()
+		e.pitch = deg_to_rad(b.get_8() * 0.75)
+		e.action = b.get_u8()
+		e.progress = b.get_u8() / 255.0
 		lista.append(e)
 	return {"tick": tick, "ack": ack, "entities": lista}
 

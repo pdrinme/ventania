@@ -5,7 +5,11 @@ func test_itens_carregam() -> void:
 	assert_eq(ItemDB.id_of(0), "")
 	assert_eq(ItemDB.id_of(ItemDB.index_of("rajada")), "rajada")
 	assert_true(ItemDB.is_weapon("gaviao") and ItemDB.is_consumable("curativo"))
-	assert_eq(ItemDB.rarities().size(), 5)
+	assert_eq(ItemDB.rarities().size(), 6, "Comum a Lendário + Mítico")
+	assert_eq(ItemDB.rarity(5)["id"], "mitico")
+	assert_eq(ItemDB.display_name("rajada"), "Rifle de Assalto Rajada")
+	assert_eq(ItemDB.display_name("trovao", 2), "Espingarda Trovão (Raro)")
+	assert_eq(ItemDB.display_name("faisca"), "Pistola Faísca")
 	assert_true(ItemDB.damage("rajada", 4) > ItemDB.damage("rajada", 0), "lendária causa mais dano")
 	assert_true(ItemDB.reload_time("rajada", 4) < ItemDB.reload_time("rajada", 0), "lendária recarrega mais rápido")
 	for id in ItemDB.data()["armas"]:
@@ -100,3 +104,12 @@ func test_raio_de_mira_passa_pelo_ombro() -> void:
 	assert_true((r["origin"] as Vector3).is_equal_approx(Vector3(0.55, 1.55, 0)))
 	assert_true((r["dir"] as Vector3).is_equal_approx(Vector3(0, 0, -1)))
 	assert_eq(Combat.pellet_damage("rajada", 0, true), 45)
+
+
+func test_mitico_nao_e_sorteado() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 99
+	for i in 20000:
+		assert_true(ItemDB.roll_rarity(rng, i % 2 == 0) < 5, "Mítico só por evento")
+		if not failures.is_empty():
+			return

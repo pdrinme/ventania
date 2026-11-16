@@ -1,31 +1,219 @@
 {
-  "_doc": "Itens de partida (armas, consumíveis, munição). Valores de balanceamento iniciais; o servidor é a autoridade. Ver GAME_DESIGN §5.",
+  "_doc": "Itens de partida (armas, consumíveis, munição). Nome exibido das armas = tipo + nome (ex.: \"Rifle de Assalto Rajada\"). Valores de balanceamento iniciais; o servidor é a autoridade.",
   "raridades": [
-    {"id": "comum",    "nome": "Comum",    "cor": "#b5b5b5", "dano": 1.00, "recarga": 1.00, "peso_bau": 34, "peso_chao": 45},
-    {"id": "incomum",  "nome": "Incomum",  "cor": "#5fd35a", "dano": 1.05, "recarga": 0.95, "peso_bau": 30, "peso_chao": 30},
-    {"id": "raro",     "nome": "Raro",     "cor": "#3fa2ff", "dano": 1.10, "recarga": 0.90, "peso_bau": 21, "peso_chao": 16},
-    {"id": "epico",    "nome": "Épico",    "cor": "#b45cf2", "dano": 1.16, "recarga": 0.85, "peso_bau": 11, "peso_chao": 7},
-    {"id": "lendario", "nome": "Lendário", "cor": "#ffb52e", "dano": 1.22, "recarga": 0.80, "peso_bau": 4,  "peso_chao": 2}
+    {
+      "id": "comum",
+      "nome": "Comum",
+      "cor": "#b5b5b5",
+      "dano": 1.0,
+      "recarga": 1.0,
+      "peso_bau": 34,
+      "peso_chao": 45
+    },
+    {
+      "id": "incomum",
+      "nome": "Incomum",
+      "cor": "#5fd35a",
+      "dano": 1.05,
+      "recarga": 0.95,
+      "peso_bau": 30,
+      "peso_chao": 30
+    },
+    {
+      "id": "raro",
+      "nome": "Raro",
+      "cor": "#3fa2ff",
+      "dano": 1.1,
+      "recarga": 0.9,
+      "peso_bau": 21,
+      "peso_chao": 16
+    },
+    {
+      "id": "epico",
+      "nome": "Épico",
+      "cor": "#b45cf2",
+      "dano": 1.16,
+      "recarga": 0.85,
+      "peso_bau": 11,
+      "peso_chao": 7
+    },
+    {
+      "id": "lendario",
+      "nome": "Lendário",
+      "cor": "#ffb52e",
+      "dano": 1.22,
+      "recarga": 0.8,
+      "peso_bau": 4,
+      "peso_chao": 2
+    },
+    {
+      "id": "mitico",
+      "nome": "Mítico",
+      "cor": "#ff4fd8",
+      "cor2": "#2ee6ff",
+      "dano": 1.3,
+      "recarga": 0.75,
+      "peso_bau": 0,
+      "peso_chao": 0,
+      "_doc": "Raridade especial (eventos/recompensas); não aparece em sorteios normais. Visual animado em degradê."
+    }
   ],
   "municao": {
-    "leve":     {"nome": "Munição leve",   "max": 360, "caixa": 30},
-    "media":    {"nome": "Munição média",  "max": 360, "caixa": 30},
-    "pesada":   {"nome": "Munição pesada", "max": 60,  "caixa": 6},
-    "cartucho": {"nome": "Cartuchos",      "max": 80,  "caixa": 10}
+    "leve": {
+      "nome": "Munição leve",
+      "max": 360,
+      "caixa": 30
+    },
+    "media": {
+      "nome": "Munição média",
+      "max": 360,
+      "caixa": 30
+    },
+    "pesada": {
+      "nome": "Munição pesada",
+      "max": 60,
+      "caixa": 6
+    },
+    "cartucho": {
+      "nome": "Cartuchos",
+      "max": 80,
+      "caixa": 10
+    }
   },
   "armas": {
-    "rajada":  {"nome": "Rajada",  "tipo": "Fuzil",            "modelo": "rajada_01",  "municao": "media",    "dano": 30, "cadencia": 5.5, "automatica": true,  "pente": 30, "recarga_s": 2.3, "alcance": 150, "dispersao": 1.6, "projeteis": 1,  "cabeca": 1.5,  "peso": 30},
-    "trovao":  {"nome": "Trovão",  "tipo": "Escopeta",         "modelo": "trovao_01",  "municao": "cartucho", "dano": 9,  "cadencia": 1.0, "automatica": false, "pente": 5,  "recarga_s": 4.2, "alcance": 35,  "dispersao": 6.0, "projeteis": 10, "cabeca": 1.5,  "peso": 24},
-    "zumbido": {"nome": "Zumbido", "tipo": "Submetralhadora",  "modelo": "zumbido_01", "municao": "leve",     "dano": 17, "cadencia": 11.0,"automatica": true,  "pente": 30, "recarga_s": 2.1, "alcance": 70,  "dispersao": 2.8, "projeteis": 1,  "cabeca": 1.5,  "peso": 22},
-    "faisca":  {"nome": "Faísca",  "tipo": "Pistola",          "modelo": "faisca_01",  "municao": "leve",     "dano": 24, "cadencia": 5.0, "automatica": false, "pente": 16, "recarga_s": 1.4, "alcance": 80,  "dispersao": 1.2, "projeteis": 1,  "cabeca": 1.75, "peso": 28},
-    "gaviao":  {"nome": "Gavião",  "tipo": "Fuzil de precisão","modelo": "gaviao_01",  "municao": "pesada",   "dano": 100,"cadencia": 0.35,"automatica": false, "pente": 1,  "recarga_s": 2.6, "alcance": 300, "dispersao": 4.0, "projeteis": 1,  "cabeca": 2.5,  "peso": 8, "dispersao_mirando": 0.0}
+    "rajada": {
+      "nome": "Rajada",
+      "tipo": "Rifle de Assalto",
+      "modelo": "rajada_01",
+      "municao": "media",
+      "dano": 30,
+      "cadencia": 5.5,
+      "automatica": true,
+      "pente": 30,
+      "recarga_s": 2.3,
+      "alcance": 150,
+      "dispersao": 1.6,
+      "projeteis": 1,
+      "cabeca": 1.5,
+      "peso": 30
+    },
+    "trovao": {
+      "nome": "Trovão",
+      "tipo": "Espingarda",
+      "modelo": "trovao_01",
+      "municao": "cartucho",
+      "dano": 9,
+      "cadencia": 1.0,
+      "automatica": false,
+      "pente": 5,
+      "recarga_s": 4.2,
+      "alcance": 35,
+      "dispersao": 6.0,
+      "projeteis": 10,
+      "cabeca": 1.5,
+      "peso": 24
+    },
+    "zumbido": {
+      "nome": "Zumbido",
+      "tipo": "Submetralhadora",
+      "modelo": "zumbido_01",
+      "municao": "leve",
+      "dano": 17,
+      "cadencia": 11.0,
+      "automatica": true,
+      "pente": 30,
+      "recarga_s": 2.1,
+      "alcance": 70,
+      "dispersao": 2.8,
+      "projeteis": 1,
+      "cabeca": 1.5,
+      "peso": 22
+    },
+    "faisca": {
+      "nome": "Faísca",
+      "tipo": "Pistola",
+      "modelo": "faisca_01",
+      "municao": "leve",
+      "dano": 24,
+      "cadencia": 5.0,
+      "automatica": false,
+      "pente": 16,
+      "recarga_s": 1.4,
+      "alcance": 80,
+      "dispersao": 1.2,
+      "projeteis": 1,
+      "cabeca": 1.75,
+      "peso": 28
+    },
+    "gaviao": {
+      "nome": "Gavião",
+      "tipo": "Rifle de Precisão",
+      "modelo": "gaviao_01",
+      "municao": "pesada",
+      "dano": 100,
+      "cadencia": 0.35,
+      "automatica": false,
+      "pente": 1,
+      "recarga_s": 2.6,
+      "alcance": 300,
+      "dispersao": 4.0,
+      "projeteis": 1,
+      "cabeca": 2.5,
+      "peso": 8,
+      "dispersao_mirando": 0.0
+    }
   },
   "consumiveis": {
-    "curativo":   {"nome": "Curativo",                 "modelo": "curativo_01",        "vida": 15,  "limite": 75,  "tempo_s": 2.5, "pilha": 15, "quantidade": 5, "peso": 30},
-    "kit_cura":   {"nome": "Kit de cura",              "modelo": "kit_cura_01",        "vida": 100, "limite": 100, "tempo_s": 7.0, "pilha": 3,  "quantidade": 1, "peso": 12},
-    "celula_p":   {"nome": "Célula de escudo pequena", "modelo": "celula_escudo_p_01", "escudo": 25, "limite": 50,  "tempo_s": 2.0, "pilha": 6,  "quantidade": 3, "peso": 26},
-    "celula_g":   {"nome": "Célula de escudo grande",  "modelo": "celula_escudo_g_01", "escudo": 50, "limite": 100, "tempo_s": 4.0, "pilha": 3,  "quantidade": 1, "peso": 14}
+    "curativo": {
+      "nome": "Curativo",
+      "modelo": "curativo_01",
+      "vida": 15,
+      "limite": 75,
+      "tempo_s": 2.5,
+      "pilha": 15,
+      "quantidade": 5,
+      "peso": 30
+    },
+    "kit_cura": {
+      "nome": "Kit de cura",
+      "modelo": "kit_cura_01",
+      "vida": 100,
+      "limite": 100,
+      "tempo_s": 7.0,
+      "pilha": 3,
+      "quantidade": 1,
+      "peso": 12
+    },
+    "celula_p": {
+      "nome": "Célula de escudo pequena",
+      "modelo": "celula_escudo_p_01",
+      "escudo": 25,
+      "limite": 50,
+      "tempo_s": 2.0,
+      "pilha": 6,
+      "quantidade": 3,
+      "peso": 26
+    },
+    "celula_g": {
+      "nome": "Célula de escudo grande",
+      "modelo": "celula_escudo_g_01",
+      "escudo": 50,
+      "limite": 100,
+      "tempo_s": 4.0,
+      "pilha": 3,
+      "quantidade": 1,
+      "peso": 14
+    }
   },
-  "bau": {"armas": 1, "consumiveis": 1, "caixas_municao": 2},
-  "modificadores_dispersao": {"mirando": 0.5, "movendo": 1.6, "agachado": 0.75, "no_ar": 2.2}
+  "bau": {
+    "armas": 1,
+    "consumiveis": 1,
+    "caixas_municao": 2
+  },
+  "modificadores_dispersao": {
+    "mirando": 0.5,
+    "movendo": 1.6,
+    "agachado": 0.75,
+    "no_ar": 2.2
+  }
 }

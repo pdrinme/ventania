@@ -22,7 +22,8 @@ def municao_01():
         k.caixa("tampa", (0.35, 0.23, 0.04), (0, 0, 0.19), "metal_escuro", bevel=0.01),
         k.caixa("faixa", (0.345, 0.225, 0.05), (0, 0, 0.10), "amarelo_sol"),
     ]
-    k.unir(p, "municao_01")
+    o = k.unir(p, "municao_01")
+    k.marcador("mao", (0, 0, 0.10), pai=o)   # onde a mão segura
 
 
 def curativo_01():
@@ -31,7 +32,8 @@ def curativo_01():
         k.cilindro("miolo", 0.03, 0.125, (0, 0, 0.07), "pele_1", lados=8, rot=(0, 90, 0)),
         k.caixa("ponta", (0.10, 0.12, 0.012), (0, -0.09, 0.005), "branco"),
     ]
-    k.unir(p, "curativo_01")
+    o = k.unir(p, "curativo_01")
+    k.marcador("mao", (0, 0, 0.07), pai=o)   # onde a mão segura
 
 
 def kit_cura_01():
@@ -43,7 +45,8 @@ def kit_cura_01():
         k.esfera("coracao_d", 0.04, (0.025, -0.135, 0.10), "coral", escala=(1, 0.4, 1), segmentos=8, aneis=6),
         k.caixa("coracao_ponta", (0.055, 0.02, 0.055), (0, -0.133, 0.07), "coral", rot=(0, 45, 0)),
     ]
-    k.unir(p, "kit_cura_01")
+    o = k.unir(p, "kit_cura_01")
+    k.marcador("mao", (0, 0, 0.18), pai=o)   # onde a mão segura
 
 
 def celula_escudo_p_01():
@@ -52,7 +55,8 @@ def celula_escudo_p_01():
         k.cilindro("tampa_b", 0.055, 0.03, (0, 0, 0.015), "metal_escuro", lados=10),
         k.cilindro("tampa_t", 0.055, 0.03, (0, 0, 0.17), "metal_escuro", lados=10),
     ]
-    k.unir(p, "celula_escudo_p_01")
+    o = k.unir(p, "celula_escudo_p_01")
+    k.marcador("mao", (0, 0, 0.09), pai=o)   # onde a mão segura
 
 
 def celula_escudo_g_01():
@@ -62,7 +66,8 @@ def celula_escudo_g_01():
         k.cilindro("tampa_t", 0.10, 0.04, (0, 0, 0.30), "metal_escuro", lados=12),
         k.caixa("faixa", (0.19, 0.19, 0.03), (0, 0, 0.16), "teal", rot=(0, 0, 45)),
     ]
-    k.unir(p, "celula_escudo_g_01")
+    o = k.unir(p, "celula_escudo_g_01")
+    k.marcador("mao", (0, 0, 0.16), pai=o)   # onde a mão segura
 
 
 GERADORES = {f.__name__: f for f in (municao_01, curativo_01, kit_cura_01, celula_escudo_p_01, celula_escudo_g_01)}

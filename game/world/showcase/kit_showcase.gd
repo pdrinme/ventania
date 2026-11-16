@@ -91,7 +91,7 @@ func _anim(n: Node, nome: String, inicio: float) -> void:
 
 func _quarteirao(q: Node3D) -> void:
 	var b := "res://assets/construcoes/"
-	_cena(q, b + "piso_madeira.glb", Vector3(-8, 0.11, -6))
+	_cena(q, b + "piso_madeira.glb", Vector3(-8, 0, -6))
 	_cena(q, b + "parede_madeira.glb", Vector3(-8, 0, -8))
 	_cena(q, b + "parede_madeira.glb", Vector3(-10, 0, -6), 90)
 	_cena(q, b + "teto_madeira.glb", Vector3(-8, 4, -6))
@@ -100,7 +100,7 @@ func _quarteirao(q: Node3D) -> void:
 	_cena(q, b + "piso_pedra.glb", Vector3(0, 4, -10))
 	_cena(q, b + "parede_pedra.glb", Vector3(0, 4, -12))
 	_cena(q, b + "teto_pedra.glb", Vector3(-4, 0, -14))
-	_cena(q, b + "piso_metal.glb", Vector3(8, 0.11, -6))
+	_cena(q, b + "piso_metal.glb", Vector3(8, 0, -6))
 	_cena(q, b + "parede_metal.glb", Vector3(8, 0, -8))
 	_cena(q, b + "parede_metal.glb", Vector3(10, 0, -6), -90)
 	_cena(q, b + "teto_metal.glb", Vector3(8, 4, -6))

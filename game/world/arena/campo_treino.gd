@@ -11,14 +11,15 @@ var com_ambiente := true   # céu/sol/neblina só no cliente
 var chest_nodes: Array[Node3D] = []
 
 ## Baús: [posição, rotação Y]. O índice é o id do baú na rede.
+## Alturas: piso no nível N tem o topo em N + 0,10 (padrão da grade).
 const CHESTS := [
-	[Vector3(-16, 0.22, -10.6), 0.0], [Vector3(0, 8.22, -26.6), 0.0], [Vector3(16, 4.22, -10), 90.0],
+	[Vector3(-16, 0.1, -10.6), 0.0], [Vector3(0, 8.1, -26.6), 0.0], [Vector3(16, 4.1, -10), 90.0],
 	[Vector3(-7, 0, 3), 30.0], [Vector3(10, 0, 5), -40.0], [Vector3(-34, 0, -28), 0.0], [Vector3(36, 0, 30), 180.0],
 ]
 ## Pontos de loot no chão (sorteados no início da partida).
 const LOOT_POINTS := [
-	Vector3(-16, 0.22, -9), Vector3(0, 4.22, -18), Vector3(16, 0.22, -9), Vector3(16, 4.22, -11),
-	Vector3(-16, 1.7, 6), Vector3(-24, 0, 12), Vector3(24, 0, 12), Vector3(-26, 0, -18), Vector3(26, 0, -20),
+	Vector3(-16, 0.1, -9), Vector3(0, 4.1, -18), Vector3(16, 0.1, -9), Vector3(16, 4.1, -11.2),
+	Vector3(-16, 1.6, 6), Vector3(-24, 0, 12), Vector3(24, 0, 12), Vector3(-26, 0, -18), Vector3(26, 0, -20),
 	Vector3(0, 0, 22), Vector3(-10, 0, 24), Vector3(12, 0, 24), Vector3(-40, 0, 0), Vector3(40, 0, 0),
 	Vector3(0, 0, -40), Vector3(-3, 0, 8), Vector3(3, 0, 8),
 ]
@@ -101,7 +102,7 @@ func _peca(caminho: String, pos: Vector3, rot_y := 0.0) -> void:
 func _construcoes() -> void:
 	var b := "res://assets/construcoes/"
 	# cabana de madeira (frente aberta)
-	_peca(b + "piso_madeira.glb", Vector3(-16, 0.11, -10))
+	_peca(b + "piso_madeira.glb", Vector3(-16, 0, -10))
 	_peca(b + "parede_madeira.glb", Vector3(-16, 0, -12))
 	_peca(b + "parede_madeira.glb", Vector3(-18, 0, -10), 90)
 	_peca(b + "parede_madeira.glb", Vector3(-14, 0, -10), -90)
@@ -114,13 +115,13 @@ func _construcoes() -> void:
 	_peca(b + "parede_pedra.glb", Vector3(0, 8, -28))
 	_peca(b + "parede_pedra.glb", Vector3(-2, 4, -18), 90)
 	# caixa de metal com rampa até o telhado
-	_peca(b + "piso_metal.glb", Vector3(16, 0.11, -10))
+	_peca(b + "piso_metal.glb", Vector3(16, 0, -10))
 	_peca(b + "parede_metal.glb", Vector3(16, 0, -12))
 	_peca(b + "parede_metal.glb", Vector3(18, 0, -10), -90)
 	_peca(b + "parede_metal.glb", Vector3(14, 0, -10), 90)
 	_peca(b + "piso_metal.glb", Vector3(16, 4, -10))
 	_peca(b + "rampa_metal.glb", Vector3(16, 0, -6))
-	# túnel baixo: teto a 1,5 m (só passa agachado)
+	# túnel baixo: placa de baixo a 1,4 m (agachado 1,15 m passa; em pé 1,8 m não)
 	_peca(b + "piso_madeira.glb", Vector3(-16, 1.5, 4))
 	_peca(b + "piso_madeira.glb", Vector3(-16, 1.5, 8))
 

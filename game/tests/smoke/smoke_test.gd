@@ -168,6 +168,37 @@ func _combate(tree: SceneTree, jogo) -> void:
 	_checar(jogo.hits_confirmed > antes, "tiro acertou o boneco (acertos confirmados: %d)" % (jogo.hits_confirmed - antes))
 	_checar(jogo._status["slots"][0]["mag"] == mag_antes - 1, "pistola semiautomática gastou 1 bala (%d -> %d)" % [mag_antes, jogo._status["slots"][0]["mag"]])
 
+	# baú: aproxima, segura Interagir, o personagem alcança a alça e o servidor abre
+	var cli: GameServer.Cliente = jogo.server.clientes.values()[0]
+	var bau: Vector3 = CampoTreino.CHESTS[3][0]
+	var frente := Basis(Vector3.UP, deg_to_rad(CampoTreino.CHESTS[3][1])) * Vector3(0, 0, 1)
+	cli.pawn.global_position = bau + frente * 1.5
+	jogo.pawn.global_position = bau + frente * 1.5
+	for i in 8:
+		await tree.physics_frame
+	var loot_antes: int = jogo._loot.size()
+	var loot_srv_antes: int = jogo.server.loot.loot.size()
+	var municao_antes: int = cli.inv.ammo.values().reduce(func(a, b): return a + b, 0)
+	Input.action_press("interact")
+	var viu_alcance := false
+	for i in 30:
+		await tree.physics_frame
+		await tree.process_frame
+		viu_alcance = viu_alcance or jogo.visual.rig.action == Protocol.ACT_CHEST
+		if jogo.chests.is_open(3):
+			break
+	Input.action_release("interact")
+	for i in 10:
+		await tree.physics_frame
+	_checar(viu_alcance, "personagem alcança a alça enquanto segura Interagir")
+	_checar(jogo.chests.is_open(3) and jogo.server.loot.chests[3]["open"], "baú aberto pelo servidor e no cliente")
+	# 4 itens saem do baú; caixas de munição que caem ao lado do jogador são coletadas na hora
+	var municao_depois: int = cli.inv.ammo.values().reduce(func(a, b): return a + b, 0)
+	var coletadas := 1 if municao_depois > municao_antes else 0
+	_checar(jogo.server.loot.loot.size() + coletadas >= loot_srv_antes + 4, "baú liberou 4 itens no servidor")
+	_checar(jogo._loot.size() + coletadas >= loot_antes + 4, "cliente recebeu os itens do baú (%d -> %d, %d coletado)" % [loot_antes, jogo._loot.size(), coletadas])
+	_checar(jogo.visual.rig.ik_d.influence > 0.5, "mão direita presa à arma (IK ativo)")
+
 
 func _ir(tree: SceneTree, cena: String) -> void:
 	var ok: bool = await SceneManager.go(cena)

@@ -121,6 +121,31 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 
 **Problemas encontrados e resolvidos:** o tamanho da mensagem de tiro estava errado (os traçantes dos outros eram descartados); o executor contava como aprovado um teste interrompido por erro de script (agora qualquer `SCRIPT ERROR` reprova); a arma pedida antes do visual ficar pronto era ignorada; e o atalho de interagir no controle colidia com o de recarregar (agora é o Y).
 
+### Etapa 3 — Revisão e polimento (v0.3.1) ✅
+| Problema relatado | Causa encontrada | Correção |
+|---|---|---|
+| Arma solta/estranha na mão | A arma ficava presa ao osso da mão e seguia uma pose fixa dos braços, sem relação com a empunhadura real. | Sistema novo: o **ItemRig** coloca o item na pose da categoria e **IK nos dois braços** (TwoBoneIK3D) leva as mãos aos marcadores do modelo (`grip_r`, `grip_l`). As armas longas ficam junto ao corpo, porque o braço (0,58 m) não alcançava o guarda-mão. |
+| Tampa do baú solta, flutuando | No gerador do Blender, juntar peças herdava a origem da primeira peça, e a tampa ficava 0,59 m deslocada do próprio pivô. | `unir()` grava a origem no mundo e `origem_em()` move a origem da tampa para a dobradiça. Medição: a tampa vai de 0,50 a 0,68 m fechada e gira presa. |
+| Colisões das construções | O mesmo erro de origem desalinhava visual e colisão (até 1,7 m). As colisões eram malhas ocas (`-colonly`), o telhado era uma placa sob uma pirâmide de 1,6 m, e o personagem travava na emenda rampa→piso. | Peças refeitas com padrões de grade (piso com topo a 0,10 m; parede de 0,24 m com detalhes dentro; rampa de topo a topo; telhado em pirâmide). Colisões **convexas sólidas** iguais ao visual e bordas do piso chanfradas. |
+| Animações rígidas | Ciclos simples com poucas chaves e sem transições. | Animações refeitas (passada com contato e empurrão, quadril, giro do tronco, braços com atraso; corrida; pulo, queda e aterrissagem; idle com peso e respiração), com AnimationTree (misturas sincronizadas e one-shots), tronco e cabeça seguindo a mira, e ações procedurais (recarga por categoria, uso de consumíveis, troca, recuo e clarão, alcance do baú). |
+| Nomes genéricos | Só o nome próprio. | "Rifle de Assalto Rajada", "Espingarda Trovão", "Submetralhadora Zumbido", "Pistola Faísca" e "Rifle de Precisão Gavião" em todo o jogo (`ItemDB.display_name`). |
+| Inventário pouco legível | Botões de texto. | Miniaturas renderizadas dos modelos, fundo em degradê por raridade, Mítico animado, espaço selecionado ampliado e o nome completo na cor da raridade. |
+| Baú sem interação física | Abria sozinho. | Destaque pulsante, balão com tecla e anel de progresso, a mão alcançando a alça e acompanhando a tampa, partículas e som, itens saltando do baú e um jogador por vez. |
+
+**Também incluído:** 22 efeitos sonoros originais sintetizados (tiros por categoria, recarga, baú, coleta, acerto, dano, escudo e cura) e o protocolo v3, com mira, item na mão e ação/progresso, para os outros jogadores verem as mesmas animações.
+
+**Testado:**
+- 63 unitários, incluindo 7 de construções com física real: subir piso e rampa nos 3 materiais, descer colado, não atravessar parede nem quina, telhado sólido e props.
+- Fumaça: o tiro, o baú aberto pela interação e o IK ativo.
+- Servidor dedicado com PvP.
+- Capturas dentro do jogo de todas as situações: `game/tests/capturar_polimento.gd`.
+
+**Ainda precisa de atenção:**
+- A mira para cima/baixo dos outros jogadores é quantizada em 0,75°.
+- Não há IK de pés em rampas (os pés podem afundar alguns centímetros na inclinação).
+- O personagem remoto alcança o baú mais próximo, não necessariamente o exato.
+- O custo de CPU do visual em celular não foi medido no aparelho.
+
 ### Etapa 4 — Mapa e sistemas Battle Royale ⬜
 Mapa pequeno (cerca de 600 m), construções ambientais, loot, Tormenta e zona segura, eliminações, espectador, vitória e encerramento.
 **Aceite:** partida completa do início ao fim (com clientes simulados), e benchmark do mapa nos 3 perfis.

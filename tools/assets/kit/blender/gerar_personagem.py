@@ -1,5 +1,6 @@
 """Gera o personagem-base do projeto ("recruta_base_01") com esqueleto padrão
-e as animações idle, acenar, andar, correr, agachado, agachado_andar e no_ar.
+e as animações idle, andar, correr, agachado, agachado_andar, pular, queda,
+aterrissar e acenar. Com arma/itens, os braços são guiados por IK na Godot.
 
 Design original: proporções cartunescas (cabeça ~1/4,5 da altura), cachecol
 coral (tema vento), óculos de aviador na testa, luvas grossas, botas.
@@ -139,7 +140,8 @@ def _rot(arm, osso, eixo, graus):
 
 
 def _chave(arm, quadro, pose):
-    """pose: osso -> [(eixo, graus), ...]; a chave especial "_quadril_z" desce/sobe o quadril (m)."""
+    """pose: osso -> [(eixo, graus), ...] (eixos da armadura, aplicados em ordem).
+    Chave especial "_quadril": (lado, cima, frente) em metros, desloca o quadril."""
     for pb in arm.pose.bones:
         pb.rotation_mode = "QUATERNION"
         q = Quaternion()
@@ -147,124 +149,179 @@ def _chave(arm, quadro, pose):
             q = _rot(arm, pb.name, eixo, graus) @ q
         pb.rotation_quaternion = q
         pb.keyframe_insert("rotation_quaternion", frame=quadro)
-    # o osso Hips aponta para +Z: o eixo Y local do osso é o "para cima" da armadura
+    # Hips aponta para +Z: no espaço local do osso, X = lado, Y = cima, Z = -frente
+    lado, cima, frente = pose.get("_quadril", (0.0, 0.0, 0.0))
     quadril = arm.pose.bones["Hips"]
-    quadril.location = (0.0, pose.get("_quadril_z", 0.0), 0.0)
+    quadril.location = (lado, cima, -frente)
     quadril.keyframe_insert("location", frame=quadro)
 
 
 X, Y, Z = (1, 0, 0), (0, 1, 0), (0, 0, 1)
+#  Convenções (verificadas em render):
+#   ossos que apontam para CIMA (Hips/Spine/Chest/Neck/Head): +X inclina para a frente,
+#     +Y inclina para a esquerda, +Z gira para a esquerda;
+#   ossos que apontam para BAIXO (pernas, braços abaixados): -X leva para a frente;
+#   joelho: +X dobra; pé: -X levanta a ponta;
+#   braços em T: (Y, +a) abaixa o esquerdo, (Y, -a) abaixa o direito;
+#   cotovelo (no referencial do braço): esquerdo (Z, -a), direito (Z, +a) dobra para a frente.
+
+
+def _mx(v):
+    return max(0.0, v)
+
+
+def _bracos(esq_frente, dir_frente, cot_e, cot_d, abaixar=76.0, abrir=0.0):
+    """Braços relaxados ao lado do corpo, balançando para a frente/trás."""
+    return {
+        "LeftShoulder": [(Y, 4)], "RightShoulder": [(Y, -4)],
+        "LeftUpperArm": [(Y, abaixar - abrir), (X, -esq_frente)],
+        "RightUpperArm": [(Y, -abaixar + abrir), (X, -dir_frente)],
+        "LeftLowerArm": [(Z, -cot_e)], "RightLowerArm": [(Z, cot_d)],
+        "LeftHand": [(Z, -8)], "RightHand": [(Z, 8)],
+    }
 
 
 def _pose_idle(t):
-    """t em [0, 1): respiração e balanço leves, braços abaixados ao lado do corpo."""
-    onda = math.sin(t * 2 * math.pi)
-    return {
-        "Chest": [(X, -1.5 * onda)],
-        "Head": [(Z, 3 * onda), (X, 1.5 * onda)],
-        "LeftUpperArm": [(Y, 72 - 2.5 * onda)],
-        "RightUpperArm": [(Y, -72 + 2.5 * onda)],
-        "LeftLowerArm": [(Z, -12)],
-        "RightLowerArm": [(Z, 12)],
-    }
-
-
-def _ciclo(t, perna, joelho, braco, inclinacao, quadril_base=0.0, cotovelo=12, balanco_quadril=0.03):
-    """Ciclo de passada. t em [0,1). Convenções (eixos da armadura, frente = -Y):
-    ossos que apontam para baixo (pernas, braços abaixados) vão para a frente com X negativo;
-    ossos que apontam para cima (tronco) inclinam para a frente com X positivo."""
+    """4 s: respiração e transferência de peso suave entre as pernas."""
     f = t * 2 * math.pi
-    s_ = math.sin(f)
-    # joelho dobra mais quando a perna está passando por trás
-    joelho_e = joelho * (0.25 + 0.75 * max(0.0, math.sin(f + 1.2)))
-    joelho_d = joelho * (0.25 + 0.75 * max(0.0, math.sin(f + 1.2 + math.pi)))
-    return {
-        "_quadril_z": quadril_base - balanco_quadril * abs(math.cos(f)),
-        "Spine": [(Z, 4 * s_)],
-        "Chest": [(X, inclinacao), (Z, -6 * s_)],
-        "Head": [(X, -inclinacao * 0.6)],
-        "LeftUpperLeg": [(X, -perna * s_)],
-        "RightUpperLeg": [(X, perna * s_)],
-        "LeftLowerLeg": [(X, joelho_e)],
-        "RightLowerLeg": [(X, joelho_d)],
-        "LeftUpperArm": [(Y, 72), (X, braco * s_)],
-        "RightUpperArm": [(Y, -72), (X, -braco * s_)],
-        "LeftLowerArm": [(Z, -cotovelo)],
-        "RightLowerArm": [(Z, cotovelo)],
+    resp = math.sin(f * 3)                 # 3 respirações por ciclo
+    peso = math.sin(f)                     # 1 transferência de peso por ciclo
+    p = {
+        "_quadril": (0.018 * peso, -0.012 + 0.004 * resp, 0.0),
+        "Hips": [(Y, -2.0 * peso)],
+        "Spine": [(X, 1.0 + 0.8 * resp), (Y, 1.2 * peso)],
+        "Chest": [(X, -1.5 * resp), (Y, 0.8 * peso)],
+        "Neck": [(X, 1.0)],
+        "Head": [(X, 2.0 + 1.2 * math.sin(f * 2 + 0.6)), (Z, 4.0 * math.sin(f + 1.1))],
+        "LeftUpperLeg": [(Y, 1.5 * peso), (X, -2)], "RightUpperLeg": [(Y, 1.5 * peso), (X, -1)],
+        "LeftLowerLeg": [(X, 4 + 3 * _mx(-peso))], "RightLowerLeg": [(X, 4 + 3 * _mx(peso))],
+        "LeftFoot": [(X, -2)], "RightFoot": [(X, -2)],
     }
+    p.update(_bracos(4 + 1.5 * resp, 4 - 1.5 * resp, 14, 14))
+    return p
 
 
-def _agachado(t, passo=0.0):
+def _passada(t, perna, joelho, braco, cotovelo, inclinacao, bob, quadril_base=0.0, giro=5.0, voo=0.0):
+    """Ciclo de passada com contato do calcanhar, empurrão da ponta, bob do quadril,
+    giro da bacia/tronco em oposição e braços contrários às pernas (cotovelo atrasado)."""
     f = t * 2 * math.pi
-    s_ = math.sin(f) * passo
-    return {
-        "_quadril_z": -0.42,
-        "Chest": [(X, 18)],
-        "Head": [(X, -14)],
-        "LeftUpperLeg": [(X, -70 - s_)],
-        "RightUpperLeg": [(X, -70 + s_)],
-        "LeftLowerLeg": [(X, 110 + 0.5 * s_)],
-        "RightLowerLeg": [(X, 110 - 0.5 * s_)],
-        "LeftFoot": [(X, -40)],
-        "RightFoot": [(X, -40)],
-        "LeftUpperArm": [(Y, 65), (X, -25 + 0.6 * s_)],
-        "RightUpperArm": [(Y, -65), (X, -25 - 0.6 * s_)],
-        "LeftLowerArm": [(Z, -35)],
-        "RightLowerArm": [(Z, 35)],
+    s, c = math.sin(f), math.cos(f)
+    coxa_e, coxa_d = -perna * s, perna * s                      # negativo = à frente
+    joelho_e = 6 + joelho * _mx(c) ** 1.5 + 8 * _mx(math.sin(f - 0.5))
+    joelho_d = 6 + joelho * _mx(-c) ** 1.5 + 8 * _mx(math.sin(f + math.pi - 0.5))
+    pe_e = -14 * _mx(s) + 26 * _mx(-math.sin(f + 0.5))
+    pe_d = -14 * _mx(-s) + 26 * _mx(math.sin(f + 0.5))
+    p = {
+        # quadril mais baixo no contato (|sin| = 1) e mais alto no apoio; em corrida há voo
+        "_quadril": (0.012 * c, quadril_base - bob * abs(s) + voo * abs(c), 0.0),
+        "Hips": [(Z, -giro * s), (Y, 2.5 * c)],
+        "Spine": [(X, inclinacao * 0.4), (Z, giro * 0.5 * s)],
+        "Chest": [(X, inclinacao * 0.6), (Z, giro * 0.9 * s)],
+        "Neck": [(X, -inclinacao * 0.35)],
+        "Head": [(X, -inclinacao * 0.45 + 1.5 * math.sin(2 * f)), (Z, -giro * 0.3 * s)],
+        "LeftUpperLeg": [(X, coxa_e)], "RightUpperLeg": [(X, coxa_d)],
+        "LeftLowerLeg": [(X, joelho_e)], "RightLowerLeg": [(X, joelho_d)],
+        "LeftFoot": [(X, pe_e)], "RightFoot": [(X, pe_d)],
     }
+    atraso = 0.35
+    p.update(_bracos(braco * math.sin(f - atraso), -braco * math.sin(f - atraso),
+                     cotovelo + 0.5 * cotovelo * _mx(math.sin(f - atraso)),
+                     cotovelo + 0.5 * cotovelo * _mx(-math.sin(f - atraso)),
+                     abaixar=74.0 if cotovelo < 40 else 68.0))
+    return p
 
 
-def _no_ar(t):
-    onda = math.sin(t * 2 * math.pi) * 4
-    return {
-        "Chest": [(X, -4)],
-        "LeftUpperLeg": [(X, -38 + onda)],
-        "LeftLowerLeg": [(X, 55)],
-        "RightUpperLeg": [(X, -8 - onda)],
-        "RightLowerLeg": [(X, 25)],
-        "LeftUpperArm": [(Y, 40), (X, -15 + onda)],
-        "RightUpperArm": [(Y, -40), (X, 10 - onda)],
-        "LeftLowerArm": [(Z, -25)],
-        "RightLowerArm": [(Z, 25)],
+def _pose_andar(t):
+    return _passada(t, perna=26, joelho=58, braco=22, cotovelo=16, inclinacao=3, bob=0.035)
+
+
+def _pose_correr(t):
+    return _passada(t, perna=46, joelho=100, braco=42, cotovelo=78, inclinacao=13, bob=0.03,
+                    quadril_base=-0.04, giro=8.0, voo=0.035)
+
+
+def _pose_agachado(t, passo=0.0):
+    f = t * 2 * math.pi
+    s = math.sin(f)
+    resp = math.sin(f * 2)
+    p = {
+        "_quadril": (0.01 * math.cos(f) * (passo > 0), -0.44 - 0.02 * abs(s) * (passo > 0), 0.04),
+        "Hips": [(X, 8), (Z, -3 * s * (passo > 0))],
+        "Spine": [(X, 10 + resp)], "Chest": [(X, 10 - resp)],
+        "Neck": [(X, -8)], "Head": [(X, -10)],
+        "LeftUpperLeg": [(X, -78 - passo * s)], "RightUpperLeg": [(X, -78 + passo * s)],
+        "LeftLowerLeg": [(X, 118 + 0.6 * passo * _mx(math.cos(f)))], "RightLowerLeg": [(X, 118 + 0.6 * passo * _mx(-math.cos(f)))],
+        "LeftFoot": [(X, -38)], "RightFoot": [(X, -38)],
     }
+    p.update(_bracos(18 + 0.5 * passo * s, 18 - 0.5 * passo * s, 40, 40, abaixar=68.0))
+    return p
 
 
-# Pose de braços segurando uma arma com as duas mãos (sobrepõe os braços da locomoção).
-BRACOS_ARMA = {
-    "RightUpperArm": [(Z, 70), (X, 28)],
-    "RightLowerArm": [(Z, 55), (X, -10)],
-    "RightHand": [(X, -10)],
-    "LeftUpperArm": [(Z, -55), (X, 22)],
-    "LeftLowerArm": [(Z, -70), (X, -15)],
-}
+def _pose_pulo(t):
+    """t 0..1: impulso (pernas estendidas, braços para cima) -> encolhe no ápice."""
+    e = t * t * (3 - 2 * t)
+    p = {
+        "_quadril": (0, 0.02 * (1 - e), 0),
+        "Spine": [(X, -4 + 8 * e)], "Chest": [(X, -6 + 10 * e)], "Head": [(X, 6 - 8 * e)],
+        "LeftUpperLeg": [(X, 8 - 50 * e)], "RightUpperLeg": [(X, 4 - 20 * e)],
+        "LeftLowerLeg": [(X, 6 + 74 * e)], "RightLowerLeg": [(X, 6 + 46 * e)],
+        "LeftFoot": [(X, 30 - 30 * e)], "RightFoot": [(X, 30 - 20 * e)],
+    }
+    p.update(_bracos(40 - 15 * e, 30 - 10 * e, 30, 30, abaixar=40 + 20 * e))
+    return p
 
 
-def _com_arma(pose_fn):
-    def f(t):
-        pose = dict(pose_fn(t))
-        pose.update(BRACOS_ARMA)
-        return pose
-    return f
+def _pose_queda(t):
+    f = t * 2 * math.pi
+    o = math.sin(f) * 5
+    p = {
+        "Spine": [(X, 2)], "Chest": [(X, -3 + o * 0.3)], "Head": [(X, 6)],
+        "LeftUpperLeg": [(X, -30 + o)], "RightUpperLeg": [(X, -12 - o)],
+        "LeftLowerLeg": [(X, 48)], "RightLowerLeg": [(X, 30)],
+        "LeftFoot": [(X, 10)], "RightFoot": [(X, 12)],
+    }
+    p.update(_bracos(10 + o, 6 - o, 26, 26, abaixar=36.0, abrir=0.0))
+    return p
 
 
-def _acao_ciclo(arm, nome, quadros, pose_fn, chaves=8):
-    """Cria uma ação em loop: `chaves` amostras uniformes + a última igual à primeira."""
+def _pose_aterrissar(t):
+    """t 0..1: amortece (desce rápido), depois volta à pose de pé."""
+    d = math.sin(min(1.0, t / 0.3) * math.pi / 2) if t < 0.3 else 1.0 - ((t - 0.3) / 0.7) ** 1.5
+    p = {
+        "_quadril": (0, -0.26 * d, 0.02 * d),
+        "Hips": [(X, 10 * d)], "Spine": [(X, 10 * d)], "Chest": [(X, 10 * d)], "Head": [(X, -14 * d)],
+        "LeftUpperLeg": [(X, -48 * d)], "RightUpperLeg": [(X, -44 * d)],
+        "LeftLowerLeg": [(X, 6 + 82 * d)], "RightLowerLeg": [(X, 6 + 78 * d)],
+        "LeftFoot": [(X, -36 * d)], "RightFoot": [(X, -34 * d)],
+    }
+    p.update(_bracos(14 * d, 14 * d, 14 + 25 * d, 14 + 25 * d, abaixar=76 - 22 * d))
+    return p
+
+
+def _acao(arm, nome, quadros, pose_fn, passo=2, loop=True):
+    """Cria uma ação amostrando a pose a cada `passo` quadros. Em loop, a última
+    chave repete a primeira (sem salto na emenda)."""
     acao = bpy.data.actions.new(nome)
     arm.animation_data.action = acao
-    for i in range(chaves + 1):
-        _chave(arm, 1 + round(i * quadros / chaves), pose_fn((i % chaves) / chaves))
+    n = max(2, quadros // passo)
+    for i in range(n + 1):
+        t = (i / n) % 1.0 if loop else i / n
+        _chave(arm, 1 + round(i * quadros / n), pose_fn(t))
     return acao
 
 
 def animar(arm):
     arm.animation_data_create()
-    acoes = []
-
-    idle = bpy.data.actions.new("idle-loop")
-    arm.animation_data.action = idle
-    for i, q in enumerate(range(1, 62, 10)):
-        _chave(arm, q, _pose_idle(i / 6.0))
-    acoes.append(idle)
+    acoes = [
+        _acao(arm, "idle-loop", 120, _pose_idle, passo=4),
+        _acao(arm, "andar-loop", 32, _pose_andar),           # 1,07 s por 2 passos @ 4,5 m/s
+        _acao(arm, "correr-loop", 20, _pose_correr),          # 0,67 s por 2 passos @ 6,5 m/s
+        _acao(arm, "agachado-loop", 60, lambda t: _pose_agachado(t, 0.0), passo=4),
+        _acao(arm, "agachado_andar-loop", 36, lambda t: _pose_agachado(t, 24.0)),
+        _acao(arm, "pular", 10, _pose_pulo, loop=False),
+        _acao(arm, "queda-loop", 24, _pose_queda),
+        _acao(arm, "aterrissar", 12, _pose_aterrissar, loop=False),
+    ]
 
     acenar = bpy.data.actions.new("acenar")
     arm.animation_data.action = acenar
@@ -278,21 +335,6 @@ def animar(arm):
         _chave(arm, q, pose)
     _chave(arm, 46, base)
     acoes.append(acenar)
-
-    # locomoção (30 fps): velocidades de referência no jogo — andar 4,5 m/s, correr 6,5 m/s, agachado 2,5 m/s
-    acoes.append(_acao_ciclo(arm, "andar-loop", 30, lambda t: _ciclo(t, 28, 40, 22, 4)))
-    acoes.append(_acao_ciclo(arm, "correr-loop", 20, lambda t: _ciclo(t, 45, 75, 40, 14, -0.04, 70, 0.06)))
-    acoes.append(_acao_ciclo(arm, "agachado-loop", 60, lambda t: _agachado(t, 0.0), chaves=2))
-    acoes.append(_acao_ciclo(arm, "agachado_andar-loop", 30, lambda t: _agachado(t, 22.0)))
-    acoes.append(_acao_ciclo(arm, "no_ar-loop", 30, _no_ar, chaves=4))
-
-    # variantes segurando arma (mesmas pernas/tronco, braços apontando a arma)
-    acoes.append(_acao_ciclo(arm, "arma_idle-loop", 60, _com_arma(_pose_idle), chaves=6))
-    acoes.append(_acao_ciclo(arm, "arma_andar-loop", 30, _com_arma(lambda t: _ciclo(t, 28, 40, 0, 4))))
-    acoes.append(_acao_ciclo(arm, "arma_correr-loop", 20, _com_arma(lambda t: _ciclo(t, 45, 75, 0, 14, -0.04, 70, 0.06))))
-    acoes.append(_acao_ciclo(arm, "arma_agachado-loop", 60, _com_arma(lambda t: _agachado(t, 0.0)), chaves=2))
-    acoes.append(_acao_ciclo(arm, "arma_agachado_andar-loop", 30, _com_arma(lambda t: _agachado(t, 22.0))))
-    acoes.append(_acao_ciclo(arm, "arma_no_ar-loop", 30, _com_arma(_no_ar), chaves=4))
 
     for a in acoes:
         a.use_fake_user = True

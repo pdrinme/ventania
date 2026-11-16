@@ -78,6 +78,20 @@ func test_snapshot_ida_e_volta() -> void:
 	assert_eq(r.flags, e.flags)
 
 
+func test_estado_de_animacao_na_rede() -> void:
+	var e := Protocol.EntityState.new()
+	e.id = 3
+	e.weapon = ItemDB.index_of("celula_p")
+	e.pitch = deg_to_rad(-30.0)
+	e.action = Protocol.ACT_USE
+	e.progress = 0.5
+	var r: Protocol.EntityState = Protocol.unpack_snapshot(Protocol.pack_snapshot(1, 1, [e]))["entities"][0]
+	assert_eq(r.weapon, e.weapon, "consumível na mão também é replicado")
+	assert_true(absf(rad_to_deg(r.pitch) + 30.0) < 0.8, "mira para baixo")
+	assert_eq(r.action, Protocol.ACT_USE)
+	assert_true(absf(r.progress - 0.5) < 0.01)
+
+
 func test_hello_e_welcome() -> void:
 	var h := Protocol.unpack_hello(Protocol.pack_hello("Brisa"))
 	assert_eq(h["protocol"], Protocol.GAME_PROTOCOL)

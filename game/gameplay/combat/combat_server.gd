@@ -40,6 +40,18 @@ func rewound(id: int, view_tick: int, atual: Vector3, agachado: bool) -> Array:
 	return [atual, agachado]
 
 
+## [ação, progresso 0..1] para animar o personagem nos outros clientes.
+func action_of(c: GameServer.Cliente) -> Array:
+	var passos := float(c.simulados)
+	if c.reload_end >= 0.0 and c.reload_total > 0.0:
+		return [Protocol.ACT_RELOAD, clampf(1.0 - (c.reload_end - passos) / c.reload_total, 0.0, 1.0)]
+	if c.use_end >= 0.0 and c.use_total > 0.0:
+		return [Protocol.ACT_USE, clampf(1.0 - (c.use_end - passos) / c.use_total, 0.0, 1.0)]
+	if c.interact_steps > 0 and c.interact_chest >= 0:
+		return [Protocol.ACT_CHEST, clampf(c.interact_steps / float(LootServer.ABRIR_BAU_PASSOS), 0.0, 1.0)]
+	return [Protocol.ACT_NONE, 0.0]
+
+
 # ---------- por entrada ----------
 
 func process(c: GameServer.Cliente, cmd: Protocol.InputCmd) -> void:
@@ -124,19 +136,36 @@ func _aplicar_consumivel(c: GameServer.Cliente) -> void:
 		c.inv.remove_slot(c.inv.selected)
 
 
+func _soltar_bau(c: GameServer.Cliente) -> void:
+	if c.interact_chest >= 0 and c.interact_chest < server.loot.chests.size():
+		if server.loot.chests[c.interact_chest].get("abrindo", 0) == c.id:
+			server.loot.chests[c.interact_chest]["abrindo"] = 0
+	c.interact_steps = 0
+	c.interact_chest = -1
+
+
 func _interagir(c: GameServer.Cliente, cmd: Protocol.InputCmd) -> void:
 	var pos := c.pawn.global_position
 	if not cmd.has(Protocol.BTN_INTERACT):
-		c.interact_steps = 0
+		_soltar_bau(c)
 		return
 	var bau := server.loot.nearest_chest(pos)
 	if bau >= 0:
+		# um jogador por vez: quem começou a abrir "reserva" o baú até soltar
+		var dono: int = server.loot.chests[bau].get("abrindo", 0)
+		if dono != 0 and dono != c.id:
+			c.interact_steps = 0
+			return
+		server.loot.chests[bau]["abrindo"] = c.id
 		c.interact_steps = c.interact_steps + 1 if c.interact_chest == bau else 1
 		c.interact_chest = bau
 		if c.interact_steps >= LootServer.ABRIR_BAU_PASSOS:
 			server.loot.open_chest(bau)
+			server.loot.chests[bau]["abrindo"] = 0
 			c.interact_steps = 0
+			c.interact_chest = -1
 		return
+	_soltar_bau(c)
 	if not c.prev_interact:
 		var id := server.loot.nearest_loot(pos)
 		if id >= 0 and server.loot.pick_up(id, c.inv, pos):

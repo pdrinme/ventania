@@ -269,13 +269,15 @@ func _enviar_snapshots() -> void:
 		if c.pawn:
 			var e := c.pawn.to_state()
 			var s := c.inv.current()
-			e.weapon = ItemDB.index_of(s.item) if ItemDB.is_weapon(s.item) and not c.dead else 0
+			e.weapon = ItemDB.index_of(s.item) if not c.dead else 0
+			e.pitch = c.ultimo_cmd.pitch
 			if c.dead:
 				e.flags |= Protocol.F_DEAD
 			if c.aiming:
 				e.flags |= Protocol.F_AIMING
-			if c.reload_end >= 0.0:
-				e.flags |= Protocol.F_RELOADING
+			var a := combat.action_of(c)
+			e.action = a[0]
+			e.progress = a[1]
 			estados.append(e)
 	for b in bonecos:
 		var e: Protocol.EntityState = (b["pawn"] as Pawn).to_state()

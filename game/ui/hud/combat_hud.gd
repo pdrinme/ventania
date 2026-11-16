@@ -13,7 +13,13 @@ const FUNDO := Color(0.06, 0.31, 0.34, 0.75)
 var _vida: ProgressBar
 var _escudo: ProgressBar
 var _vida_txt: Label
-var _slots: Array[Button] = []
+var _slots: Array[ItemSlot] = []
+var _nome_item: Label
+var _balao: Control
+var _balao_tecla := ""
+var _balao_texto := ""
+var _balao_prog := -1.0
+var _balao_cor := Color.WHITE
 var _municao: Label
 var _acao: ProgressBar
 var _acao_txt: Label
@@ -64,19 +70,30 @@ func _ready() -> void:
 	barra.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	barra.add_theme_constant_override("separation", 6)
 	add_child(barra)
+	barra.add_theme_constant_override("separation", 10)
 	for i in Inventory.SLOTS:
-		var b := Button.new()
-		b.custom_minimum_size = Vector2(88, 64)
-		b.focus_mode = Control.FOCUS_NONE
-		b.clip_text = true
-		b.add_theme_font_size_override("font_size", 15)
-		b.pressed.connect(func(): slot_tapped.emit(i))
+		var b := ItemSlot.new()
+		b.indice = i
+		b.tapped.connect(func(): slot_tapped.emit(i))
 		barra.add_child(b)
 		_slots.append(b)
+	_nome_item = Label.new()
+	_nome_item.theme_type_variation = "Subtitulo"
+	_contorno(_nome_item)
+	_nome_item.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 140)
+	_nome_item.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_nome_item.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_nome_item.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	add_child(_nome_item)
+	_balao = Control.new()
+	_balao.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_balao.draw.connect(_desenhar_balao)
+	_balao.visible = false
+	add_child(_balao)
 	_municao = Label.new()
 	_municao.theme_type_variation = "Subtitulo"
 	_contorno(_municao)
-	_municao.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 112)
+	_municao.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 172)
 	_municao.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_municao.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	add_child(_municao)
@@ -158,26 +175,22 @@ func update_status(st: Dictionary) -> void:
 	_vida_txt.text = "Vida %d · Escudo %d" % [st["hp"], st["shield"]]
 	var tipos := ItemDB.ammo_types()
 	for i in _slots.size():
-		var b := _slots[i]
-		var s: Dictionary = st["slots"][i] if i < st["slots"].size() else {"item": 0, "rarity": 0, "mag": 0, "count": 0}
-		var id := ItemDB.id_of(s["item"])
-		var estilo := StyleBoxFlat.new()
-		estilo.set_corner_radius_all(10)
-		estilo.bg_color = FUNDO
-		estilo.set_border_width_all(4 if i == st["selected"] else 2)
-		if id.is_empty():
-			b.text = str(i + 1)
-			estilo.border_color = Color(1, 1, 1, 0.25)
-		else:
-			var nome: String = ItemDB.def(id)["nome"]
-			b.text = "%d %s\n%s" % [i + 1, nome, ("%d" % s["mag"]) if ItemDB.is_weapon(id) else "x%d" % s["count"]]
-			estilo.border_color = ItemDB.rarity_color(s["rarity"]) if ItemDB.is_weapon(id) else Color("e8e8e8")
-		if i == st["selected"]:
-			estilo.bg_color = Color(0.13, 0.72, 0.66, 0.9)
-		for nome_estilo in ["normal", "hover", "pressed"]:
-			b.add_theme_stylebox_override(nome_estilo, estilo)
+		var sl: Dictionary = st["slots"][i] if i < st["slots"].size() else {"item": 0, "rarity": 0, "mag": 0, "count": 0}
+		var id := ItemDB.id_of(sl["item"])
+		var qtd := ""
+		if ItemDB.is_weapon(id):
+			qtd = str(sl["mag"])
+		elif not id.is_empty():
+			qtd = "x%d" % sl["count"]
+		_slots[i].set_item(id, sl["rarity"], qtd, i == st["selected"])
 	var atual: Dictionary = st["slots"][st["selected"]] if st["selected"] < st["slots"].size() else {"item": 0}
 	var aid := ItemDB.id_of(atual["item"])
+	if aid.is_empty():
+		_nome_item.text = ""
+	else:
+		_nome_item.text = ItemDB.display_name(aid)
+		var cor := ItemDB.rarity_color(atual["rarity"]) if ItemDB.is_weapon(aid) else Color.WHITE
+		_nome_item.add_theme_color_override("font_color", cor.lightened(0.25))
 	if ItemDB.is_weapon(aid) and st["ammo"].size() == tipos.size():
 		var reserva: int = st["ammo"][tipos.find(ItemDB.weapon(aid)["municao"])]
 		_municao.text = "%d / %d" % [atual["mag"], reserva]
@@ -188,7 +201,7 @@ func update_status(st: Dictionary) -> void:
 	if caixa.visible:
 		_acao_total = st["action_total_ms"] / 1000.0
 		_acao_fim = Time.get_ticks_msec() / 1000.0 + st["action_left_ms"] / 1000.0
-		_acao_txt.text = "Recarregando…" if st["action"] == 1 else "Usando %s…" % ItemDB.def(aid).get("nome", "")
+		_acao_txt.text = "Recarregando…" if st["action"] == 1 else "Usando %s…" % ItemDB.display_name(aid)
 
 
 func current_item() -> String:
@@ -199,6 +212,48 @@ func current_item() -> String:
 
 func set_prompt(texto: String) -> void:
 	_aviso.text = texto
+
+
+## Balão de interação ancorado no objeto (posição de tela). tecla vazia = esconder.
+## progresso: -1 = sem anel; 0..1 = segurar.
+func set_world_prompt(pos_tela: Vector2, tecla: String, texto: String, progresso := -1.0, cor := Color.WHITE) -> void:
+	_balao.visible = not tecla.is_empty()
+	if not _balao.visible:
+		return
+	_balao.position = pos_tela
+	_balao_tecla = tecla
+	_balao_texto = texto
+	_balao_prog = progresso
+	_balao_cor = cor
+	_balao.queue_redraw()
+
+
+func _desenhar_balao() -> void:
+	var fonte := get_theme_default_font()
+	var tam_t := 20
+	var w_texto := fonte.get_string_size(_balao_texto, HORIZONTAL_ALIGNMENT_LEFT, -1, tam_t).x
+	var w_tecla := maxf(34.0, fonte.get_string_size(_balao_tecla, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x + 18)
+	var larg := w_tecla + w_texto + 30
+	var r := Rect2(Vector2(-larg / 2, -26), Vector2(larg, 48))
+	var fundo := StyleBoxFlat.new()
+	fundo.bg_color = Color(0.06, 0.26, 0.29, 0.92)
+	fundo.set_corner_radius_all(14)
+	fundo.set_border_width_all(2)
+	fundo.border_color = _balao_cor
+	fundo.shadow_color = Color(0, 0, 0, 0.3)
+	fundo.shadow_size = 4
+	_balao.draw_style_box(fundo, r)
+	# tecla (com anel de progresso ao segurar)
+	var c := r.position + Vector2(10 + w_tecla / 2, 24)
+	var tecla := StyleBoxFlat.new()
+	tecla.bg_color = Color("f4f1ea")
+	tecla.set_corner_radius_all(8)
+	_balao.draw_style_box(tecla, Rect2(c - Vector2(w_tecla / 2, 16), Vector2(w_tecla, 32)))
+	var ws := fonte.get_string_size(_balao_tecla, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+	_balao.draw_string(fonte, c + Vector2(-ws / 2, 7), _balao_tecla, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("24252c"))
+	if _balao_prog >= 0.0:
+		_balao.draw_arc(c, w_tecla / 2 + 7, -PI / 2, -PI / 2 + TAU * _balao_prog, 32, Color("ffc93c"), 4.0, true)
+	_balao.draw_string(fonte, Vector2(c.x + w_tecla / 2 + 12, c.y + 7), _balao_texto, HORIZONTAL_ALIGNMENT_LEFT, -1, tam_t, Color.WHITE)
 
 
 func hit_marker(cabeca: bool) -> void:

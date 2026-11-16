@@ -50,7 +50,11 @@ static func from_dict(d: Variant) -> InputEvent:
 ## Texto legível para a interface.
 static func describe(e: InputEvent) -> String:
 	if e is InputEventKey:
-		return OS.get_keycode_string(DisplayServer.keyboard_get_keycode_from_physical((e as InputEventKey).physical_keycode))
+		var fisica := (e as InputEventKey).physical_keycode
+		# sem tela (servidor/testes) não há layout de teclado para consultar
+		if DisplayServer.get_name() == "headless":
+			return OS.get_keycode_string(fisica)
+		return OS.get_keycode_string(DisplayServer.keyboard_get_keycode_from_physical(fisica))
 	if e is InputEventMouseButton:
 		match (e as InputEventMouseButton).button_index:
 			MOUSE_BUTTON_LEFT: return "Mouse esquerdo"

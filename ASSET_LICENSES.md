@@ -36,6 +36,8 @@
 | Kit visual: 18 GLB em `game/assets/{construcoes,cenario,baus_coletaveis,personagens}/` | Projeto Ventania (gerados por `tools/assets/kit/blender/*.py`) | Original | Original |
 | `game/assets/ui/fontes/fredoka_500.woff2`, `fredoka_700.woff2` | The Fredoka Project Authors | npm `@fontsource/fredoka` 5.3.0 (subset latin) | OFL-1.1 (texto em `game/assets/ui/fontes/OFL.txt`) |
 | `game/assets/audio/ui/*.wav` | Projeto Ventania (`tools/audio/gerar_sons_ui.py`, síntese) | Original | Original |
+| `game/assets/audio/jogo/*.wav` (22 efeitos) | Projeto Ventania (`tools/audio/gerar_sons_jogo.py`, síntese) | Original | Original |
+| `game/assets/ui/icones/*.png` (miniaturas do inventário) | Projeto Ventania (`game/tests/gerar_icones.gd`, renderizadas dos modelos originais) | Original | Original |
 | `game/assets/ui/icone.png` | Projeto Ventania (`tools/assets/kit/gerar_icone.py`) | Original | Original |
 | `game/assets/texturas_materiais/paleta_ventania.png`, `toon_paleta.gdshader`, `M_paleta_ventania.tres` | Projeto Ventania | Original | Original |
 
