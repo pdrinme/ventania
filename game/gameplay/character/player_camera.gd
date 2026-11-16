@@ -14,7 +14,7 @@ const FOV_MIRA := 55.0
 const PITCH_MIN := -80.0
 const PITCH_MAX := 70.0
 
-var alvo: Pawn
+var alvo: Node3D             # Pawn (jogando) ou PawnVisual de outro jogador (espectador)
 var yaw := 0.0
 var pitch := -10.0          # graus
 var mirando := false
@@ -72,14 +72,16 @@ func _process(delta: float) -> void:
 	if alvo == null:
 		return
 	mirando = Input.is_action_pressed("aim") and not bloqueado
-	var altura_alvo := ALTURA_AGACHADO if alvo.crouched else ALTURA_PE
+	var agachado: bool = alvo is Pawn and (alvo as Pawn).crouched
+	var altura_alvo := ALTURA_AGACHADO if agachado else ALTURA_PE
 	_altura = lerpf(_altura, altura_alvo, minf(1.0, delta * 12.0))
 	global_position = alvo.get_global_transform_interpolated().origin + Vector3(0, _altura, 0)
 	rotation = Vector3(deg_to_rad(pitch), deg_to_rad(yaw), 0)
 	_braco.spring_length = lerpf(_braco.spring_length, DIST_MIRA if mirando else DIST, minf(1.0, delta * 10.0))
 	_braco.position = Vector3(OMBRO, 0, 0)
 	_cam.fov = lerpf(_cam.fov, FOV_MIRA if mirando else FOV, minf(1.0, delta * 10.0))
-	_braco.add_excluded_object(alvo.get_rid())
+	if alvo is CollisionObject3D:
+		_braco.add_excluded_object((alvo as CollisionObject3D).get_rid())
 
 
 func camera() -> Camera3D:

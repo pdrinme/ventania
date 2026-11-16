@@ -1,5 +1,5 @@
 class_name CampoTreino
-extends Node3D
+extends Mapa
 ## Mapa de teste da Etapa 2: chão, construções do kit (com colisão) e props.
 ## O mesmo mapa roda no servidor (colisão) e no cliente (visual + colisão para predição).
 
@@ -7,8 +7,6 @@ const NOME := "campo_treino"
 const LIMITE := 110.0
 const ALTURA_MORTE := -30.0
 
-var com_ambiente := true   # céu/sol/neblina só no cliente
-var chest_nodes: Array[Node3D] = []
 
 ## Baús: [posição, rotação Y]. O índice é o id do baú na rede.
 ## Alturas: piso no nível N tem o topo em N + 0,10 (padrão da grade).
@@ -33,6 +31,34 @@ func _ready() -> void:
 	_chao()
 	_construcoes()
 	_props()
+
+
+func map_name() -> String:
+	return NOME
+
+
+func display_name() -> String:
+	return "Campo de treino"
+
+
+func chests() -> Array:
+	return CHESTS
+
+
+func loot_points() -> Array:
+	return LOOT_POINTS
+
+
+func dummies() -> Array:
+	return DUMMIES
+
+
+func death_height() -> float:
+	return ALTURA_MORTE
+
+
+func limit() -> float:
+	return LIMITE
 
 
 func spawn_point(i: int) -> Vector3:

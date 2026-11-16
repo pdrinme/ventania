@@ -16,15 +16,36 @@ var broadcast: Callable
 var loot := {}                       # id -> {"id","item","rarity","count","mag","ammo","mat","pos","dono","ate"}
 var chests: Array = []               # [{"pos","open","reopen_tick"}]
 var rng := RandomNumberGenerator.new()
+var reabastecer := true              # treino: baús fecham e reabastecem; BR: não
+var _pontos: Array = []
 var _proximo := 1
 
 
-func _init(mundo: CampoTreino, enviar: Callable, semente := 0) -> void:
+func _init(mundo: Mapa, enviar: Callable, semente := 0) -> void:
 	broadcast = enviar
 	rng.seed = semente if semente != 0 else int(Time.get_unix_time_from_system())
-	for c in CampoTreino.CHESTS:
+	for c in (mundo.chests() if mundo else CampoTreino.CHESTS):
 		chests.append({"pos": c[0], "rot": c[1], "open": false, "reopen_tick": 0})
-	for p in CampoTreino.LOOT_POINTS:
+	_pontos = mundo.loot_points() if mundo else CampoTreino.LOOT_POINTS
+	for p in _pontos:
+		if rng.randf() < 0.75:
+			_sortear_chao(p)
+
+
+## Partida nova: remove todo o loot, fecha os baús e sorteia de novo (vazio = só limpa).
+func reset(semente: int, vazio := false) -> void:
+	for id in loot.keys():
+		remove(id)
+	for i in chests.size():
+		if chests[i]["open"]:
+			chests[i]["open"] = false
+			broadcast.call(Protocol.pack_u16_msg(Protocol.S_CHEST, i, 0))
+		chests[i]["reopen_tick"] = 0
+		chests[i]["abrindo"] = 0
+	if vazio:
+		return
+	rng.seed = semente
+	for p in _pontos:
 		if rng.randf() < 0.75:
 			_sortear_chao(p)
 
@@ -178,6 +199,8 @@ func open_chest(i: int) -> void:
 
 ## Treino: baús fecham e reabastecem depois de um tempo.
 func update(tick: int) -> void:
+	if not reabastecer:
+		return
 	for i in chests.size():
 		var c: Dictionary = chests[i]
 		if c["open"]:

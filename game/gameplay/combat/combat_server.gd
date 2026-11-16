@@ -109,6 +109,12 @@ func process(c: GameServer.Cliente, cmd: Protocol.InputCmd) -> void:
 	c.aiming = cmd.has(Protocol.BTN_AIM)
 
 
+func cancel(c: GameServer.Cliente) -> void:
+	_cancelar(c)
+	c.fire_next = 0.0
+	c.swing_prev = -1.0
+
+
 func _cancelar(c: GameServer.Cliente) -> void:
 	c.reload_end = -1.0
 	c.use_end = -1.0
@@ -372,6 +378,8 @@ func _alvos(atirador: GameServer.Cliente, view_tick: int) -> Array:
 
 
 func _aplicar_dano(atirador: GameServer.Cliente, alvo: Dictionary, dano: int, cabeca: bool, pos: Vector3, arma: String) -> void:
+	if server.partida and alvo.has("cliente") and not server.partida.dano_ativo():
+		return                          # espera/contagem/fim: sem dano entre jogadores
 	var vit: Vitals = alvo["cliente"].vit if alvo.has("cliente") else alvo["boneco"]["vit"]
 	var r := vit.take_damage(dano)
 	var flags := (Protocol.HIT_HEAD if cabeca else 0) | (Protocol.HIT_SHIELD if r["shield"] > 0 else 0) | (Protocol.HIT_KILL if r["killed"] else 0)
@@ -391,6 +399,13 @@ func _aplicar_dano(atirador: GameServer.Cliente, alvo: Dictionary, dano: int, ca
 
 
 func eliminate(v: GameServer.Cliente, quem: int, arma: String) -> void:
+	if v.dead:
+		return
+	if server.partida and server.partida.on_elimination(v, quem):
+		# fora da partida em andamento (espera): só volta para a área de espera
+		v.vit.reset()
+		server.respawn_lobby(v)
+		return
 	v.dead = true
 	v.respawn_tick = server.tick + RESPAWN_TICKS
 	_cancelar(v)

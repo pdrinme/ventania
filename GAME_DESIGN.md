@@ -81,8 +81,9 @@ Eles ficam em arquivos de dados e serão ajustados com testes de jogo.
 
 ## 7. Partida Battle Royale
 
-- **Mapa inicial pequeno:** cerca de 600 m × 600 m, com 4–6 pontos de interesse originais, relevo simples, vegetação instanciada e construções ambientais destrutíveis e coletáveis. A expansão vem depois.
-- **Tormenta:** 6–8 fases (espera, fechamento e dano crescente). O centro da próxima zona é sorteado dentro da zona atual. O dano por segundo cresce a cada fase.
+- **Mapa inicial pequeno — Ilha Ventania:** ~600 m × 600 m (área jogável de 524 m entre as praias), relevo suave com o morro do Mirante no centro e vegetação instanciada. Pontos de interesse originais: **Vila Brisa** (casas de madeira), **Pedreira Cinza** (torres e casas de pedra, rochas), **Porto Ferrugem** (galpões e contêineres de metal), **Fazenda Girassol** (celeiro de dois andares e plantação), **Mirante do Vento** (torre de pedra com baú no topo) e **Acampamento Coral** (cabanas), mais 12 cabanas espalhadas. São 37 baús e 102 pontos de loot. As construções ainda não são destrutíveis nem coletáveis: isso entra na Etapa 5.
+- **Fluxo da partida:** espera no Mirante (sem dano) → contagem de 10 s → cada jogador aparece num ponto diferente da ilha só com a picareta → loot, combate e Tormenta → vitória → resultados (colocação, eliminações, tempo vivo) → nova partida em 15 s. Não há ônibus nem paraquedas por enquanto (ideia para depois).
+- **Tormenta:** 7 fases (`data/partida.json`): esperas de 60 → 20 s, fechamentos de 45 → 20 s, raios 190 / 120 / 75 / 45 / 25 / 10 / 0 m e dano de 1, 1, 2, 5, 8, 10 e 15 por segundo, só na vida. Uma partida dura no máximo ~10 min. O centro da próxima zona é sorteado dentro da zona atual e sempre em terra.
 - **Vitória:** sobra um jogador ou time. Depois disso aparecem a tela de resultados e a volta ao lobby.
 - **Espectador:** ao ser eliminado, o jogador acompanha quem o eliminou ou um companheiro de time, e pode voltar ao lobby a qualquer momento.
 

@@ -1,8 +1,10 @@
 extends Control
 ## Partida (cliente). Modos (SceneManager.params["modo"]):
-##   "local"  — treino: sobe um GameServer neste processo, num mundo 3D separado
-##              (SubViewport com own_world_3d), e conecta por ENet em 127.0.0.1.
-##   "remoto" — conecta em params["host"]:params["porta"].
+##   "local"    — treino: sobe um GameServer neste processo, num mundo 3D separado
+##                (SubViewport com own_world_3d), e conecta por ENet em 127.0.0.1.
+##   "br_local" — Battle Royale na Ilha Ventania com servidor neste processo.
+##   "remoto"   — conecta em params["host"]:params["porta"].
+## O mapa é criado quando o servidor diz qual é (S_WELCOME).
 ## O jogador local é PREDITO (Movement.step com a mesma entrada enviada ao
 ## servidor) e RECONCILIADO a cada snapshot. Os outros são INTERPOLADOS ~150 ms atrás.
 
@@ -12,7 +14,12 @@ const PORTAS_LOCAIS := [24801, 24802, 24803, 24804]
 var modo := "local"
 var server: GameServer
 var client: GameClient
-var mundo: CampoTreino
+var mundo: Mapa
+var tormenta: StormVisual
+var match_hud: MatchHud
+var _partida := {}                  # último S_MATCH
+var _assistindo := -1               # id do jogador assistido (espectador)
+var resultado := {}                 # último S_RESULT (testes)
 var pawn: Pawn
 var visual: PawnVisual
 var camera: PlayerCamera
@@ -70,8 +77,6 @@ func _ready() -> void:
 	var p: Dictionary = SceneManager.params
 	modo = p.get("modo", "local")
 
-	mundo = CampoTreino.new()
-	add_child(mundo)
 	camera = PlayerCamera.new()
 	add_child(camera)
 	sampler = InputSampler.new()
@@ -86,6 +91,10 @@ func _ready() -> void:
 	touch.sampler = sampler
 	touch.camera = camera
 	camada.add_child(touch)
+	match_hud = MatchHud.new()
+	match_hud.theme = tema
+	camada.add_child(match_hud)
+	match_hud.back_to_menu.connect(_sair)
 	combat_hud = CombatHud.new()
 	combat_hud.theme = tema
 	camada.add_child(combat_hud)
@@ -103,7 +112,8 @@ func _ready() -> void:
 	add_child(fx)
 	chests = ChestsClient.new()
 	add_child(chests)
-	chests.setup(mundo)
+	tormenta = StormVisual.new()
+	add_child(tormenta)
 	hud.resume_requested.connect(func(): _pausar(false))
 	hud.quit_requested.connect(_sair)
 	_atualizar_toque(InputManager.device)
@@ -115,7 +125,12 @@ func _ready() -> void:
 	client.rejected.connect(func(r): _falhar(r))
 	client.disconnected.connect(func(): _falhar("Conexão com o servidor perdida."))
 	client.snapshot_received.connect(_on_snapshot)
-	client.player_info.connect(func(id, nome): _nomes[id] = nome)
+	client.player_info.connect(func(id, nome):
+		_nomes[id] = nome
+		match_hud.set_names(_nomes))
+	client.match_state.connect(_on_match)
+	client.storm.connect(func(t): tormenta.set_state(t))
+	client.result.connect(_on_result)
 	client.player_left.connect(_remover_remoto)
 	client.status_received.connect(_on_status)
 	client.shot_received.connect(_on_shot)
@@ -132,7 +147,7 @@ func _ready() -> void:
 
 	var host: String = p.get("host", "127.0.0.1")
 	var porta: int = p.get("porta", Protocol.DEFAULT_PORT)
-	if modo == "local":
+	if modo == "local" or modo == "br_local":
 		porta = _subir_servidor_local()
 		if porta == 0:
 			_falhar("Não foi possível iniciar o servidor local.")
@@ -153,10 +168,17 @@ func _subir_servidor_local() -> int:
 	vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	vp.size = Vector2i(2, 2)
 	add_child(vp)
-	var mundo_srv := CampoTreino.new()
+	var br := modo == "br_local"
+	var mundo_srv := Mapa.create(IlhaVentania.NOME if br else CampoTreino.NOME)
 	mundo_srv.com_ambiente = false
 	vp.add_child(mundo_srv)
-	server = GameServer.new(mundo_srv)
+	# BR local: começa com 1 jogador depois de uma espera curta
+	var cfg := {}
+	if br:
+		cfg = PartidaBR.carregar_config()
+		cfg["min_jogadores"] = 1
+		cfg["espera_maxima_s"] = 3
+	server = GameServer.new(mundo_srv, 0, "br" if br else "treino", cfg)
 	add_child(server)
 	for porta in PORTAS_LOCAIS:
 		if server.start(porta, "127.0.0.1") == OK:
@@ -166,6 +188,11 @@ func _subir_servidor_local() -> int:
 
 
 func _on_welcome(info: Dictionary) -> void:
+	mundo = Mapa.create(info["map"])
+	add_child(mundo)
+	move_child(mundo, 0)
+	chests.setup(mundo)
+	match_hud.setup(mundo, tormenta)
 	pawn = Pawn.new()
 	pawn.entity_id = info["id"]
 	mundo.add_child(pawn)
@@ -173,7 +200,8 @@ func _on_welcome(info: Dictionary) -> void:
 	visual = PawnVisual.new()
 	pawn.add_child(visual)
 	camera.alvo = pawn
-	hud.flash("Campo de treino" if modo == "local" else "Conectado", 2.5)
+	match_hud.jogador = pawn
+	hud.flash(mundo.display_name(), 2.5)
 	_pausar(false)
 
 
@@ -261,6 +289,9 @@ func _process(delta: float) -> void:
 	if pawn:
 		_atualizar_visual_proprio(delta)
 		_atualizar_aviso()
+		match_hud.yaw = camera.yaw_rad()
+		if _morto and _assistindo >= 0:
+			_seguir_assistido()
 	_interpolar_remotos()
 	if inventario.is_open():
 		_proximos_t += delta
@@ -530,11 +561,18 @@ func _on_elim(e: Dictionary) -> void:
 	var vitima: String = _nomes.get(e["victim"], "?")
 	var quem: String = _nomes.get(e["killer"], "?")
 	var arma := ItemDB.id_of(e["weapon"])
+	var na_tormenta: bool = _em_partida() and e["killer"] == e["victim"]
 	var texto := "%s saiu do mapa" % vitima if e["killer"] == e["victim"] or arma.is_empty() \
 			else "%s eliminou %s (%s)" % [quem, vitima, ItemDB.display_name(arma)]
+	if na_tormenta:
+		texto = "%s foi pego pela Tormenta" % vitima
 	combat_hud.kill_feed(texto)
 	if pawn and e["victim"] == pawn.entity_id:
-		combat_hud.show_eliminated("Eliminado por %s\nReaparecendo…" % quem if e["killer"] != e["victim"] else "Você caiu!\nReaparecendo…")
+		if _em_partida():
+			combat_hud.show_eliminated("Eliminado por %s" % quem if e["killer"] != e["victim"] else ("Eliminado pela Tormenta" if na_tormenta else "Você caiu!"))
+			_assistindo = e["killer"] if e["killer"] != e["victim"] else -1
+		else:
+			combat_hud.show_eliminated("Eliminado por %s\nReaparecendo…" % quem if e["killer"] != e["victim"] else "Você caiu!\nReaparecendo…")
 
 
 func _set_morto(v: bool) -> void:
@@ -546,6 +584,17 @@ func _set_morto(v: bool) -> void:
 	if v:
 		_inventario(false)
 		_golpe_ini = -1
+		if _em_partida():
+			get_tree().create_timer(2.0).timeout.connect(func():
+				if _morto:
+					combat_hud.show_eliminated("")
+					_proximo_assistido(0))
+	else:
+		_assistindo = -1
+		camera.alvo = pawn
+		match_hud.jogador = pawn
+		match_hud.set_spectating("")
+		match_hud.hide_result()
 	if not v:
 		combat_hud.show_eliminated("")
 
@@ -730,6 +779,14 @@ func _nome_tecla(acao: String) -> String:
 
 
 func _unhandled_input(e: InputEvent) -> void:
+	if e.is_action_pressed("map") and not hud.is_paused():
+		match_hud.toggle_map(not match_hud.map_open())
+		get_viewport().set_input_as_handled()
+		return
+	if _morto and _em_partida() and e.is_action_pressed("fire") and not match_hud.result_visible():
+		_proximo_assistido(1)
+		get_viewport().set_input_as_handled()
+		return
 	if e.is_action_pressed("inventory") and not hud.is_paused():
 		_inventario(not inventario.is_open())
 		get_viewport().set_input_as_handled()
@@ -804,6 +861,62 @@ func _exit_tree() -> void:
 		client.close()
 	if server:
 		server.stop()
+
+
+# ---------- partida Battle Royale ----------
+
+func _em_partida() -> bool:
+	var e: int = _partida.get("estado", Protocol.MATCH_TREINO)
+	return e == Protocol.MATCH_JOGO or e == Protocol.MATCH_FIM
+
+
+func _on_match(m: Dictionary) -> void:
+	var antes: int = _partida.get("estado", Protocol.MATCH_TREINO)
+	_partida = m
+	match_hud.set_match(m)
+	if m["estado"] != antes:
+		match m["estado"]:
+			Protocol.MATCH_CONTAGEM:
+				hud.flash("Prepare-se!", 2.0)
+			Protocol.MATCH_JOGO:
+				hud.flash("A partida começou! Pegue armas e fique longe da Tormenta.", 3.5)
+				Audio.play_sfx("bau_abrir", -6.0)
+			Protocol.MATCH_ESPERA:
+				tormenta.clear()
+				match_hud.hide_result()
+				if antes == Protocol.MATCH_FIM:
+					hud.flash("Nova partida: área de espera", 2.5)
+
+
+func _on_result(r: Dictionary) -> void:
+	resultado = r
+	combat_hud.show_eliminated("")
+	var venceu: bool = pawn != null and r["vencedor"] == pawn.entity_id
+	match_hud.show_result(r, _nomes.get(r["vencedor"], ""), pawn.entity_id if pawn else -1)
+	Audio.play_sfx("escudo_ok" if venceu else "dano", -2.0)
+
+
+## Espectador: segue o jogador assistido (visual remoto) com a câmera.
+func _seguir_assistido() -> void:
+	var r: Dictionary = _remotos.get(_assistindo, {})
+	if r.is_empty() or not (r["visual"] as PawnVisual).visible:
+		_proximo_assistido(1)
+		return
+	camera.alvo = r["visual"]
+	match_hud.jogador = r["visual"]
+
+
+func _proximo_assistido(passo: int) -> void:
+	var ids := _remotos.keys().filter(func(id): return id < GameServer.DUMMY_ID_BASE and (_remotos[id]["visual"] as PawnVisual).visible)
+	ids.sort()
+	if ids.is_empty():
+		_assistindo = -1
+		match_hud.set_spectating("")
+		return
+	var i := ids.find(_assistindo)
+	_assistindo = ids[(i + passo + ids.size()) % ids.size()] if i >= 0 else ids[0]
+	match_hud.set_spectating(_nomes.get(_assistindo, "?"))
+	_seguir_assistido()
 
 
 ## Outros jogadores (sem contar os bonecos de treino).

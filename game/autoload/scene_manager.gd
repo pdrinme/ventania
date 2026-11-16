@@ -9,6 +9,7 @@ const SCENES := {
 	"menu": "res://scenes/menu/main_menu.tscn",
 	"settings": "res://scenes/settings/settings_menu.tscn",
 	"diagnostics": "res://scenes/diagnostics/diagnostics.tscn",
+	"benchmark_ilha": "res://scenes/diagnostics/benchmark_ilha.tscn",
 	"game": "res://scenes/game/game.tscn",
 	"server": "res://scenes/server/server_main.tscn",
 }

@@ -1,0 +1,21 @@
+{
+  "_doc": "Partida Battle Royale (Etapa 4). Tempos em segundos. O servidor é a autoridade. Tormenta: cada fase espera, depois fecha até o raio indicado; o dano por segundo (só na vida, ignora o escudo) vale para quem está fora da zona segura durante a fase.",
+  "min_jogadores": 2,
+  "espera_maxima_s": 90,
+  "contagem_s": 10,
+  "fim_s": 15,
+  "protecao_inicio_s": 3,
+  "tormenta": {
+    "raio_inicial": 380,
+    "margem_terra": 230,
+    "fases": [
+      {"espera_s": 60, "fechamento_s": 45, "raio": 190, "dano": 1},
+      {"espera_s": 45, "fechamento_s": 40, "raio": 120, "dano": 1},
+      {"espera_s": 40, "fechamento_s": 35, "raio": 75, "dano": 2},
+      {"espera_s": 35, "fechamento_s": 30, "raio": 45, "dano": 5},
+      {"espera_s": 30, "fechamento_s": 25, "raio": 25, "dano": 8},
+      {"espera_s": 25, "fechamento_s": 20, "raio": 10, "dano": 10},
+      {"espera_s": 20, "fechamento_s": 20, "raio": 0, "dano": 15}
+    ]
+  }
+}

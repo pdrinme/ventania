@@ -177,7 +177,7 @@ func test_itens_proximos() -> void:
 
 
 func test_protocolo_v4() -> void:
-	assert_eq(Protocol.GAME_PROTOCOL, 4)
+	assert_true(Protocol.GAME_PROTOCOL >= 4)
 	var op := Protocol.unpack_inv(Protocol.pack_inv({"req": 42, "op": Protocol.OP_SPLIT, "a": 2, "n": 7}))
 	assert_eq(op["req"], 42)
 	assert_eq(op["op"], Protocol.OP_SPLIT)

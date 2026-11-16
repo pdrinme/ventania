@@ -56,14 +56,30 @@ kill "$PID" 2>/dev/null; wait "$PID" 2>/dev/null; rm -rf "$TMPDB"
 passo "Servidor dedicado de partida (outro processo) + 2 clientes"
 PORTA=$(python3 -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()")
 LOGSRV=$(mktemp)
-"$GODOT" --headless --path game -- --servidor --porta="$PORTA" >"$LOGSRV" 2>&1 &
+"$GODOT" --headless --path game -- --servidor --modo=treino --porta="$PORTA" >"$LOGSRV" 2>&1 &
 PID=$!
 for i in $(seq 1 100); do grep -q "servidor dedicado pronto" "$LOGSRV" 2>/dev/null && break; sleep 0.1; done
 timeout 60 "$GODOT" --headless --path game -s res://tests/integration/test_dedicated_server.gd -- 127.0.0.1 "$PORTA" 2>&1 | grep -E "DEDICADO|FALHA"; checar "${PIPESTATUS[0]}" "servidor dedicado"
 kill "$PID" 2>/dev/null; wait "$PID" 2>/dev/null; rm -f "$LOGSRV"
 
-passo "Desempenho do servidor (24 jogadores)"
+passo "Etapa 4: partida Battle Royale completa (clientes simulados, servidor no processo)"
+FILTRO="PARTIDA_BR|FALHOU|partida:"
+rodar_godot timeout 600 "$GODOT" --headless --path game -s res://tests/integration/test_partida_br.gd -- 6; checar $? "partida BR"
+
+passo "Etapa 4: partida BR no servidor dedicado (outro processo) com 4 clientes simulados"
+PORTA=$(python3 -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()")
+LOGSRV=$(mktemp)
+"$GODOT" --headless --path game -- --servidor --modo=br --porta="$PORTA" --config=res://tests/integration/partida_rapida.json --min-jogadores=4 >"$LOGSRV" 2>&1 &
+PID=$!
+for i in $(seq 1 150); do grep -q "servidor dedicado pronto" "$LOGSRV" 2>/dev/null && break; sleep 0.1; done
+rodar_godot timeout 400 "$GODOT" --headless --path game -s res://tests/integration/test_partida_br.gd -- 4 --externo="$PORTA"; checar $? "partida BR dedicada"
+grep -E "partida [0-9]+ (começou|terminou)" "$LOGSRV" | sed 's/^.*\] /   servidor: /'
+kill "$PID" 2>/dev/null; wait "$PID" 2>/dev/null; rm -f "$LOGSRV"
+
+passo "Desempenho do servidor (24 jogadores): campo de treino e ilha"
 "$GODOT" --headless --path game -s res://tests/perf/perf_server.gd -- 24 300 2>&1 | grep PERF_SERVIDOR
+echo "   (Ilha Ventania, jogadores espalhados pelos POIs):"
+"$GODOT" --headless --path game -s res://tests/perf/perf_server.gd -- 24 300 ilha 2>&1 | grep PERF_SERVIDOR
 
 echo
 if [ "$FALHAS" -eq 0 ]; then echo "TODOS OS TESTES PASSARAM"; else echo "$FALHAS GRUPO(S) FALHARAM"; fi

@@ -44,3 +44,11 @@ func add_shield(amount: int, limite: int) -> int:
 func reset() -> void:
 	health = MAX_HEALTH
 	shield = 0
+
+
+## Dano da Tormenta: ignora o escudo (vai direto na vida).
+func take_storm_damage(amount: int) -> bool:
+	if not alive() or amount <= 0:
+		return false
+	health = maxi(0, health - amount)
+	return health <= 0

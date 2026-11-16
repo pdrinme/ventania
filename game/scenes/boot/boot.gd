@@ -31,6 +31,9 @@ func _ready() -> void:
 		if a.begins_with("--sair-apos="):
 			SairApos.new().run(get_tree(), a.trim_prefix("--sair-apos=").split(","))
 			return
+	if "--benchmark-ilha" in args:
+		SceneManager.go("benchmark_ilha")
+		return
 	if "--teste-fumaca" in args:
 		SmokeTest.new().run(get_tree())
 		return

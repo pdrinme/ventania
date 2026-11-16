@@ -13,7 +13,7 @@ para um pequeno grupo de amigos.
 
 ## Status
 
-**Etapa 3 (combate e inventário): concluída.** Campo de treino com 5 armas, raridades, baús, consumíveis, vida e escudo, e tiro decidido pelo servidor com compensação de latência, sozinho (com bonecos de treino) ou com amigos. Ainda não há partida Battle Royale com Tormenta (Etapa 4).
+**Etapa 4 (mapa e Battle Royale): implementada e testada com clientes simulados.** Partida Battle Royale na Ilha Ventania (~600 m, 6 pontos de interesse), com loot pelo inventário completo, picareta permanente, Tormenta em 7 fases, eliminações, espectador, vitória e partidas seguidas no servidor dedicado. O campo de treino (bonecos, reaparecer) continua disponível. Ainda não há construção pelo jogador (Etapa 5) nem bots (Etapa 6).
 Veja [ROADMAP.md](ROADMAP.md).
 
 ## Documentos
@@ -68,6 +68,8 @@ Servidor de partida dedicado (o mesmo executável do jogo):
 ```bash
 godot --headless --path game -- --servidor --porta=24800
 ```
+
+Por padrão o servidor roda partidas Battle Royale seguidas (começa com 2+ jogadores, ou depois de 90 s com 1). Opções: `--modo=treino` (campo de treino), `--min-jogadores=N`, `--config=arquivo.json` (sobrescreve `game/data/partida.json`).
 
 Todos os testes (Python, Godot, fumaça, integração, servidor dedicado e desempenho):
 

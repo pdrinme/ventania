@@ -32,7 +32,8 @@ func _ready() -> void:
 	coluna.add_child(espaco)
 
 	var alvo: int = get_tree().root.theme.get_meta("altura_alvo", 52)
-	var b1 := _botao(coluna, "Jogar: campo de treino", alvo, func(): SceneManager.go("game", {"modo": "local"}))
+	var b1 := _botao(coluna, "Battle Royale: Ilha Ventania", alvo, func(): SceneManager.go("game", {"modo": "br_local"}))
+	_botao(coluna, "Campo de treino", alvo, func(): SceneManager.go("game", {"modo": "local"}))
 	_botao(coluna, "Entrar em servidor", alvo, _entrar_servidor)
 	_botao(coluna, "Vitrine e teste de desempenho", alvo, func(): SceneManager.go("diagnostics"))
 	_botao(coluna, "Configurações", alvo, func(): SceneManager.go("settings"))

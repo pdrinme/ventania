@@ -63,6 +63,7 @@ func _ready() -> void:
 	_b_perfil = _botao(coluna, "", alvo, _proximo_perfil)
 	_b_densidade = _botao(coluna, "", alvo, _proxima_densidade)
 	_b_bench = _botao(coluna, "Iniciar teste (20 s)", alvo, _iniciar_bench)
+	_botao(coluna, "Benchmark da Ilha (3 perfis, ~70 s)", alvo, func(): SceneManager.go("benchmark_ilha"))
 	_b_copiar = _botao(coluna, "Copiar resultado", alvo, func():
 		DisplayServer.clipboard_set(_ultimo_resumo)
 		_resultado.text += "\n(copiado)")

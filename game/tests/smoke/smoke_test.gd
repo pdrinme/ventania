@@ -57,6 +57,7 @@ func run(tree: SceneTree) -> void:
 	_checar(FileAccess.file_exists(caminho), "benchmark salva JSON")
 
 	await _jogar(tree)
+	await _jogar_br(tree)
 
 	await _ir(tree, "menu")
 	_checar(tree.current_scene.name == "main_menu", "voltou ao menu")
@@ -310,6 +311,53 @@ func _picareta_e_inventario(tree: SceneTree, jogo) -> void:
 	_checar(ItemDB.id_of(jogo._status["slots"][0]["item"]) == "faisca", "pistola de volta no espaço 1")
 	jogo._inventario(false)
 	_checar(not jogo.inventario.is_open() and not jogo.sampler.inventario_aberto, "tela de inventário fecha")
+
+
+## Battle Royale local na Ilha Ventania: mapa vindo do servidor, contagem, início
+## da partida (só picareta, longe da espera), Tormenta, HUD da partida e fim.
+func _jogar_br(tree: SceneTree) -> void:
+	await _ir(tree, "menu")
+	var ok: bool = await SceneManager.go("game", {"modo": "br_local"})
+	_checar(ok, "abrir Battle Royale local")
+	var jogo = tree.current_scene
+	for i in 200:
+		await tree.physics_frame
+		if jogo.pawn:
+			break
+	_checar(jogo.mundo is IlhaVentania, "cliente montou a Ilha Ventania anunciada pelo servidor")
+	_checar(jogo.match_hud._mini.visible, "minimapa visível")
+	var viu_contagem := false
+	for i in 30 * 25:
+		await tree.physics_frame
+		var e: int = jogo._partida.get("estado", -1)
+		viu_contagem = viu_contagem or e == Protocol.MATCH_CONTAGEM
+		if e == Protocol.MATCH_JOGO:
+			break
+	_checar(viu_contagem, "contagem regressiva antes da partida")
+	_checar(jogo._partida.get("estado", -1) == Protocol.MATCH_JOGO, "partida começou")
+	for i in 20:
+		await tree.physics_frame
+		await tree.process_frame
+	_checar(jogo.tormenta.active() and jogo.tormenta.visible, "Tormenta recebida e desenhada")
+	_checar(jogo.match_hud._topo.text.begins_with("Vivos 1"), "HUD da partida: %s" % jogo.match_hud._topo.text)
+	_checar(jogo.combat_hud.current_item() == "picareta", "começa só com a picareta na mão")
+	_checar(jogo._status["slots"].all(func(sl): return sl["item"] == 0), "inventário vazio no início da partida")
+	_checar(jogo.server.loot.loot.size() > 40, "loot do mapa sorteado (%d itens)" % jogo.server.loot.loot.size())
+	var cli: GameServer.Cliente = jogo.server.clientes.values()[0]
+	cli.pawn.global_position = Vector3(250, jogo.mundo.ground_height(250, 250) + 0.3, 250)
+	for i in 10:
+		await tree.physics_frame
+		await tree.process_frame
+	_checar(jogo.tormenta.is_outside(jogo.pawn.global_position) or not jogo.server.partida.tormenta.is_outside(cli.pawn.global_position),
+			"cliente e servidor concordam sobre estar fora da zona")
+	jogo.server.combat.eliminate(cli, cli.id, "")
+	for i in 60:
+		await tree.physics_frame
+		if not jogo.resultado.is_empty() and jogo._partida.get("estado", -1) == Protocol.MATCH_FIM:
+			break
+	_checar(not jogo.resultado.is_empty(), "tela de resultado recebida (#%d de %d)" % [jogo.resultado.get("colocacao", 0), jogo.resultado.get("total", 0)])
+	_checar(jogo._partida.get("estado", -1) == Protocol.MATCH_FIM, "partida terminou")
+	_checar(jogo.match_hud._res_titulo.text != "VITÓRIA!", "eliminado sozinho não é vitória")
 
 
 func _ir(tree: SceneTree, cena: String) -> void:

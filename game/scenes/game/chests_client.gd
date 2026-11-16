@@ -3,7 +3,7 @@ extends Node
 ## Baús no cliente: destaque quando dá para interagir, abertura sincronizada
 ## (tampa + partículas + som) e o ponto da alça que a mão do personagem alcança.
 
-var mundo: CampoTreino
+var mundo: Mapa
 var abertos := {}                  # i -> true
 var _desde_abertura := {}          # i -> segundos desde que abriu
 var _destacado := -1
@@ -21,7 +21,7 @@ void fragment() {
 """
 
 
-func setup(m: CampoTreino) -> void:
+func setup(m: Mapa) -> void:
 	mundo = m
 	var sh := Shader.new()
 	sh.code = SHADER_DESTAQUE

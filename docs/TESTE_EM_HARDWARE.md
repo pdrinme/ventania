@@ -30,12 +30,22 @@ GPU integrada a partir de 2012 atende.
 | Recarregar | R | X | Botão Recarga |
 | Pegar item / abrir baú (segurar) | E | Y | Botão Pegar |
 | Trocar de espaço | 1–5 ou roda do mouse | LB / RB | Tocar no espaço |
+| Picareta | F | ► (direcional direito) | Tocar no 1º espaço |
+| Inventário | Tab | Select / Back | Botão Mochila |
+| Mapa | M | ▲ (direcional cima) | — |
 | Pausa | Esc | Start | Botão II / voltar |
 
 Para testar: atire nos três **bonecos de treino** à frente do ponto inicial,
 abra os baús (há um no topo da torre de pedra e outro no telhado da caixa de
 metal), troque de arma, use curativos e células de escudo. Com um amigo no mesmo
 servidor, dá para trocar tiros de verdade. Quem é eliminado reaparece em 4 s.
+
+**Battle Royale (Etapa 4):** no menu, **Battle Royale: Ilha Ventania** abre uma
+partida sozinho (serve para conhecer a ilha e a Tormenta: você vence se ainda
+estiver vivo quando a última fase terminar). Com amigos, o servidor dedicado roda
+partidas seguidas: todos esperam no Mirante, a contagem começa com 2 ou mais
+jogadores, cada um aparece num ponto da ilha só com a picareta, e quem é eliminado
+assiste aos outros (Atirar troca de jogador, Esc volta ao menu).
 
 **Jogar com amigos (mesma rede ou VPN):**
 1. Em um PC, abra um terminal na pasta do jogo e rode o servidor:
@@ -45,6 +55,7 @@ servidor, dá para trocar tiros de verdade. Quem é eliminado reaparece em 4 s.
 ```
 
    No Windows: `Ventania.console.exe --headless -- --servidor` (se existir) ou `Ventania.exe --headless -- --servidor`.
+   Isso roda partidas Battle Royale. Para o campo de treino, acrescente `--modo=treino`.
 2. Libere a porta **24800 UDP** no firewall desse PC.
 3. Cada jogador vai em **Configurações → Rede**, preenche **Seu nome** e **Servidor de partida** (`IP-DO-PC:24800`) e toca em **Entrar em servidor**. Quem roda o servidor também pode jogar no mesmo PC usando `127.0.0.1:24800`.
 
@@ -59,6 +70,8 @@ Ligue **Configurações → Gráficos → Mostrar FPS** para ver o FPS durante a
    - **Perfil: Equilibrado**, Densidade 1×1;
    - **Perfil: Qualidade**, Densidade 1×1;
    - o perfil que rodou melhor, com **Densidade 2×2** e depois **3×3**. Isso simula uma área com muito mais construções.
+
+5. **Benchmark da Ilha (Etapa 4):** na mesma tela, toque em **Benchmark da Ilha (3 perfis, ~70 s)**. A câmera percorre os pontos de interesse com 16 personagens e a Tormenta, e mede os três perfis em sequência. No fim, o resumo já fica copiado: cole aqui. Também roda pela linha de comando: `./ventania.x86_64 -- --benchmark-ilha`.
 
 Os resultados também ficam salvos (JSON + CSV, frame a frame) em:
 - Windows: `%APPDATA%\Godot\app_userdata\Ventania\benchmarks\`

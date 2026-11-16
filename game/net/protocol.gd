@@ -4,7 +4,7 @@ extends RefCounted
 ## Cliente envia ENTRADAS (não posições); servidor envia SNAPSHOTS do estado.
 ## Ver ARCHITECTURE §4.
 
-const GAME_PROTOCOL := 4
+const GAME_PROTOCOL := 5
 const DEFAULT_PORT := 24800
 const TICK_RATE := 30            # simulação (Hz)
 const SNAPSHOT_EVERY := 2        # snapshot a cada N ticks (15 Hz)
@@ -36,6 +36,16 @@ const S_LOOT_GONE := 21      # para todos: item no chão sumiu
 const S_CHEST := 22          # para todos: baú aberto/fechado
 const S_INV_RESULT := 23     # para o dono: resultado de uma operação de inventário (Inventory.Err)
 const S_MELEE := 24          # para todos: impacto de um golpe de picareta (efeito por material)
+const S_MATCH := 25          # para todos: estado da partida BR (espera, contagem, jogo, fim), vivos, vencedor
+const S_STORM := 26          # para todos: Tormenta (fase, círculos de/para, tempos, dano)
+const S_RESULT := 27         # para um jogador: colocação, eliminações e tempo vivo (ao ser eliminado ou vencer)
+
+# estados da partida (S_MATCH)
+const MATCH_TREINO := 0
+const MATCH_ESPERA := 1
+const MATCH_CONTAGEM := 2
+const MATCH_JOGO := 3
+const MATCH_FIM := 4
 
 # operações de inventário (C_INV)
 const OP_SWAP := 1           # a, b: espaços 0..4
@@ -575,3 +585,83 @@ static func unpack_melee(data: PackedByteArray) -> Dictionary:
 	r["flags"] = b.get_u8()
 	r["target"] = b.get_u16()
 	return r
+
+
+# ---------- partida Battle Royale ----------
+
+## {"estado","vivos","total","resta_ms","vencedor","espectadores"}
+static func pack_match(m: Dictionary) -> PackedByteArray:
+	var b := _buf()
+	b.put_u8(S_MATCH)
+	b.put_u8(m["estado"])
+	b.put_u8(clampi(m["vivos"], 0, 255))
+	b.put_u8(clampi(m["total"], 0, 255))
+	b.put_u32(clampi(m["resta_ms"], 0, 0x7FFFFFFF))
+	b.put_u16(m.get("vencedor", 0))
+	return b.data_array
+
+
+static func unpack_match(data: PackedByteArray) -> Dictionary:
+	if data.size() != 10:
+		return {}
+	var b := _reader(data)
+	b.seek(1)
+	return {"estado": b.get_u8(), "vivos": b.get_u8(), "total": b.get_u8(), "resta_ms": b.get_u32(), "vencedor": b.get_u16()}
+
+
+## Tormenta.to_dict()
+static func pack_storm(t: Dictionary) -> PackedByteArray:
+	var b := _buf()
+	b.put_u8(S_STORM)
+	b.put_u8(t["fase"])
+	b.put_u8(t["fases"])
+	b.put_u8((1 if t["fechando"] else 0) | (2 if t["terminou"] else 0))
+	b.put_float(t["c_de"].x)
+	b.put_float(t["c_de"].y)
+	b.put_float(t["r_de"])
+	b.put_float(t["c_para"].x)
+	b.put_float(t["c_para"].y)
+	b.put_float(t["r_para"])
+	b.put_u32(t["total_ms"])
+	b.put_u32(t["resta_ms"])
+	b.put_u8(clampi(t["dano"], 0, 255))
+	return b.data_array
+
+
+static func unpack_storm(data: PackedByteArray) -> Dictionary:
+	if data.size() != 37:
+		return {}
+	var b := _reader(data)
+	b.seek(1)
+	var r := {"fase": b.get_u8(), "fases": b.get_u8()}
+	var f := b.get_u8()
+	r["fechando"] = f & 1 != 0
+	r["terminou"] = f & 2 != 0
+	r["c_de"] = Vector2(b.get_float(), b.get_float())
+	r["r_de"] = b.get_float()
+	r["c_para"] = Vector2(b.get_float(), b.get_float())
+	r["r_para"] = b.get_float()
+	r["total_ms"] = b.get_u32()
+	r["resta_ms"] = b.get_u32()
+	r["dano"] = b.get_u8()
+	return r
+
+
+## {"colocacao","total","eliminacoes","tempo_s","vencedor"}
+static func pack_result(r: Dictionary) -> PackedByteArray:
+	var b := _buf()
+	b.put_u8(S_RESULT)
+	b.put_u8(r["colocacao"])
+	b.put_u8(r["total"])
+	b.put_u8(clampi(r["eliminacoes"], 0, 255))
+	b.put_u16(clampi(r["tempo_s"], 0, 65535))
+	b.put_u16(r.get("vencedor", 0))
+	return b.data_array
+
+
+static func unpack_result(data: PackedByteArray) -> Dictionary:
+	if data.size() != 8:
+		return {}
+	var b := _reader(data)
+	b.seek(1)
+	return {"colocacao": b.get_u8(), "total": b.get_u8(), "eliminacoes": b.get_u8(), "tempo_s": b.get_u16(), "vencedor": b.get_u16()}

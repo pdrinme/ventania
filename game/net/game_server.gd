@@ -58,7 +58,9 @@ class Cliente:
 	var respawn_tick := 0
 	var dirty := true
 
-var world: CampoTreino
+var world: Mapa
+var modo := "treino"         # "treino" (reaparece, bonecos) ou "br" (partida Battle Royale)
+var partida: PartidaBR
 var peer: ENetMultiplayerPeer
 var tick := 0
 var clientes := {}           # peer_id -> Cliente
@@ -70,18 +72,27 @@ var _proximo_id := 1
 var _spawns := 0
 
 
-func _init(mundo: CampoTreino, semente_loot := 0) -> void:
+## modo "br": PartidaBR (config opcional, ex.: tempos curtos nos testes).
+func _init(mundo: Mapa, semente_loot := 0, modo_partida := "treino", config_partida := {}) -> void:
 	world = mundo
+	modo = modo_partida
 	combat = CombatServer.new(self)
 	loot = LootServer.new(mundo, func(d): broadcast(d, true), semente_loot)
+	if modo == "br":
+		kit_inicial = false
+		loot.reabastecer = false
+		loot.reset(0, true)          # na espera não há loot; ele é sorteado ao começar
+		partida = PartidaBR.new(self, config_partida)
 
 
 func _ready() -> void:
-	for i in CampoTreino.DUMMIES.size():
+	if modo != "treino":
+		return
+	for i in world.dummies().size():
 		var p := Pawn.new()
 		p.entity_id = DUMMY_ID_BASE + i
 		world.add_child.call_deferred(p)
-		p.position = CampoTreino.DUMMIES[i]
+		p.position = world.dummies()[i]
 		var v := Vitals.new()
 		v.shield = 50
 		bonecos.append({"id": p.entity_id, "pawn": p, "vit": v, "last_hit": 0})
@@ -119,10 +130,12 @@ func _physics_process(dt: float) -> void:
 	for c: Cliente in clientes.values():
 		if c.pawn:
 			_simular(c, dt)
-			if c.dead and tick >= c.respawn_tick:
+			if c.dead and tick >= c.respawn_tick and partida == null:
 				_reviver(c)
 	combat.update_dummies()
 	loot.update(tick)
+	if partida:
+		partida.update()
 	for c: Cliente in clientes.values():
 		if c.pawn:
 			combat.record(tick, c.id, c.pawn.global_position, c.pawn.crouched)
@@ -157,7 +170,7 @@ func _simular(c: Cliente, dt: float) -> void:
 			c.simulados += 1
 			if not c.dead:
 				combat.process(c, cmd)
-	if c.pawn.global_position.y < CampoTreino.ALTURA_MORTE and not c.dead:
+	if c.pawn.global_position.y < world.death_height() and not c.dead:
 		combat.eliminate(c, c.id, "")
 
 
@@ -214,7 +227,9 @@ func _entrar(de: int, nome: String) -> void:
 	clientes[de] = c
 	_reaparecer(c)
 	_dar_kit(c)
-	send_to(de, Protocol.pack_welcome(c.id, tick, CampoTreino.NOME), true)
+	if partida:
+		partida.on_join(c)
+	send_to(de, Protocol.pack_welcome(c.id, tick, world.map_name()), true)
 	for outro: Cliente in clientes.values():
 		send_to(de, Protocol.pack_player_info(outro.id, outro.nome), true)
 		if outro.peer_id != de:
@@ -263,6 +278,8 @@ func _on_desconectou(id: int) -> void:
 	var c: Cliente = clientes.get(id)
 	clientes.erase(id)
 	if c and c.pawn:
+		if partida:
+			partida.on_leave(c)
 		if not c.dead:
 			loot.drop_inventory(c.inv, c.pawn.global_position)
 		c.pawn.queue_free()
@@ -347,6 +364,24 @@ static func _limpar_nome(n: String) -> String:
 			limpo += ch
 	limpo = limpo.substr(0, Protocol.MAX_NAME).strip_edges()
 	return limpo if not limpo.is_empty() else "Jogador"
+
+
+func client_by_id(id: int) -> Cliente:
+	for c: Cliente in clientes.values():
+		if c.id == id:
+			return c
+	return null
+
+
+## Volta para a área de espera (partida BR fora de jogo).
+func respawn_lobby(c: Cliente) -> void:
+	c.dead = false
+	_reaparecer(c)
+	c.dirty = true
+
+
+func log_msg(msg: String) -> void:
+	_log(msg)
 
 
 func player_count() -> int:

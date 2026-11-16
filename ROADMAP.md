@@ -182,9 +182,50 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 - Teste em hardware real (notebook e celular) e uso com controle físico (a navegação por foco foi feita, mas não testada com um controle de verdade).
 - Vida das construções, rachaduras, destruição e coleta: Etapa 5 (ver abaixo).
 
-### Etapa 4 — Mapa e sistemas Battle Royale ⬜
-Mapa pequeno (cerca de 600 m), construções ambientais, loot, Tormenta e zona segura, eliminações, espectador, vitória e encerramento.
-**Aceite:** partida completa do início ao fim (com clientes simulados), e benchmark do mapa nos 3 perfis.
+### Etapa 4 — Mapa e sistemas Battle Royale ✅ (v0.4.0; falta a medição no seu hardware)
+Começou automaticamente depois da picareta e do inventário validados, como pedido.
+
+**Implementado:**
+- **Mapa genérico** (`Mapa`): o servidor anuncia o mapa e o cliente o monta. Servidor, loot e cliente deixaram de depender do campo de treino.
+- **Ilha Ventania** (~600 m, área jogável de 524 m): relevo determinístico (igual no servidor e no cliente), praias e mar, morro central.
+  - 6 POIs originais feitos com as peças do kit: Vila Brisa, Pedreira Cinza, Porto Ferrugem, Fazenda Girassol, Mirante do Vento e Acampamento Coral.
+  - 12 cabanas espalhadas, ~365 árvores, pedras e arbustos.
+  - 37 baús e 102 pontos de loot.
+  - Desenhada com MultiMesh por região e colisão com formas compartilhadas.
+- **Loot pelo inventário novo:** baús e chão usam o mesmo `LootServer`/`Inventory` da v0.3.3 (pegar, trocar, largar). O loot é sorteado de novo a cada partida, e os baús não reabastecem no BR.
+- **Partida (`PartidaBR`):**
+  - espera (Mirante, sem dano), contagem, jogo, fim e nova partida;
+  - cada jogador aparece num ponto da ilha só com a picareta;
+  - eliminação definitiva com colocação e tela de resultado;
+  - espectador (segue quem eliminou; Atirar troca, Esc volta ao menu);
+  - vitória do último vivo (sozinho: sobreviver à Tormenta);
+  - desconectar conta como eliminação; quem entra no meio assiste.
+- **Tormenta:** 7 fases em `data/partida.json`, zona seguinte sempre dentro da atual e em terra, dano só na vida, desempate quando todos morreriam juntos. Parede roxa animada, aviso e tela roxa dentro dela, tempo e fase no HUD.
+- **HUD da partida:** vivos/total, fase e tempo, minimapa gerado do relevo e mapa completo (M) com os POIs e as zonas atual e próxima.
+- **Servidor dedicado:** roda partidas BR seguidas por padrão (`--modo=treino` para o campo, `--min-jogadores`, `--config`). No menu: **Battle Royale: Ilha Ventania** (local) e **Campo de treino**.
+- **Protocolo v5:** `S_MATCH`, `S_STORM`, `S_RESULT` e material no loot.
+
+**Aceite — executado:**
+- **Partida completa com clientes simulados**, nos dois modos:
+  - no processo, 6 clientes por ENet: espera → contagem → jogo → fim → nova partida; 5 de 6 pegaram arma, atiraram e eliminaram; vencedor único; colocações 1–6 sem repetição; todos receberam o resultado; a Tormenta fechou;
+  - num **servidor dedicado em outro processo**, 4 clientes: partida completa com vencedor e colocações 1–4.
+  Os clientes simulados (`tests/integration/cliente_simulado.gd`) jogam só com o que o servidor envia; não são os bots da Etapa 6.
+- 90 unitários (6 novos: fases e zonas aninhadas em 5 sementes, fechamento, dano só na vida, mensagens, ilha determinística, mapa pelo nome). Fumaça do BR local: mapa vindo do servidor, contagem, início só com a picareta, Tormenta, HUD, loot, fim e resultado.
+- **Benchmark do mapa nos 3 perfis** (`--benchmark-ilha` ou botão na tela de desempenho): rota pelos POIs com 16 personagens e a Tormenta. Aqui só há renderização por software (llvmpipe, sem GPU), então **o FPS daqui não vale para o seu aparelho**. As chamadas de desenho e primitivas não dependem da GPU:
+
+| Perfil | Draw calls | Primitivas | Orçamento (ARCHITECTURE §9) | FPS no llvmpipe (só referência) |
+|---|---|---|---|---|
+| Desempenho | 73 | 57 mil | ≤ 150 / ≤ 100 mil | 26,4 (1% pior 18,9) |
+| Equilibrado | 161 | 127 mil | ≤ 300 / ≤ 250 mil | 16,4 (12,4) |
+| Qualidade | 191 | 158 mil | ≤ 600 / ≤ 600 mil | 7,7 (5,3) |
+
+- **Servidor:** 24 jogadores na ilha a 3,8 ms/tick em média (11% do tick; picos de até 19 ms), contra 1,0 ms no campo de treino. O custo vem do relevo e dos ~760 corpos de colisão. Cabe no orçamento, mas é o primeiro ponto a otimizar se o PC do servidor for fraco.
+- Capturas: `game/tests/capturar_ilha.gd` (vista aérea, os 6 POIs, chão, Tormenta, mapa e resultado).
+
+**Pendente / não validado:**
+- **FPS do mapa no seu notebook e no celular:** rode o Benchmark da Ilha e me mande o resultado. É o último item do aceite.
+- Partida com pessoas de verdade pela rede (só clientes simulados até agora).
+- As construções do mapa ainda não são destrutíveis (Etapa 5). Não há ônibus nem paraquedas (não fazia parte do plano da Etapa 4). Os bots (IA) são a Etapa 6.
 
 ### Etapa 5 — Construção ⬜
 Parede, piso, rampa e teto, com grade, edição, destruição, desabamento sem apoio e materiais, tudo sincronizado.

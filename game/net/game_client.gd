@@ -20,6 +20,9 @@ signal loot_removed(id: int)
 signal chest_changed(id: int, open: bool)
 signal inventory_result(r: Dictionary)
 signal melee_impact(m: Dictionary)
+signal match_state(m: Dictionary)
+signal storm(t: Dictionary)
+signal result(r: Dictionary)
 
 const TEMPO_CONEXAO_S := 6.0
 
@@ -113,6 +116,18 @@ func _receber(dados: PackedByteArray) -> void:
 			var r := Protocol.unpack_inv_result(dados)
 			if not r.is_empty():
 				inventory_result.emit(r)
+		Protocol.S_MATCH:
+			var m := Protocol.unpack_match(dados)
+			if not m.is_empty():
+				match_state.emit(m)
+		Protocol.S_STORM:
+			var st := Protocol.unpack_storm(dados)
+			if not st.is_empty():
+				storm.emit(st)
+		Protocol.S_RESULT:
+			var r := Protocol.unpack_result(dados)
+			if not r.is_empty():
+				result.emit(r)
 		Protocol.S_MELEE:
 			var m := Protocol.unpack_melee(dados)
 			if not m.is_empty():
