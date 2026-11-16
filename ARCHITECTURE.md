@@ -76,6 +76,14 @@ game/
 Regra: um sistema por pasta, arquivos pequenos e sem "god objects". Os autoloads
 apenas coordenam. A lógica fica em classes testáveis.
 
+### Convenções de código (Etapa 1)
+
+- **Autoloads, em ordem:** `Log`, `Audio`, `Settings`, `InputManager`, `Meta`, `SceneManager`. A ordem importa: `Settings` aplica volumes no `Audio`.
+- **Lógica testável fica em classes `RefCounted` sem dependência de cena** (`SettingsStore`, `SettingsSchema`, `InputSerializer`, `PlayerProfile`, `Benchmark`, `SafeFile`). Os autoloads só aplicam e coordenam.
+- **O mundo se integra às configurações por grupos:** `sol` (DirectionalLight3D), `camera_principal` (Camera3D) e `ambiente` (WorldEnvironment).
+- **Nomes de API em inglês** (`get_value`, `go`, `check_health`). Comentários, textos de interface e variáveis locais em português.
+- **Scripts executados com `-s`** (testes) não enxergam os autoloads como identificadores. Use `root.get_node("Settings")`, ou rode o jogo com `-- --teste-fumaca`.
+
 ## 4. Rede em partida **[ADR-4]**
 
 - **Transporte:** `ENetMultiplayerPeer`, UDP, com canais separados (confiável para eventos, não confiável e sequenciado para snapshots/entrada).

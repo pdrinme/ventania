@@ -34,6 +34,9 @@
 |---|---|---|---|
 | `game/assets/baus_coletaveis/caixote_exemplo_01.glb` (+ textura extraída) | Projeto Ventania (gerado por `tools/assets/blender/make_sample_crate.py`) | Original | Original. Asset de teste do pipeline, não é final |
 | Kit visual: 18 GLB em `game/assets/{construcoes,cenario,baus_coletaveis,personagens}/` | Projeto Ventania (gerados por `tools/assets/kit/blender/*.py`) | Original | Original |
+| `game/assets/ui/fontes/fredoka_500.woff2`, `fredoka_700.woff2` | The Fredoka Project Authors | npm `@fontsource/fredoka` 5.3.0 (subset latin) | OFL-1.1 (texto em `game/assets/ui/fontes/OFL.txt`) |
+| `game/assets/audio/ui/*.wav` | Projeto Ventania (`tools/audio/gerar_sons_ui.py`, síntese) | Original | Original |
+| `game/assets/ui/icone.png` | Projeto Ventania (`tools/assets/kit/gerar_icone.py`) | Original | Original |
 | `game/assets/texturas_materiais/paleta_ventania.png`, `toon_paleta.gdshader`, `M_paleta_ventania.tres` | Projeto Ventania | Original | Original |
 
 A fonte da verdade é `assets_catalog.json`. Os `game/assets/<cat>/LICENSES.json`
@@ -63,4 +66,4 @@ distribuição dentro do pacote do jogo.
 
 ## 5. Atribuições exigidas
 
-*(nenhuma ainda; esta seção será gerada a partir dos `LICENSES.json` e exibida na tela de Créditos do jogo)*
+- **Fredoka:** Copyright 2016 The Fredoka Project Authors. Licenciada sob a SIL Open Font License 1.1. Também exibida em Configurações → Servidor.

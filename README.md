@@ -13,7 +13,7 @@ para um pequeno grupo de amigos.
 
 ## Status
 
-**Etapa 0, pipeline de assets (0.5) e kit visual (0.6): concluídos.** Ainda não há código de gameplay.
+**Etapa 1 (fundação): concluída.** Há uma versão executável com menu, configurações e vitrine com teste de desempenho. Ainda não há gameplay (Etapa 2).
 Veja [ROADMAP.md](ROADMAP.md).
 
 ## Documentos
@@ -27,6 +27,7 @@ Veja [ROADMAP.md](ROADMAP.md).
 | [docs/assets/PIPELINE.md](docs/assets/PIPELINE.md) | Pipeline Blender → GLB → Godot, formatos, convenções, catálogo |
 | [docs/assets/IMPORTACAO_GODOT_E_OTIMIZACAO.md](docs/assets/IMPORTACAO_GODOT_E_OTIMIZACAO.md) | Importação na Godot e otimização de geometria, texturas e materiais |
 | [docs/assets/REFERENCIAS.md](docs/assets/REFERENCIAS.md) | Uso de referências visuais e o fluxo referência → asset original |
+| [docs/TESTE_EM_HARDWARE.md](docs/TESTE_EM_HARDWARE.md) | Como instalar, rodar o teste de desempenho e reportar |
 | [docs/art/GUIA_DE_ESTILO.md](docs/art/GUIA_DE_ESTILO.md) | Direção visual, paleta, shader cartoon, proporções e kit inicial |
 
 ## Tecnologia (resumo)
@@ -48,5 +49,32 @@ Veja [ROADMAP.md](ROADMAP.md).
 
 ## Como rodar
 
-Ainda não há nada executável. As instruções chegam na Etapa 1. O guia de
-instalação para os amigos chega na Etapa 12.
+Builds prontas: veja [docs/TESTE_EM_HARDWARE.md](docs/TESTE_EM_HARDWARE.md).
+
+A partir do código-fonte, com o Godot 4.7.2:
+
+```bash
+godot --path game
+```
+
+Meta-servidor (opcional, Python 3.11+, sem dependências):
+
+```bash
+cd backend && python3 -m meta_server
+```
+
+Todos os testes (Python, Godot, fumaça e integração):
+
+```bash
+GODOT=/caminho/do/godot tools/run_tests.sh
+```
+
+Exportar as builds:
+
+```bash
+godot --headless --path game --export-release "Linux" ../builds/linux/ventania.x86_64
+```
+
+```bash
+godot --headless --path game --export-release "Windows" ../builds/windows/Ventania.exe
+```

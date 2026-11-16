@@ -24,7 +24,7 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 - ✅ Engine verificada: Godot 4.7.2-stable baixado e executado em modo headless.
 - ✅ Teste técnico: conexão ENet cliente-servidor em loopback com sucesso.
 - ✅ Documentos: README, ARCHITECTURE, GAME_DESIGN, ROADMAP e ASSET_LICENSES.
-- ⚠️ Pendente do usuário: aprovar a arquitetura e os ajustes acima, e definir onde o código será versionado.
+- ✅ Código versionado em github.com/pdrinme/ventania (privado).
 
 ### Etapa 0.5 — Pipeline de assets ✅
 - ✅ Estrutura `references/` (local, fora do git), `assets_src/` e `game/assets/`, com 8 categorias.
@@ -45,9 +45,20 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 - ✅ `docs/art/GUIA_DE_ESTILO.md`.
 - ⬜ Pendente: validar o visual e o FPS em hardware real (Android e GPU integrada), usar MultiMesh para as peças repetidas (Etapas 4/5), e criar armas, mochilas, trajes variantes e casas.
 
-### Etapa 1 — Fundação ⬜
-Estrutura de diretórios, autoloads, gerenciador de cenas (com tela de carregamento), carregamento de recursos (assíncrono), configurações (perfis Performance, Balanced e Quality com opções independentes), áudio (barramentos e volumes), entrada (InputMap remapeável, detecção de dispositivo), estrutura de dados do jogador (cache de perfil), salvamento local (configurações), cliente HTTP do meta-servidor, esqueleto do meta-servidor e runner de testes.
-**Aceite:** o projeto abre e executa no PC, os testes headless passam, o cliente obtém `/v1/health` do meta-servidor, e as configurações persistem entre execuções.
+### Etapa 1 — Fundação ✅
+- ✅ Estrutura do projeto: `autoload/`, `core/`, `ui/`, `scenes/`, `world/`, `tests/`, além de `backend/`.
+- ✅ Gerenciamento de cenas com carregamento em segundo plano e tela de carregamento (`SceneManager`, `AsyncLoader`).
+- ✅ Configurações: 3 perfis (Desempenho, Equilibrado, Qualidade) e opções independentes, validadas por esquema e salvas de forma atômica em `user://settings.json`. São aplicadas na janela, nas sombras, na distância de visão (com neblina de profundidade) e no áudio.
+- ✅ Áudio: barramentos Master, Música, Efeitos e Interface, com sons de interface originais.
+- ✅ Entrada: 28 ações com teclado, mouse e controle, remapeamento com detecção de conflito e detecção de dispositivo.
+- ✅ Estrutura de dados do jogador (`PlayerProfile`, um cache validado; a fonte da verdade fica no servidor) e salvamento seguro (`SafeFile`).
+- ✅ Comunicação com o servidor: `MetaApi` (HTTP/JSON com timeout e checagem de protocolo) e meta-servidor em Python stdlib (`/v1/health`, `/v1/compat`, SQLite com migrações).
+- ✅ Interface: tema próprio (fonte Fredoka OFL) e menu com o personagem 3D. A tela de configurações tem layout diferente no PC e no celular.
+- ✅ Vitrine e teste de desempenho (20 s, com resultado em JSON/CSV e cópia do resumo) para hardware real.
+- ✅ Testes: 12 de assets, 8 do backend, 24 unitários na Godot, fumaça do jogo completo e integração cliente↔servidor (`tools/run_tests.sh`). A build Linux exportada também passa no teste de fumaça.
+- ✅ Exportação: builds de Windows e Linux geradas.
+- ⚠️ Não testado: a build de Windows (não há Windows nem Wine no ambiente de desenvolvimento).
+- ⬜ Pendente: APK Android (depende do Android SDK e do aceite da licença do Google, ver `docs/TESTE_EM_HARDWARE.md`), medições em hardware real, e layout de toque (Etapa 2).
 
 ### Etapa 2 — Personagem e gameplay básico ⬜
 Personagem em terceira pessoa (esqueleto padrão), câmera, movimentação, corrida, pulo, agachamento, colisões, animações (placeholders originais), controles de PC e controles touch básicos. Movimento via servidor em processo, com predição e reconciliação.
