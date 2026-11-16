@@ -9,7 +9,7 @@ extends SkeletonModifier3D
 ## Espaço do esqueleto: frente = +Z, esquerda = +X, cima = +Y.
 ## Espaço de mira (offsets abaixo): x = esquerda, y = cima, z = frente.
 
-enum Cat { NENHUM, RIFLE, PRECISAO, PISTOLA, CONSUMIVEL }
+enum Cat { NENHUM, RIFLE, PRECISAO, PISTOLA, CONSUMIVEL, PICARETA }
 
 ## Poses por categoria: posição do grip_r relativa aos ombros (no espaço de mira).
 ## Armas longas junto ao corpo (coronha no ombro direito): com o braço curto do
@@ -56,6 +56,8 @@ var _abaixar := 0.0                # 0..1 arma abaixada (corrida/alcance)
 
 
 static func categoria(id: String) -> int:
+	if ItemDB.is_tool_item(id):
+		return Cat.PICARETA
 	if ItemDB.is_consumable(id):
 		return Cat.CONSUMIVEL
 	if not ItemDB.is_weapon(id):
@@ -153,6 +155,12 @@ func _process_modification_with_delta(delta: float) -> void:
 			mao_e = mao_e.lerp(reach_pos, reach_w)
 		alvo_e.transform = Transform3D(Basis(), mao_e)
 		alvo_ew = 1.0
+	elif cat == Cat.PICARETA:
+		_picareta(ombros, mira)
+		alvo_dw = 1.0
+		if reach_w > 0.0:
+			alvo_e.transform = Transform3D(Basis(), reach_pos)
+			alvo_ew = reach_w
 	elif cat == Cat.CONSUMIVEL:
 		_consumivel(sk, chest, ombros, delta)
 		alvo_dw = 1.0
@@ -197,6 +205,73 @@ func _mao_recarga(cat: int, p: float, gl: Vector3, mag: Vector3, bolso: Vector3,
 
 
 var _w_e_consumivel := 0.0
+
+
+# ---------- picareta ----------
+# Chaves [p, posição do grip_r (espaço de mira, relativa aos ombros), ângulos (inclinação X,
+# rolagem Z, giro Y) em graus]. Inclinação +: cabeça para a frente; rolagem +: cabeça
+# para fora (direita); giro +: cabo para a esquerda. Ordem: giro * rolagem * inclinação.
+const PIC_REPOUSO := [Vector3(-0.30, -0.36, 0.17), Vector3(28, 20, 0)]
+const PIC_CORRENDO := [Vector3(-0.27, -0.44, 0.08), Vector3(48, 18, 0)]
+const PIC_COSTAS := [Vector3(-0.18, 0.12, -0.22), Vector3(-110, 30, 0)]   # sacar/guardar: por cima do ombro
+## Golpe A: de cima para baixo, na diagonal (preparação, impacto, continuação, volta).
+const PIC_GOLPE_A := [
+	[0.0, Vector3(-0.30, -0.36, 0.17), Vector3(28, 20, 0)],
+	[0.30, Vector3(-0.30, 0.04, -0.02), Vector3(-62, 26, 0)],
+	[0.42, Vector3(-0.22, -0.10, 0.42), Vector3(95, 8, 0)],
+	[0.54, Vector3(-0.16, -0.32, 0.34), Vector3(128, -4, 0)],
+	[1.0, Vector3(-0.30, -0.36, 0.17), Vector3(28, 20, 0)],
+]
+## Golpe B (o seguinte da sequência): horizontal, da direita para a esquerda.
+const PIC_GOLPE_B := [
+	[0.0, Vector3(-0.30, -0.36, 0.17), Vector3(28, 20, 0)],
+	[0.30, Vector3(-0.36, -0.10, 0.06), Vector3(80, 90, -80)],
+	[0.42, Vector3(-0.16, -0.12, 0.42), Vector3(86, 90, 0)],
+	[0.54, Vector3(0.08, -0.20, 0.32), Vector3(86, 90, 50)],
+	[1.0, Vector3(-0.30, -0.36, 0.17), Vector3(28, 20, 0)],
+]
+
+
+static func _rot_pic(ang: Vector3) -> Basis:
+	return Basis(Vector3.UP, deg_to_rad(ang.z)) * Basis(Vector3.FORWARD, -deg_to_rad(ang.y)) * Basis(Vector3.RIGHT, deg_to_rad(ang.x))
+
+
+static func _trilha_pic(chaves: Array, p: float) -> Array:
+	var pos := []
+	var ang := []
+	for k in chaves:
+		pos.append([k[0], k[1]])
+		ang.append([k[0], k[2]])
+	return [_trilha(pos, p), _trilha(ang, p)]
+
+
+func _picareta(ombros: Vector3, mira: Basis) -> void:
+	var off: Vector3 = PIC_REPOUSO[0]
+	var ang: Vector3 = PIC_REPOUSO[1]
+	# correndo: picareta baixa ao lado do corpo
+	off = off.lerp(PIC_CORRENDO[0], sprint)
+	ang = ang.lerp(PIC_CORRENDO[1], sprint)
+	if action == Protocol.ACT_SWING or action == Protocol.ACT_SWING_B:
+		var k := _trilha_pic(PIC_GOLPE_B if action == Protocol.ACT_SWING_B else PIC_GOLPE_A, progress)
+		off = k[0]
+		ang = k[1]
+		# o tronco acompanha: recua na preparação, avança no impacto
+		aim.chest_kick = _trilha([[0.0, 0.0], [0.30, -0.10], [0.42, 0.16], [0.6, 0.06], [1.0, 0.0]], progress)
+	else:
+		aim.chest_kick = 0.0
+	# sacar/guardar: vem das costas por cima do ombro
+	var e := _suave(equip)
+	off = (PIC_COSTAS[0] as Vector3).lerp(off, e)
+	ang = (PIC_COSTAS[1] as Vector3).lerp(ang, e)
+	var g_r := _marcador("grip_r")
+	var base := mira * _rot_pic(ang)
+	holder.transform = Transform3D(base, ombros + mira * off) * g_r.affine_inverse()
+	alvo_d.transform = holder.transform * g_r
+
+
+## Ponto de impacto da ponta da picareta (espaço do esqueleto) — efeitos e testes.
+func pickaxe_tip() -> Vector3:
+	return holder.transform * _marcador("cabeca").origin
 
 
 func _consumivel(sk: Skeleton3D, chest: Transform3D, ombros: Vector3, delta: float) -> void:

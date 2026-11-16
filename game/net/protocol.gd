@@ -4,7 +4,7 @@ extends RefCounted
 ## Cliente envia ENTRADAS (não posições); servidor envia SNAPSHOTS do estado.
 ## Ver ARCHITECTURE §4.
 
-const GAME_PROTOCOL := 3
+const GAME_PROTOCOL := 4
 const DEFAULT_PORT := 24800
 const TICK_RATE := 30            # simulação (Hz)
 const SNAPSHOT_EVERY := 2        # snapshot a cada N ticks (15 Hz)
@@ -19,6 +19,7 @@ const CH_SNAPSHOT := 2
 # cliente -> servidor
 const C_HELLO := 1
 const C_INPUT := 2
+const C_INV := 3             # operação de inventário (trocar, dividir, largar, pegar); o servidor valida
 # servidor -> cliente
 const S_WELCOME := 10
 const S_REJECT := 11
@@ -33,6 +34,22 @@ const S_ELIM := 19           # para todos: eliminação
 const S_LOOT := 20           # para todos: item no chão apareceu/mudou
 const S_LOOT_GONE := 21      # para todos: item no chão sumiu
 const S_CHEST := 22          # para todos: baú aberto/fechado
+const S_INV_RESULT := 23     # para o dono: resultado de uma operação de inventário (Inventory.Err)
+const S_MELEE := 24          # para todos: impacto de um golpe de picareta (efeito por material)
+
+# operações de inventário (C_INV)
+const OP_SWAP := 1           # a, b: espaços 0..4
+const OP_SPLIT := 2          # a: espaço, n: quantidade separada
+const OP_DROP := 3           # a: espaço (255 = picareta: recusado), n: quantidade
+const OP_DROP_AMMO := 4      # a: tipo de munição (índice), n
+const OP_PICKUP := 5         # loot: id no chão, b: espaço a trocar (255 = nenhum)
+const OP_DROP_MATERIAL := 6  # a: tipo de material (índice), n
+const SEM_ESPACO := 255      # a/b "nenhum" (ou picareta)
+
+## InputCmd.slot: 0 = manter, 1..5 = espaços, 6 = picareta
+const SLOT_PICKAXE := 6
+## status["selected"] quando a picareta está na mão
+const SELECTED_PICKAXE := 255
 
 # botões
 const BTN_JUMP := 1
@@ -57,6 +74,8 @@ const ACT_NONE := 0
 const ACT_RELOAD := 1
 const ACT_USE := 2
 const ACT_CHEST := 3
+const ACT_SWING := 4         # golpe de picareta (progress = fase do golpe)
+const ACT_SWING_B := 5       # golpe seguinte da sequência (alterna o lado)
 
 const INPUT_REDUNDANCY := 3      # cada pacote repete as últimas N entradas (perda de pacote)
 
@@ -75,7 +94,7 @@ class InputCmd:
 	var yaw := 0.0               # radianos
 	var pitch := 0.0             # radianos
 	var buttons := 0
-	var slot := 0                # 0 = manter; 1..5 = selecionar espaço
+	var slot := 0                # 0 = manter; 1..5 = selecionar espaço; 6 = picareta
 	var view_tick := 0           # tick dos outros jogadores que o cliente via (compensação de latência)
 
 	func has(b: int) -> bool:
@@ -153,7 +172,7 @@ static func pack_inputs(cmds: Array) -> PackedByteArray:
 		b.put_u16(_yaw_u16(c.yaw))
 		b.put_16(clampi(roundi(rad_to_deg(c.pitch) * 100.0), -9000, 9000))
 		b.put_u8(c.buttons & 0xFF)
-		b.put_u8(clampi(c.slot, 0, 5))
+		b.put_u8(clampi(c.slot, 0, SLOT_PICKAXE))
 		b.put_u32(c.view_tick)
 	return b.data_array
 
@@ -181,7 +200,7 @@ static func unpack_inputs(data: PackedByteArray) -> Array:
 		c.pitch = deg_to_rad(clampf(b.get_16() / 100.0, -89.0, 89.0))
 		c.buttons = b.get_u8() & BTN_ALL
 		var slot := b.get_u8()
-		c.slot = slot if slot <= 5 else 0
+		c.slot = slot if slot <= SLOT_PICKAXE else 0
 		c.view_tick = b.get_u32()
 		out.append(c)
 	return out
@@ -313,8 +332,9 @@ static func _get_v3(b: StreamPeerBuffer) -> Vector3:
 	return Vector3(b.get_float(), b.get_float(), b.get_float())
 
 
-## status: {"hp","shield","selected","action"(0 nada,1 recarga,2 uso),"action_left_ms","action_total_ms",
-##          "slots": [{"item","rarity","mag","count"} x5], "ammo": [int x tipos]}
+## status: {"hp","shield","selected"(0..4; SELECTED_PICKAXE = picareta),"action"(0 nada,1 recarga,2 uso),
+##          "action_left_ms","action_total_ms", "slots": [{"item","rarity","mag","count"} x5],
+##          "ammo": [int x tipos], "materials": [int x tipos]}
 static func pack_status(st: Dictionary) -> PackedByteArray:
 	var b := _buf()
 	b.put_u8(S_STATUS)
@@ -332,6 +352,10 @@ static func pack_status(st: Dictionary) -> PackedByteArray:
 	b.put_u8(st["ammo"].size())
 	for a in st["ammo"]:
 		b.put_u16(a)
+	var mats: Array = st.get("materials", [])
+	b.put_u8(mats.size())
+	for m in mats:
+		b.put_u16(m)
 	return b.data_array
 
 
@@ -345,8 +369,16 @@ static func unpack_status(data: PackedByteArray) -> Dictionary:
 	for i in 5:
 		st["slots"].append({"item": b.get_u8(), "rarity": b.get_u8(), "mag": b.get_u16(), "count": b.get_u16()})
 	var n := b.get_u8()
+	if b.get_position() + n * 2 + 1 > data.size():
+		return {}
 	for i in n:
 		st["ammo"].append(b.get_u16())
+	st["materials"] = []
+	var m := b.get_u8()
+	if b.get_position() + m * 2 != data.size():
+		return {}
+	for i in m:
+		st["materials"].append(b.get_u16())
 	return st
 
 
@@ -425,7 +457,8 @@ static func unpack_elim(data: PackedByteArray) -> Dictionary:
 	return {"killer": b.get_u16(), "victim": b.get_u16(), "weapon": b.get_u8()}
 
 
-## loot: {"id","item"(índice ItemDB, 0 = munição),"rarity","count","ammo"(0 = não é munição; 1.. = tipo),"pos"}
+## loot: {"id","item"(índice ItemDB, 0 = reserva),"rarity","count","ammo"(0 = não é munição; 1.. = tipo),
+##        "mat"(0 = não é material; 1.. = tipo),"pos"}
 static func pack_loot(l: Dictionary) -> PackedByteArray:
 	var b := _buf()
 	b.put_u8(S_LOOT)
@@ -434,16 +467,18 @@ static func pack_loot(l: Dictionary) -> PackedByteArray:
 	b.put_u8(l["rarity"])
 	b.put_u16(l["count"])
 	b.put_u8(l["ammo"])
+	b.put_u8(l.get("mat", 0))
 	_put_v3(b, l["pos"])
 	return b.data_array
 
 
 static func unpack_loot(data: PackedByteArray) -> Dictionary:
-	if data.size() != 20:
+	if data.size() != 21:
 		return {}
 	var b := _reader(data)
 	b.seek(1)
-	return {"id": b.get_u16(), "item": b.get_u8(), "rarity": b.get_u8(), "count": b.get_u16(), "ammo": b.get_u8(), "pos": _get_v3(b)}
+	return {"id": b.get_u16(), "item": b.get_u8(), "rarity": b.get_u8(), "count": b.get_u16(), "ammo": b.get_u8(),
+			"mat": b.get_u8(), "pos": _get_v3(b)}
 
 
 static func pack_u16_msg(tipo: int, v: int, extra := -1) -> PackedByteArray:
@@ -460,3 +495,83 @@ static func unpack_u16_msg(data: PackedByteArray) -> Array:
 	b.seek(1)
 	var v := b.get_u16()
 	return [v, b.get_u8() if data.size() > 3 else -1]
+
+
+# ---------- inventário ----------
+
+## {"req","op","a","b","n","loot"}
+static func pack_inv(op: Dictionary) -> PackedByteArray:
+	var b := _buf()
+	b.put_u8(C_INV)
+	b.put_u16(int(op.get("req", 0)) & 0xFFFF)
+	b.put_u8(op["op"])
+	b.put_u8(clampi(int(op.get("a", SEM_ESPACO)), 0, 255))
+	b.put_u8(clampi(int(op.get("b", SEM_ESPACO)), 0, 255))
+	b.put_u16(clampi(int(op.get("n", 0)), 0, 65535))
+	b.put_u16(clampi(int(op.get("loot", 0)), 0, 65535))
+	return b.data_array
+
+
+const INV_SIZE := 10
+
+
+static func unpack_inv(data: PackedByteArray) -> Dictionary:
+	if data.size() != INV_SIZE or data[0] != C_INV:
+		return {}
+	var b := _reader(data)
+	b.seek(1)
+	var r := {"req": b.get_u16(), "op": b.get_u8(), "a": b.get_u8(), "b": b.get_u8(), "n": b.get_u16(), "loot": b.get_u16()}
+	if r["op"] < OP_SWAP or r["op"] > OP_DROP_MATERIAL:
+		return {}
+	return r
+
+
+static func pack_inv_result(req: int, op: int, code: int) -> PackedByteArray:
+	var b := _buf()
+	b.put_u8(S_INV_RESULT)
+	b.put_u16(req & 0xFFFF)
+	b.put_u8(op)
+	b.put_u8(code)
+	return b.data_array
+
+
+static func unpack_inv_result(data: PackedByteArray) -> Dictionary:
+	if data.size() != 5:
+		return {}
+	var b := _reader(data)
+	b.seek(1)
+	return {"req": b.get_u16(), "op": b.get_u8(), "code": b.get_u8()}
+
+
+# ---------- golpe de picareta ----------
+
+const MELEE_PLAYER := 1      # flags: acertou um jogador/boneco
+
+
+## {"swinger","pos","normal","material","flags","target"}
+static func pack_melee(m: Dictionary) -> PackedByteArray:
+	var b := _buf()
+	b.put_u8(S_MELEE)
+	b.put_u16(m["swinger"])
+	_put_v3(b, m["pos"])
+	var nrm: Vector3 = m["normal"]
+	b.put_8(clampi(roundi(nrm.x * 127.0), -127, 127))
+	b.put_8(clampi(roundi(nrm.y * 127.0), -127, 127))
+	b.put_8(clampi(roundi(nrm.z * 127.0), -127, 127))
+	b.put_u8(m["material"])
+	b.put_u8(m.get("flags", 0))
+	b.put_u16(m.get("target", 0))
+	return b.data_array
+
+
+static func unpack_melee(data: PackedByteArray) -> Dictionary:
+	if data.size() != 22:
+		return {}
+	var b := _reader(data)
+	b.seek(1)
+	var r := {"swinger": b.get_u16(), "pos": _get_v3(b)}
+	r["normal"] = Vector3(b.get_8(), b.get_8(), b.get_8()) / 127.0
+	r["material"] = b.get_u8()
+	r["flags"] = b.get_u8()
+	r["target"] = b.get_u16()
+	return r

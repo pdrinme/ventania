@@ -22,6 +22,7 @@ var combat_hud: CombatHud
 var touch: TouchControls
 var fx: CombatFx
 var chests: ChestsClient
+var inventario: InventoryScreen
 
 var _seq := 0
 var _pendentes: Array = []          # InputCmd ainda não confirmados pelo servidor
@@ -54,6 +55,15 @@ var _bau_t := 0.0
 var _bau_alcance := -1              # baú cuja tampa a mão acompanha ao abrir
 var _bau_alcance_t := 0.0
 const SEGURAR_BAU_S := float(LootServer.ABRIR_BAU_PASSOS) / Protocol.TICK_RATE
+# picareta prevista localmente (mesmo relógio de passos do servidor)
+var _golpe_ini := -1                # seq do início do golpe em andamento (-1 = nenhum)
+var _golpe_ant := -1
+var _golpe_combo := 0
+var _golpe_impactou := false
+var _golpe_t0 := 0.0                # instante do início (progresso suave da animação)
+var melee_confirmed := 0            # impactos confirmados pelo servidor (testes)
+var melee_local := 0                # impactos previstos localmente (testes)
+var _proximos_t := 0.0
 
 
 func _ready() -> void:
@@ -80,6 +90,12 @@ func _ready() -> void:
 	combat_hud.theme = tema
 	camada.add_child(combat_hud)
 	combat_hud.slot_tapped.connect(func(i): sampler.select_slot(i))
+	inventario = InventoryScreen.new()
+	inventario.theme = tema
+	camada.add_child(inventario)
+	inventario.request.connect(_pedido_inventario)
+	inventario.close_requested.connect(func(): _inventario(false))
+	touch.inventory_pressed.connect(func(): _inventario(not inventario.is_open()))
 	hud = GameHud.new()
 	hud.theme = tema
 	camada.add_child(hud)
@@ -111,6 +127,8 @@ func _ready() -> void:
 	client.loot_spawned.connect(_on_loot)
 	client.loot_removed.connect(_on_loot_gone)
 	client.chest_changed.connect(_on_chest)
+	client.inventory_result.connect(_on_inv_result)
+	client.melee_impact.connect(_on_melee)
 
 	var host: String = p.get("host", "127.0.0.1")
 	var porta: int = p.get("porta", Protocol.DEFAULT_PORT)
@@ -244,6 +262,11 @@ func _process(delta: float) -> void:
 		_atualizar_visual_proprio(delta)
 		_atualizar_aviso()
 	_interpolar_remotos()
+	if inventario.is_open():
+		_proximos_t += delta
+		if _proximos_t > 0.2:
+			_proximos_t = 0.0
+			_atualizar_proximos()
 	_info_t += delta
 	if _info_t > 0.5:
 		_info_t = 0.0
@@ -281,7 +304,9 @@ func _interpolar_remotos() -> void:
 		v.set_held(proxima["weapon"])
 		v.update_state(proxima["vel"], proxima["flags"], yaw)
 		v.set_aim(lerp_angle(anterior["pitch"], proxima["pitch"], t), proxima["flags"] & Protocol.F_AIMING != 0)
-		v.set_action(proxima["action"], lerpf(anterior["progress"], proxima["progress"], t) if anterior["action"] == proxima["action"] else proxima["progress"])
+		# golpes seguidos recomeçam o progresso (1 -> 0): não interpola "para trás"
+		var mesma_acao: bool = anterior["action"] == proxima["action"] and proxima["progress"] >= anterior["progress"]
+		v.set_action(proxima["action"], lerpf(anterior["progress"], proxima["progress"], t) if mesma_acao else proxima["progress"])
 		# abrindo baú: a mão alcança a alça do baú mais próximo
 		var bau := _bau_proximo(v.global_position) if proxima["action"] == Protocol.ACT_CHEST else -1
 		v.set_reach(chests.handle_position(bau) if bau >= 0 else Vector3.ZERO, 1.0 if bau >= 0 else 0.0)
@@ -293,9 +318,10 @@ func _on_status(st: Dictionary) -> void:
 	var item_antes := combat_hud.current_item()
 	_status = st
 	combat_hud.update_status(st)
-	sampler.selected = st["selected"]
-	var atual: Dictionary = st["slots"][st["selected"]]
-	_mag_local = atual["mag"]
+	inventario.update_status(st)
+	var na_picareta: bool = st["selected"] == Protocol.SELECTED_PICKAXE
+	sampler.selected = Inventory.PICKAXE if na_picareta else st["selected"]
+	_mag_local = 0 if na_picareta else st["slots"][st["selected"]]["mag"]
 	var agora := Time.get_ticks_msec() / 1000.0
 	_acao_fim = agora + st["action_left_ms"] / 1000.0
 	_acao_total = st["action_total_ms"] / 1000.0
@@ -309,7 +335,7 @@ func _on_status(st: Dictionary) -> void:
 			Audio.play_sfx("escudo_ok" if item_antes.begins_with("celula") else "cura_ok")
 	_acao_antes = st["action"]
 	if combat_hud.current_item() != item_antes and not combat_hud.current_item().is_empty():
-		Audio.play_sfx("sacar", -6.0)
+		Audio.play_sfx("picareta_sacar" if ItemDB.is_tool_item(combat_hud.current_item()) else "sacar", -6.0)
 
 
 func _acao_fim_esperado(agora: float) -> bool:
@@ -327,6 +353,10 @@ func _atualizar_visual_proprio(delta: float) -> void:
 	var prog := 0.0
 	if acao != 0 and _acao_total > 0.0:
 		prog = clampf(1.0 - (_acao_fim - agora) / _acao_total, 0.0, 1.0)
+	# golpe de picareta previsto: anima já, sem esperar o servidor
+	if _golpe_ini >= 0 and ItemDB.is_tool_item(atual):
+		acao = Protocol.ACT_SWING_B if _golpe_combo == 1 else Protocol.ACT_SWING
+		prog = clampf((agora - _golpe_t0) / (Combat.melee_swing_steps() / float(Protocol.TICK_RATE)), 0.0, 1.0)
 	# segurando Interagir num baú: alcança a alça (previsto localmente)
 	if _bau_segurando >= 0 and acao == 0:
 		acao = Protocol.ACT_CHEST
@@ -343,8 +373,13 @@ func _atualizar_visual_proprio(delta: float) -> void:
 func _prever_tiro(cmd: Protocol.InputCmd) -> void:
 	if cmd.slot > 0:
 		_fire_next_local = _seq + CombatServer.PASSOS_TROCA
+		_golpe_ini = -1
 	var id := combat_hud.current_item()
 	var fogo := cmd.has(Protocol.BTN_FIRE)
+	if ItemDB.is_tool_item(id) and not _morto:
+		_prever_golpe(cmd, fogo)
+		_prev_fire_local = fogo
+		return
 	if _morto or not ItemDB.is_weapon(id) or _status.get("action", 0) != 0:
 		_prev_fire_local = fogo
 		return
@@ -366,6 +401,73 @@ func _prever_tiro(cmd: Protocol.InputCmd) -> void:
 		# o traçante sai do CANO e vai até onde a linha da mira bate
 		fx.tracer(cano, fim["pos"], fim["jogador"], curto, fim["normal"])
 	Audio.play_sfx(_som_tiro(id))
+
+
+## Mesma regra do CombatServer._picareta, no relógio local (seq): o golpe começa,
+## o impacto acontece no passo melee_impact_step() com efeito imediato, e golpes
+## seguidos alternam o lado. O servidor confirma (S_MELEE) e decide o dano.
+func _prever_golpe(cmd: Protocol.InputCmd, fogo: bool) -> void:
+	var n := Combat.melee_swing_steps()
+	if _golpe_ini >= 0:
+		var k := _seq - _golpe_ini
+		if not _golpe_impactou and k >= Combat.melee_impact_step():
+			_golpe_impactou = true
+			_impacto_local(cmd)
+		if k >= n:
+			_golpe_ini = -1
+	if fogo and _golpe_ini < 0 and _seq >= _fire_next_local:
+		var seguido := _golpe_ant >= 0 and _seq - _golpe_ant <= n + 1
+		_golpe_combo = (1 - _golpe_combo) if seguido else 0
+		_golpe_ini = _seq
+		_golpe_ant = _seq
+		_golpe_impactou = false
+		_fire_next_local = _seq + n
+		_golpe_t0 = Time.get_ticks_msec() / 1000.0
+		Audio.play_sfx("golpe_ar", -5.0, randf_range(0.92, 1.08))
+
+
+func _impacto_local(cmd: Protocol.InputCmd) -> void:
+	var raio := Combat.aim_ray(pawn.global_position, pawn.crouched, cmd.yaw, cmd.pitch)
+	var origem: Vector3 = raio["origin"]
+	var d: Vector3 = raio["dir"]
+	var mundo := Combat.melee_trace(pawn.get_world_3d().direct_space_state, origem, d)
+	var t_max: float = mundo["t"] if not mundo.is_empty() else Combat.melee_range()
+	for rr in _remotos.values():
+		var v: PawnVisual = rr["visual"]
+		if not v.visible:
+			continue
+		var agachado: bool = rr["amostras"].size() > 0 and rr["amostras"][-1]["flags"] & Protocol.F_CROUCHED != 0
+		var h := Hitbox.test(origem, d, v.global_position, agachado)
+		if not h.is_empty() and h["t"] <= t_max:
+			melee_local += 1
+			fx.melee_impact(origem + d * float(h["t"]), -d, ImpactMaterial.JOGADOR)
+			Audio.play_sfx("golpe_terra", -2.0)
+			return
+	if not mundo.is_empty():
+		melee_local += 1
+		fx.melee_impact(mundo["pos"], mundo["normal"], mundo["material"])
+		Audio.play_at(_som_golpe(mundo["material"]), mundo["pos"], 0.0, randf_range(0.94, 1.06))
+
+
+static func _som_golpe(material: int) -> String:
+	match material:
+		ImpactMaterial.MADEIRA:
+			return "golpe_madeira"
+		ImpactMaterial.PEDRA:
+			return "golpe_pedra"
+		ImpactMaterial.METAL:
+			return "golpe_metal"
+	return "golpe_terra"
+
+
+## Impacto confirmado pelo servidor. O próprio golpe já teve efeito previsto; os
+## dos outros jogadores aparecem aqui.
+func _on_melee(m: Dictionary) -> void:
+	if pawn and m["swinger"] == pawn.entity_id:
+		melee_confirmed += 1
+		return
+	fx.melee_impact(m["pos"], m["normal"], m["material"])
+	Audio.play_at(_som_golpe(m["material"]) if m["material"] != ImpactMaterial.JOGADOR else "golpe_terra", m["pos"])
 
 
 ## Onde a linha da mira termina (previsão local, só para o efeito; o servidor decide
@@ -441,6 +543,9 @@ func _set_morto(v: bool) -> void:
 	_morto = v
 	sampler.morto = v
 	visual.visible = not v
+	if v:
+		_inventario(false)
+		_golpe_ini = -1
 	if not v:
 		combat_hud.show_eliminated("")
 
@@ -495,7 +600,7 @@ func _bau_proximo(pos: Vector3) -> int:
 func _atualizar_aviso() -> void:
 	combat_hud.set_prompt("")
 	var cam := camera.camera()
-	if _morto or hud.is_paused():
+	if _morto or hud.is_paused() or inventario.is_open():
 		combat_hud.set_world_prompt(Vector2.ZERO, "", "")
 		chests.highlight(-1)
 		_bau_segurando = -1
@@ -524,10 +629,85 @@ func _atualizar_aviso() -> void:
 			dist = pos.distance_to(v.data["pos"])
 			melhor = v
 	if melhor:
-		var cor := ItemDB.rarity_color(melhor.data["rarity"]) if ItemDB.is_weapon(ItemDB.id_of(melhor.data["item"])) else Color.WHITE
-		_balao(cam, melhor.data["pos"] + Vector3(0, 0.9, 0), tecla, "Pegar " + melhor.label(), -1.0, cor)
+		var id_l := ItemDB.id_of(melhor.data["item"])
+		var cor := ItemDB.rarity_color(melhor.data["rarity"]) if ItemDB.is_weapon(id_l) else Color.WHITE
+		var texto := "Pegar " + melhor.label()
+		if not _cabe(id_l):
+			# cheio: troca pelo item na mão; com a picareta na mão, não troca
+			var na_mao := combat_hud.current_item()
+			texto = "Inventário cheio (escolha o espaço)" if ItemDB.is_tool_item(na_mao) or na_mao.is_empty() \
+					else "Trocar %s por %s" % [ItemDB.short_name(na_mao), melhor.label()]
+		_balao(cam, melhor.data["pos"] + Vector3(0, 0.9, 0), tecla, texto, -1.0, cor)
 	else:
 		combat_hud.set_world_prompt(Vector2.ZERO, "", "")
+
+
+## Cabe ao menos uma unidade deste item sem trocar nada? (pelo último status)
+func _cabe(id: String) -> bool:
+	var inv := Inventory.new()
+	for i in mini(Inventory.SLOTS, _status.get("slots", []).size()):
+		var sl: Dictionary = _status["slots"][i]
+		var sid := ItemDB.id_of(sl["item"])
+		if not sid.is_empty():
+			inv.slots[i].item = sid
+			inv.slots[i].count = maxi(1, sl["count"])
+	return inv.room_for(id) > 0
+
+
+# ---------- inventário ----------
+
+func _inventario(abrir: bool) -> void:
+	if inventario == null or abrir == inventario.is_open():
+		return
+	if abrir and (_morto or pawn == null or hud.is_paused()):
+		return
+	if abrir:
+		inventario.open()
+		_atualizar_proximos()
+	else:
+		inventario.close()
+	sampler.inventario_aberto = abrir
+	camera.bloqueado = abrir or hud.is_paused()
+	_atualizar_toque(InputManager.device)
+	var capturar := not abrir and not hud.is_paused() and not Settings.is_mobile and InputManager.device != "toque" \
+			and DisplayServer.get_name() != "headless"
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if capturar else Input.MOUSE_MODE_VISIBLE
+
+
+func _pedido_inventario(op: Dictionary) -> void:
+	if op["op"] == -1:
+		sampler.select_slot(op["a"])        # equipar = trocar o item na mão (vai pela entrada)
+		Audio.play_sfx("inv_mover", -6.0)
+		return
+	client.send_inventory(op)
+
+
+func _on_inv_result(r: Dictionary) -> void:
+	if r["code"] != Inventory.Err.OK:
+		var msg: String = Inventory.MENSAGENS.get(r["code"], "")
+		combat_hud.message(msg)
+		inventario.show_result(r["code"])
+		Audio.play_sfx("inv_erro", -4.0)
+		return
+	inventario.show_result(Inventory.Err.OK)
+	match r["op"]:
+		Protocol.OP_DROP, Protocol.OP_DROP_AMMO, Protocol.OP_DROP_MATERIAL:
+			Audio.play_sfx("largar", -3.0)
+		Protocol.OP_SWAP, Protocol.OP_SPLIT:
+			Audio.play_sfx("inv_mover", -4.0)
+
+
+## Itens de espaço no chão ao alcance (para a lista da tela de inventário).
+func _atualizar_proximos() -> void:
+	if pawn == null:
+		return
+	var pos := pawn.global_position
+	var lista := []
+	for v: LootVisual in _loot.values():
+		if not LootServer.is_reserve(v.data) and pos.distance_to(v.data["pos"]) <= LootServer.PROXIMOS_DIST:
+			lista.append(v.data)
+	lista.sort_custom(func(a, b): return pos.distance_to(a["pos"]) < pos.distance_to(b["pos"]))
+	inventario.set_nearby(lista)
 
 
 func _balao(cam: Camera3D, ponto: Vector3, tecla: String, texto: String, prog: float, cor: Color) -> void:
@@ -550,6 +730,14 @@ func _nome_tecla(acao: String) -> String:
 
 
 func _unhandled_input(e: InputEvent) -> void:
+	if e.is_action_pressed("inventory") and not hud.is_paused():
+		_inventario(not inventario.is_open())
+		get_viewport().set_input_as_handled()
+		return
+	if inventario.is_open() and (e.is_action_pressed("pause") or e.is_action_pressed("ui_cancel")):
+		_inventario(false)
+		get_viewport().set_input_as_handled()
+		return
 	if e.is_action_pressed("pause") or (e.is_action_pressed("ui_cancel") and hud.is_paused()):
 		_pausar(not hud.is_paused())
 		get_viewport().set_input_as_handled()
@@ -566,6 +754,8 @@ func _notification(what: int) -> void:
 
 
 func _pausar(v: bool) -> void:
+	if v:
+		_inventario(false)
 	hud.show_pause(v)
 	sampler.bloqueado = v
 	camera.bloqueado = v
@@ -574,7 +764,18 @@ func _pausar(v: bool) -> void:
 
 
 func _atualizar_toque(d: String) -> void:
-	touch.visible = d == "toque" or Settings.is_mobile
+	touch.visible = (d == "toque" or Settings.is_mobile) and not (inventario and inventario.is_open())
+	if combat_hud:
+		combat_hud.set_pickaxe_key(_rotulo_picareta(d))
+
+
+func _rotulo_picareta(d: String) -> String:
+	if d == "toque" or Settings.is_mobile:
+		return ""
+	if d == "controle":
+		return "►"
+	var ev := InputManager.keyboard_events("pickaxe")
+	return InputSerializer.describe(ev[0]) if not ev.is_empty() else "F"
 
 
 func _falhar(motivo: String) -> void:

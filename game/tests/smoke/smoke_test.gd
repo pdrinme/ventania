@@ -199,6 +199,117 @@ func _combate(tree: SceneTree, jogo) -> void:
 	_checar(jogo.server.loot.loot.size() + coletadas >= loot_srv_antes + 4, "baú liberou 4 itens no servidor")
 	_checar(jogo._loot.size() + coletadas >= loot_antes + 4, "cliente recebeu os itens do baú (%d -> %d, %d coletado)" % [loot_antes, jogo._loot.size(), coletadas])
 	_checar(jogo.visual.rig.ik_d.influence > 0.5, "mão direita presa à arma (IK ativo)")
+	await _picareta_e_inventario(tree, jogo)
+
+
+func _apertar(acao: String) -> void:
+	var ev := InputEventAction.new()
+	ev.action = acao
+	ev.pressed = true
+	Input.parse_input_event(ev)
+	var solta := InputEventAction.new()
+	solta.action = acao
+	Input.parse_input_event(solta)
+
+
+## Picareta (seleção, golpe, impacto confirmado, visto por outro jogador) e
+## inventário (abrir, largar, recusar a picareta, pegar de volta), tudo pela rede.
+func _picareta_e_inventario(tree: SceneTree, jogo) -> void:
+	var cli: GameServer.Cliente = jogo.server.clientes.values()[0]
+	_checar(jogo.combat_hud._picareta.item == "picareta", "barra: picareta no 1º espaço à esquerda")
+	_apertar("pickaxe")
+	for i in 20:
+		await tree.physics_frame
+		if jogo._status.get("selected", 0) == Protocol.SELECTED_PICKAXE:
+			break
+	_checar(cli.inv.pickaxe_selected() and jogo.combat_hud.current_item() == "picareta", "tecla dedicada seleciona a picareta (servidor confirmou)")
+	_checar(jogo.combat_hud._picareta.selecionado and not jogo.combat_hud._slots[0].selecionado, "destaque no 1º espaço")
+	for i in 20:
+		await tree.process_frame
+	_checar(jogo.visual.held_index() == ItemDB.index_of("picareta"), "picareta na mão do personagem")
+	# diante da parede de madeira da cabana, golpeia segurando o botão
+	var pos := Vector3(-16.55, 0.1, -10.2)
+	cli.pawn.global_position = pos
+	jogo.pawn.global_position = pos
+	jogo.camera.yaw = 0.0
+	jogo.camera.pitch = 0.0
+	for i in 6:
+		await tree.physics_frame
+	var fx_antes: int = jogo.fx.melee_impacts
+	var viu_golpe := false
+	Input.action_press("fire")
+	for i in 45:
+		await tree.physics_frame
+		await tree.process_frame
+		viu_golpe = viu_golpe or jogo.visual.rig.action in [Protocol.ACT_SWING, Protocol.ACT_SWING_B]
+	Input.action_release("fire")
+	for i in 15:
+		await tree.physics_frame
+	_checar(viu_golpe, "animação do golpe na mão do personagem")
+	_checar(jogo.melee_local >= 2 and jogo.fx.melee_impacts > fx_antes, "impacto imediato previsto no cliente (%d)" % jogo.melee_local)
+	_checar(jogo.melee_confirmed >= 2 and jogo.melee_confirmed == cli.melee_hits, "servidor confirmou cada impacto, sem duplicar (%d / %d)" % [jogo.melee_confirmed, cli.melee_hits])
+	_checar(cli.swings == cli.melee_hits, "um impacto por golpe (%d golpes)" % cli.swings)
+
+	# outro jogador com a picareta: o primeiro vê a picareta e o golpe dele
+	var outro := GameClient.new()
+	tree.root.add_child(outro)
+	outro.connect_to("127.0.0.1", jogo.local_port, "Teste3")
+	var seq := 0
+	var viu_remoto := false
+	var idx_pic := ItemDB.index_of("picareta")
+	for i in 150:
+		await tree.physics_frame
+		await tree.process_frame
+		outro.poll()
+		if outro.connected:
+			seq += 1
+			var c := Protocol.InputCmd.new()
+			c.seq = seq
+			c.slot = Protocol.SLOT_PICKAXE if seq < 3 else 0
+			c.buttons = Protocol.BTN_FIRE if seq > 10 else 0
+			outro.send_inputs([c])
+			var r: Dictionary = jogo._remotos.get(outro.my_id, {})
+			if not r.is_empty():
+				var v: PawnVisual = r["visual"]
+				viu_remoto = viu_remoto or (v.held_index() == idx_pic and v.rig.action in [Protocol.ACT_SWING, Protocol.ACT_SWING_B])
+	_checar(viu_remoto, "jogador remoto aparece com a picareta e golpeando")
+	outro.close()
+	outro.queue_free()
+
+	# inventário: abre, larga a pistola, a picareta é recusada, pega a pistola de volta
+	var resultados := []
+	jogo.client.inventory_result.connect(func(r): resultados.append(r))
+	jogo._inventario(true)
+	_checar(jogo.inventario.is_open() and jogo.sampler.inventario_aberto, "tela de inventário abre")
+	cli.pawn.global_position = Vector3(30, 0, 40)
+	jogo.pawn.global_position = Vector3(30, 0, 40)
+	for i in 6:
+		await tree.physics_frame
+	jogo._pedido_inventario({"op": Protocol.OP_DROP, "a": 0, "n": 1})
+	jogo._pedido_inventario({"op": Protocol.OP_DROP, "a": Protocol.SEM_ESPACO, "n": 1})
+	for i in 20:
+		await tree.physics_frame
+		if resultados.size() >= 2:
+			break
+	_checar(resultados.size() == 2 and resultados[0]["code"] == Inventory.Err.OK, "servidor largou a pistola")
+	_checar(resultados.size() == 2 and resultados[1]["code"] == Inventory.Err.NOT_DROPPABLE, "servidor recusou largar a picareta")
+	_checar(jogo._status["slots"][0]["item"] == 0, "espaço 1 vazio no HUD depois de largar")
+	var largada := -1
+	for v: LootVisual in jogo._loot.values():
+		if ItemDB.id_of(v.data["item"]) == "faisca" and v.data["pos"].distance_to(Vector3(30, 0, 40)) < 2.5:
+			largada = v.data["id"]
+	_checar(largada >= 0, "pistola largada aparece no chão para todos")
+	jogo._atualizar_proximos()
+	_checar(jogo.inventario._proximos.any(func(l): return l["id"] == largada), "tela lista o item próximo")
+	jogo._pedido_inventario({"op": Protocol.OP_PICKUP, "loot": largada, "b": Protocol.SEM_ESPACO})
+	for i in 20:
+		await tree.physics_frame
+		if resultados.size() >= 3:
+			break
+	_checar(resultados.size() >= 3 and resultados[2]["code"] == Inventory.Err.OK, "pegou de volta pela tela de inventário")
+	_checar(ItemDB.id_of(jogo._status["slots"][0]["item"]) == "faisca", "pistola de volta no espaço 1")
+	jogo._inventario(false)
+	_checar(not jogo.inventario.is_open() and not jogo.sampler.inventario_aberto, "tela de inventário fecha")
 
 
 func _ir(tree: SceneTree, cena: String) -> void:

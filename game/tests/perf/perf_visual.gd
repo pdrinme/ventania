@@ -14,7 +14,7 @@ func _init() -> void:
 		vis.append(v)
 	await process_frame
 	Engine.max_fps = 0          # (de novo: o autoload Settings reaplica o limite ao iniciar)
-	var itens := ["rajada", "faisca", "trovao", "zumbido", "gaviao", "celula_p"]
+	var itens := ["rajada", "faisca", "trovao", "zumbido", "gaviao", "celula_p", "picareta"]
 	for i in n:
 		vis[i].set_held(ItemDB.index_of(itens[i % itens.size()]))
 	var tempos := PackedFloat64Array()
@@ -24,7 +24,8 @@ func _init() -> void:
 			var v := vis[i]
 			v.update_state(Vector3(0, 0, -4.5 + (i % 3) * 2.0), Protocol.F_ON_FLOOR, 0.0)
 			v.set_aim(sin(f * 0.05) * 0.4, i % 2 == 0)
-			v.set_action(Protocol.ACT_RELOAD if i % 4 == 0 else 0, fmod(f / 60.0, 1.0))
+			var acao := Protocol.ACT_SWING if i % 7 == 6 else (Protocol.ACT_RELOAD if i % 4 == 0 else 0)
+			v.set_action(acao, fmod(f / 60.0, 1.0))
 		await process_frame
 		tempos.append((Time.get_ticks_usec() - ini) / 1000.0)
 	var total := 0.0

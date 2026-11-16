@@ -24,6 +24,7 @@ const ACTIONS := {
 	"edit_mode": {"label": "Modo edição", "keys": [KEY_G], "joy": [JOY_BUTTON_DPAD_DOWN], "remap": true},
 	"slot_next": {"label": "Próximo item", "mouse": [MOUSE_BUTTON_WHEEL_DOWN], "joy": [JOY_BUTTON_RIGHT_SHOULDER], "remap": false},
 	"slot_prev": {"label": "Item anterior", "mouse": [MOUSE_BUTTON_WHEEL_UP], "joy": [JOY_BUTTON_LEFT_SHOULDER], "remap": false},
+	"pickaxe": {"label": "Picareta", "keys": [KEY_F], "joy": [JOY_BUTTON_DPAD_RIGHT], "remap": true},
 	"slot_1": {"label": "Item 1", "keys": [KEY_1], "remap": true},
 	"slot_2": {"label": "Item 2", "keys": [KEY_2], "remap": true},
 	"slot_3": {"label": "Item 3", "keys": [KEY_3], "remap": true},

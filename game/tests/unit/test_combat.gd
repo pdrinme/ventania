@@ -23,9 +23,12 @@ func test_inventario_armas_e_troca() -> void:
 	for id in ["rajada", "trovao", "zumbido", "faisca", "gaviao"]:
 		assert_null(inv.add_item(id, 1)["dropped"])
 	assert_eq(inv.first_free(), -1)
+	var cheio := inv.add_item("rajada", 4)
+	assert_eq(cheio["error"], Inventory.Err.FULL, "cheio e sem troca pedida: recusa (não troca em silêncio)")
+	assert_eq(cheio["taken"], 0)
 	inv.select(2)
-	var r := inv.add_item("rajada", 4)
-	assert_eq((r["dropped"] as Inventory.Slot).item, "zumbido", "cheio: troca pelo espaço selecionado")
+	var r := inv.add_item("rajada", 4, 1, -1, 2)
+	assert_eq((r["dropped"] as Inventory.Slot).item, "zumbido", "cheio: troca pelo espaço escolhido")
 	assert_eq(inv.current().item, "rajada")
 	assert_eq(inv.current().rarity, 4)
 	assert_eq(inv.current().mag, 30, "arma nova vem com pente cheio")
@@ -43,6 +46,7 @@ func test_consumiveis_empilham() -> void:
 func test_municao_e_recarga() -> void:
 	var inv := Inventory.new()
 	inv.add_item("rajada", 0, 1, 5)
+	inv.select(0)
 	assert_eq(inv.add_ammo("media", 1000), 360, "respeita o máximo")
 	assert_eq(inv.reload_amount(), 25)
 	assert_eq(inv.finish_reload(), 25)

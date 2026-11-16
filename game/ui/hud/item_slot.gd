@@ -2,14 +2,21 @@ class_name ItemSlot
 extends Control
 ## Um espaço do inventário: miniatura do item sobre fundo em degradê da raridade,
 ## número do espaço, munição/quantidade e destaque quando selecionado.
-## Mítico: degradê animado entre duas cores.
+## Mítico: degradê animado entre duas cores. indice = Inventory.PICKAXE: espaço fixo
+## da picareta (fundo próprio, sem raridade). Usado na barra do HUD e na tela de
+## inventário (lá também com foco de controle/teclado e arrastar e soltar).
 
 signal tapped
+signal dropped_on(origem: int)     # arrastar e soltar (tela de inventário)
 
 const RAIO := 12.0
 const TAM := Vector2(84, 84)
 
 var indice := 0
+var rotulo := ""                 # texto do canto (vazio = número do espaço)
+var tamanho := TAM
+var arrastavel := false          # tela de inventário: arrastar para trocar
+var marcado := false             # origem de "Mover" (tela de inventário)
 var item := ""
 var raridade := 0
 var texto_qtd := ""
@@ -20,12 +27,37 @@ var _escala := 1.0
 
 
 func _ready() -> void:
-	custom_minimum_size = TAM
+	custom_minimum_size = tamanho
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	pivot_offset = TAM / 2.0
+	pivot_offset = tamanho / 2.0
 	gui_input.connect(func(e):
-		if (e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT) or (e is InputEventScreenTouch and e.pressed):
-			tapped.emit())
+		if (e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT) or (e is InputEventScreenTouch and e.pressed) \
+				or (focus_mode != FOCUS_NONE and e.is_action_pressed("ui_accept")):
+			tapped.emit()
+			accept_event())
+	focus_entered.connect(queue_redraw)
+	focus_exited.connect(queue_redraw)
+
+
+func _get_drag_data(_pos: Vector2) -> Variant:
+	if not arrastavel or item.is_empty() or indice == Inventory.PICKAXE:
+		return null
+	var pre := TextureRect.new()
+	pre.texture = _icone
+	pre.custom_minimum_size = tamanho * 0.8
+	pre.size = tamanho * 0.8
+	pre.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pre.modulate.a = 0.85
+	set_drag_preview(pre)
+	return {"espaco": indice}
+
+
+func _can_drop_data(_pos: Vector2, d: Variant) -> bool:
+	return arrastavel and indice != Inventory.PICKAXE and d is Dictionary and d.has("espaco") and d["espaco"] != indice
+
+
+func _drop_data(_pos: Vector2, d: Variant) -> void:
+	dropped_on.emit(int(d["espaco"]))
 
 
 ## Sem cache estático próprio: o ResourceLoader já reaproveita o recurso carregado
@@ -60,14 +92,26 @@ func _cores() -> Array:
 func _process(delta: float) -> void:
 	_escala = move_toward(_escala, 1.1 if selecionado else 1.0, delta * 2.5)
 	scale = Vector2.ONE * _escala
-	if not item.is_empty() and ItemDB.rarity(raridade).has("cor2"):
+	if not item.is_empty() and ItemDB.is_weapon(item) and ItemDB.rarity(raridade).has("cor2"):
 		_t += delta
 		queue_redraw()
 
 
 func _draw() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
-	if item.is_empty():
+	if indice == Inventory.PICKAXE:
+		# espaço fixo: aço escuro com friso dourado (permanente)
+		_caixa(rect, Color("4d6070"), Color("26323f"))
+		var friso := StyleBoxFlat.new()
+		friso.draw_center = false
+		friso.set_corner_radius_all(int(RAIO) - 3)
+		friso.set_border_width_all(2)
+		friso.border_color = Color("ffc93c", 0.55)
+		draw_style_box(friso, rect.grow(-5))
+		if _icone:
+			var mp := 8.0
+			draw_texture_rect(_icone, Rect2(mp, mp, size.x - mp * 2, size.y - mp * 2), false)
+	elif item.is_empty():
 		_caixa(rect, Color(0.04, 0.2, 0.23, 0.55), Color(0.04, 0.2, 0.23, 0.55))
 	else:
 		var cores := _cores() if ItemDB.is_weapon(item) else [Color("8a9bab"), Color("4b5866")]
@@ -79,8 +123,13 @@ func _draw() -> void:
 			draw_texture_rect(_icone, Rect2(m, m + 2, size.x - m * 2, size.y - m * 2 - 10), false)
 	var contorno := Color.WHITE if selecionado else Color(1, 1, 1, 0.25)
 	_contorno(rect, contorno, 4.0 if selecionado else 2.0)
+	if marcado:
+		_contorno(rect.grow(3), Color("ffc93c"), 3.0)
+	if has_focus():
+		_contorno(rect.grow(6), Color("ffc93c", 0.9), 3.0)
 	var fonte := get_theme_default_font()
-	_texto(fonte, Vector2(7, 17), str(indice + 1), 14, Color(1, 1, 1, 0.85))
+	var canto := rotulo if not rotulo.is_empty() else ("" if indice == Inventory.PICKAXE else str(indice + 1))
+	_texto(fonte, Vector2(7, 17), canto, 14, Color(1, 1, 1, 0.85))
 	if not texto_qtd.is_empty():
 		var w := fonte.get_string_size(texto_qtd, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
 		_texto(fonte, Vector2(size.x - w - 7, size.y - 7), texto_qtd, 17, Color.WHITE)

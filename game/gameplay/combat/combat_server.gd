@@ -47,6 +47,9 @@ func action_of(c: GameServer.Cliente) -> Array:
 		return [Protocol.ACT_RELOAD, clampf(1.0 - (c.reload_end - passos) / c.reload_total, 0.0, 1.0)]
 	if c.use_end >= 0.0 and c.use_total > 0.0:
 		return [Protocol.ACT_USE, clampf(1.0 - (c.use_end - passos) / c.use_total, 0.0, 1.0)]
+	if c.swing_start >= 0.0:
+		var k := clampf((passos - c.swing_start) / float(Combat.melee_swing_steps()), 0.0, 1.0)
+		return [Protocol.ACT_SWING_B if c.combo == 1 else Protocol.ACT_SWING, k]
 	if c.interact_steps > 0 and c.interact_chest >= 0:
 		return [Protocol.ACT_CHEST, clampf(c.interact_steps / float(LootServer.ABRIR_BAU_PASSOS), 0.0, 1.0)]
 	return [Protocol.ACT_NONE, 0.0]
@@ -57,7 +60,8 @@ func action_of(c: GameServer.Cliente) -> Array:
 func process(c: GameServer.Cliente, cmd: Protocol.InputCmd) -> void:
 	var passos := float(c.simulados)
 	var inv := c.inv
-	if cmd.slot > 0 and inv.select(cmd.slot - 1):
+	var pedido := Inventory.PICKAXE if cmd.slot == Protocol.SLOT_PICKAXE else cmd.slot - 1
+	if cmd.slot > 0 and inv.select(pedido):
 		_cancelar(c)
 		c.fire_next = maxf(c.fire_next, passos + PASSOS_TROCA)
 		c.dirty = true
@@ -93,9 +97,11 @@ func process(c: GameServer.Cliente, cmd: Protocol.InputCmd) -> void:
 			c.use_end = passos + t
 			c.use_total = t
 			c.dirty = true
+	elif ItemDB.is_tool_item(s.item):
+		_picareta(c, cmd, passos, fogo)
 
 	_interagir(c, cmd)
-	if server.loot.auto_ammo(inv, c.pawn.global_position):
+	if server.loot.auto_ammo(inv, c.pawn.global_position, c.id, server.tick):
 		c.dirty = true
 	c.prev_fire = fogo
 	c.prev_reload = cmd.has(Protocol.BTN_RELOAD)
@@ -106,6 +112,61 @@ func process(c: GameServer.Cliente, cmd: Protocol.InputCmd) -> void:
 func _cancelar(c: GameServer.Cliente) -> void:
 	c.reload_end = -1.0
 	c.use_end = -1.0
+	c.swing_start = -1.0
+
+
+# ---------- picareta ----------
+
+## Golpes enquanto o botão estiver segurado. Cada golpe dura melee_swing_steps()
+## passos e registra NO MÁXIMO um impacto, no passo melee_impact_step() (o quadro
+## de impacto da animação). Golpes seguidos alternam o lado (combo 0/1).
+func _picareta(c: GameServer.Cliente, cmd: Protocol.InputCmd, passos: float, fogo: bool) -> void:
+	var n := Combat.melee_swing_steps()
+	if c.swing_start >= 0.0:
+		var k := passos - c.swing_start
+		if not c.swing_hit and k >= Combat.melee_impact_step():
+			c.swing_hit = true
+			_golpe(c, cmd)
+		if k >= n:
+			c.swing_start = -1.0
+	if fogo and c.swing_start < 0.0 and passos >= c.fire_next:
+		var seguido := c.swing_prev >= 0.0 and passos - c.swing_prev <= n + 1
+		c.combo = (1 - c.combo) if seguido else 0
+		c.swing_start = passos
+		c.swing_prev = passos
+		c.swing_hit = false
+		c.fire_next = passos + n
+		c.swings += 1
+
+
+## Impacto do golpe: primeiro o que estiver mais perto na linha da mira, entre o
+## cenário (raio de física) e jogadores/bonecos (hitbox voltada no tempo).
+func _golpe(c: GameServer.Cliente, cmd: Protocol.InputCmd) -> void:
+	var p := c.pawn
+	var raio := Combat.aim_ray(p.global_position, p.crouched, cmd.yaw, cmd.pitch)
+	var origem: Vector3 = raio["origin"]
+	var d: Vector3 = raio["dir"]
+	var mundo := Combat.melee_trace(server.world.get_world_3d().direct_space_state, origem, d)
+	var t_mundo: float = mundo["t"] if not mundo.is_empty() else Combat.melee_range()
+	var melhor := {}
+	for a in _alvos(c, cmd.view_tick):
+		var h := Hitbox.test(origem, d, a["pos"], a["crouched"])
+		if not h.is_empty() and h["t"] <= t_mundo and (melhor.is_empty() or h["t"] < melhor["t"]):
+			melhor = h
+			melhor["alvo"] = a
+	if not melhor.is_empty():
+		var ponto: Vector3 = origem + d * float(melhor["t"])
+		c.melee_hits += 1
+		server.broadcast(Protocol.pack_melee({"swinger": c.id, "pos": ponto, "normal": -d, "material": ImpactMaterial.JOGADOR,
+				"flags": Protocol.MELEE_PLAYER, "target": melhor["alvo"]["id"]}), true)
+		_aplicar_dano(c, melhor["alvo"], int(ItemDB.tool_def(Inventory.PICKAXE_ID)["dano_jogador"]), false, ponto, Inventory.PICKAXE_ID)
+		return
+	if mundo.is_empty():
+		return
+	c.melee_hits += 1
+	server.broadcast(Protocol.pack_melee({"swinger": c.id, "pos": mundo["pos"], "normal": mundo["normal"], "material": mundo["material"]}), true)
+	# Etapa 5: vida das peças, dano progressivo e coleta de materiais se ligam aqui
+	server.melee_hit.emit(c.id, mundo["collider"], mundo["material"], mundo["pos"])
 
 
 func _iniciar_recarga(c: GameServer.Cliente, passos: float) -> void:
@@ -168,9 +229,93 @@ func _interagir(c: GameServer.Cliente, cmd: Protocol.InputCmd) -> void:
 	_soltar_bau(c)
 	if not c.prev_interact:
 		var id := server.loot.nearest_loot(pos)
-		if id >= 0 and server.loot.pick_up(id, c.inv, pos):
-			c.fire_next = maxf(c.fire_next, float(c.simulados) + PASSOS_TROCA)
-			c.dirty = true
+		if id >= 0:
+			# inventário cheio: troca pelo item NA MÃO (escolha clara do jogador);
+			# com a picareta na mão não troca nada e avisa
+			var troca := c.inv.selected if not c.inv.pickaxe_selected() else -1
+			var r := pick_up(c, id, troca)
+			if r != Inventory.Err.OK:
+				server.send_to(c.peer_id, Protocol.pack_inv_result(0, Protocol.OP_PICKUP, r), true)
+
+
+# ---------- inventário (operações pedidas pelo cliente; o servidor decide) ----------
+
+## Pega um item do chão. troca: espaço a substituir se não houver lugar (-1 = nenhum).
+func pick_up(c: GameServer.Cliente, id: int, troca: int) -> int:
+	var r := server.loot.pick_up(id, c.inv, c.pawn.global_position, troca, drop_position(c, 0))
+	if r == Inventory.Err.OK:
+		c.fire_next = maxf(c.fire_next, float(c.simulados) + PASSOS_TROCA)
+		c.dirty = true
+	return r
+
+
+## Executa uma operação de C_INV. Retorna Inventory.Err.
+func inventory_op(c: GameServer.Cliente, op: Dictionary) -> int:
+	if c.dead or c.pawn == null:
+		return Inventory.Err.INVALID
+	var inv := c.inv
+	var a: int = op["a"]
+	var b: int = op["b"]
+	var n: int = op["n"]
+	var antes := inv.current()
+	var r := Inventory.Err.INVALID
+	match op["op"]:
+		Protocol.OP_SWAP:
+			r = inv.swap(a, b)
+		Protocol.OP_SPLIT:
+			r = inv.split(Inventory.PICKAXE if a == Protocol.SEM_ESPACO else a, n)
+		Protocol.OP_DROP:
+			var t := inv.take_from_slot(Inventory.PICKAXE if a == Protocol.SEM_ESPACO else a, n)
+			r = t["error"]
+			if r == Inventory.Err.OK:
+				var s: Inventory.Slot = t["slot"]
+				server.loot.spawn_item(s.item, s.rarity, s.count, s.mag if ItemDB.is_weapon(s.item) else -1,
+						drop_position(c, c.drops), c.id, server.tick)
+				c.drops += 1
+		Protocol.OP_DROP_AMMO, Protocol.OP_DROP_MATERIAL:
+			var tipos := ItemDB.ammo_types() if op["op"] == Protocol.OP_DROP_AMMO else ItemDB.material_types()
+			if a < tipos.size() and n > 0:
+				var saiu := inv.take_reserve(tipos[a], n)
+				if saiu > 0:
+					r = Inventory.Err.OK
+					if op["op"] == Protocol.OP_DROP_AMMO:
+						server.loot.spawn_ammo(tipos[a], drop_position(c, c.drops), saiu, c.id, server.tick)
+					else:
+						server.loot.spawn_material(tipos[a], drop_position(c, c.drops), saiu, c.id, server.tick)
+					c.drops += 1
+				else:
+					r = Inventory.Err.EMPTY
+		Protocol.OP_PICKUP:
+			var l: Dictionary = server.loot.loot.get(op["loot"], {})
+			if l.is_empty():
+				r = Inventory.Err.GONE
+			elif c.pawn.global_position.distance_to(l["pos"]) > LootServer.PEGAR_DIST + LootServer.FOLGA_DIST:
+				r = Inventory.Err.TOO_FAR
+			else:
+				r = pick_up(c, op["loot"], b if Inventory.valid_slot(b) else -1)
+	if r == Inventory.Err.OK:
+		# o item na mão mudou (largado/trocado): cancela recarga/uso/golpe
+		if inv.current() != antes or inv.current().is_empty():
+			_cancelar(c)
+		c.dirty = true
+	return r
+
+
+## Onde um item largado cai: 1,6 m à frente (fora do alcance da coleta automática
+## de munição), espalhado por i, no chão da frente; parede no caminho -> aos pés.
+func drop_position(c: GameServer.Cliente, i: int) -> Vector3:
+	var p := c.pawn
+	var frente := Basis(Vector3.UP, c.ultimo_cmd.yaw) * Vector3(0, 0, -1)
+	var ang := (i % 5 - 2) * 0.35
+	var alvo := p.global_position + (Basis(Vector3.UP, ang) * frente) * 1.6
+	var espaco := server.world.get_world_3d().direct_space_state
+	var peito := p.global_position + Vector3(0, 1.0, 0)
+	var q := PhysicsRayQueryParameters3D.create(peito, alvo + Vector3(0, 1.0, 0), Pawn.LAYER_WORLD)
+	if not espaco.intersect_ray(q).is_empty():
+		alvo = p.global_position
+	var desce := PhysicsRayQueryParameters3D.create(alvo + Vector3(0, 1.2, 0), alvo + Vector3(0, -3.0, 0), Pawn.LAYER_WORLD)
+	var chao := espaco.intersect_ray(desce)
+	return (chao["position"] as Vector3) + Vector3(0, 0.02, 0) if not chao.is_empty() else alvo
 
 
 # ---------- disparo ----------
@@ -249,7 +394,7 @@ func eliminate(v: GameServer.Cliente, quem: int, arma: String) -> void:
 	v.dead = true
 	v.respawn_tick = server.tick + RESPAWN_TICKS
 	_cancelar(v)
-	server.loot.drop_inventory(v.inv, v.pawn.global_position)
+	server.loot.drop_inventory(v.inv, v.pawn.global_position)   # a picareta fica com o jogador
 	server.broadcast(Protocol.pack_elim(quem, v.id, ItemDB.index_of(arma)), true)
 	v.dirty = true
 

@@ -63,6 +63,7 @@ func _ambiente() -> void:
 func _chao() -> void:
 	var corpo := StaticBody3D.new()
 	corpo.name = "Chao"
+	corpo.set_meta("material", ImpactMaterial.TERRA)
 	var forma := CollisionShape3D.new()
 	var caixa := BoxShape3D.new()
 	caixa.size = Vector3(LIMITE * 2.2, 2.0, LIMITE * 2.2)
@@ -96,6 +97,7 @@ func _peca(caminho: String, pos: Vector3, rot_y := 0.0) -> void:
 	var n := (load(caminho) as PackedScene).instantiate() as Node3D
 	n.position = pos
 	n.rotation_degrees.y = rot_y
+	n.set_meta("material", ImpactMaterial.from_asset(caminho.get_file().get_basename()))
 	add_child(n)
 
 
@@ -139,5 +141,6 @@ func _props() -> void:
 		var bau := (load("res://assets/baus_coletaveis/bau_ventania_01.glb") as PackedScene).instantiate() as Node3D
 		bau.position = dados_bau[0]
 		bau.rotation_degrees.y = dados_bau[1]
+		bau.set_meta("material", ImpactMaterial.MADEIRA)
 		add_child(bau)
 		chest_nodes.append(bau)

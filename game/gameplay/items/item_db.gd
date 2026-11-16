@@ -1,7 +1,9 @@
 class_name ItemDB
 extends RefCounted
 ## Definições de itens (data/itens.json), carregadas uma vez. Cada item tem um
-## índice pequeno (u8) usado na rede: 0 = vazio, depois armas e consumíveis em ordem.
+## índice pequeno (u8) usado na rede: 0 = vazio, depois armas, consumíveis e
+## ferramentas em ordem. Regras de inventário (pilha, coleta, descarte) vêm de
+## "regras" por categoria e podem ser sobrescritas no próprio item.
 
 const ARQUIVO := "res://data/itens.json"
 
@@ -21,6 +23,8 @@ static func _carregar() -> void:
 	for id in _dados["armas"]:
 		_ids.append(id)
 	for id in _dados["consumiveis"]:
+		_ids.append(id)
+	for id in _dados["ferramentas"]:
 		_ids.append(id)
 	for i in _ids.size():
 		_indices[_ids[i]] = i
@@ -49,6 +53,63 @@ static func is_consumable(id: String) -> bool:
 	return data()["consumiveis"].has(id)
 
 
+static func is_tool_item(id: String) -> bool:
+	return data()["ferramentas"].has(id)
+
+
+static func tool_def(id: String) -> Dictionary:
+	return data()["ferramentas"].get(id, {})
+
+
+## Item que ocupa um dos 5 espaços (arma ou consumível).
+static func is_slot_item(id: String) -> bool:
+	return is_weapon(id) or is_consumable(id)
+
+
+static func category(id: String) -> String:
+	if is_weapon(id):
+		return "armas"
+	if is_consumable(id):
+		return "consumiveis"
+	if is_tool_item(id):
+		return "ferramentas"
+	if data()["municao"].has(id):
+		return "municao"
+	if data()["materiais"].has(id):
+		return "materiais"
+	return ""
+
+
+## Regra de inventário do item: o próprio item sobrescreve a da categoria.
+static func rule(id: String, campo: String, padrao: Variant = null) -> Variant:
+	var d := def(id)
+	if d.has(campo):
+		return d[campo]
+	return data()["regras"].get(category(id), {}).get(campo, padrao)
+
+
+## Máximo por pilha (armas/ferramentas 1; consumíveis "pilha"; munição/materiais "max").
+static func stack_limit(id: String) -> int:
+	match category(id):
+		"municao", "materiais":
+			return int(def(id).get("max", 0))
+		"consumiveis":
+			return int(consumable(id).get("pilha", 1))
+	return int(rule(id, "pilha", 1))
+
+
+static func can_drop(id: String) -> bool:
+	return bool(rule(id, "descartavel", false))
+
+
+static func material_types() -> Array:
+	return data()["materiais"].keys().filter(func(k): return not k.begins_with("_"))
+
+
+static func material(tipo: String) -> Dictionary:
+	return data()["materiais"].get(tipo, {})
+
+
 static func weapon(id: String) -> Dictionary:
 	return data()["armas"].get(id, {})
 
@@ -58,7 +119,10 @@ static func consumable(id: String) -> Dictionary:
 
 
 static func def(id: String) -> Dictionary:
-	return weapon(id) if is_weapon(id) else consumable(id)
+	for cat in ["armas", "consumiveis", "ferramentas", "municao", "materiais"]:
+		if data()[cat].has(id):
+			return data()[cat][id]
+	return {}
 
 
 static func rarities() -> Array:
@@ -75,7 +139,7 @@ static func rarity_color(i: int) -> Color:
 
 
 static func ammo_types() -> Array:
-	return data()["municao"].keys()
+	return data()["municao"].keys().filter(func(k): return not k.begins_with("_"))
 
 
 static func ammo(tipo: String) -> Dictionary:

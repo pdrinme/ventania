@@ -18,6 +18,8 @@ signal eliminated(info: Dictionary)
 signal loot_spawned(l: Dictionary)
 signal loot_removed(id: int)
 signal chest_changed(id: int, open: bool)
+signal inventory_result(r: Dictionary)
+signal melee_impact(m: Dictionary)
 
 const TEMPO_CONEXAO_S := 6.0
 
@@ -107,11 +109,33 @@ func _receber(dados: PackedByteArray) -> void:
 		Protocol.S_CHEST:
 			var c := Protocol.unpack_u16_msg(dados)
 			chest_changed.emit(c[0], c[1] == 1)
+		Protocol.S_INV_RESULT:
+			var r := Protocol.unpack_inv_result(dados)
+			if not r.is_empty():
+				inventory_result.emit(r)
+		Protocol.S_MELEE:
+			var m := Protocol.unpack_melee(dados)
+			if not m.is_empty():
+				melee_impact.emit(m)
 
 
 func send_inputs(cmds: Array) -> void:
 	if connected:
 		_enviar(Protocol.pack_inputs(cmds), false, Protocol.CH_INPUT)
+
+
+var _req := 0
+
+
+## Pede uma operação de inventário ao servidor. Retorna o número do pedido (a
+## resposta chega em inventory_result com o mesmo "req").
+func send_inventory(op: Dictionary) -> int:
+	if not connected:
+		return -1
+	_req = (_req % 65000) + 1
+	op["req"] = _req
+	_enviar(Protocol.pack_inv(op), true, Protocol.CH_RELIABLE)
+	return _req
 
 
 func rtt_ms() -> int:

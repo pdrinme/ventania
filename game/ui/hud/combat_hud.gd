@@ -1,10 +1,10 @@
 class_name CombatHud
 extends Control
-## HUD de combate: vida/escudo, 5 espaços de inventário, barra de ação
+## HUD de combate: vida/escudo, barra de equipamentos (picareta + 5 espaços), barra de ação
 ## (recarga/uso), aviso de interação, feed de eliminações, tela de eliminado e
 ## marcador de acerto. Só mostra o que o servidor informa (status).
 
-signal slot_tapped(i: int)
+signal slot_tapped(i: int)          # 0..4 ou Inventory.PICKAXE
 
 const VERDE := Color("5fd35a")
 const AZUL := Color("3fa2ff")
@@ -14,6 +14,9 @@ var _vida: ProgressBar
 var _escudo: ProgressBar
 var _vida_txt: Label
 var _slots: Array[ItemSlot] = []
+var _picareta: ItemSlot
+var _mensagem: Label
+var _mensagem_t := 0.0
 var _nome_item: Label
 var _balao: Control
 var _balao_tecla := ""
@@ -71,6 +74,15 @@ func _ready() -> void:
 	barra.add_theme_constant_override("separation", 6)
 	add_child(barra)
 	barra.add_theme_constant_override("separation", 10)
+	# 1º espaço, à extrema esquerda: a picareta (permanente, fora dos 5 espaços)
+	_picareta = ItemSlot.new()
+	_picareta.indice = Inventory.PICKAXE
+	_picareta.tapped.connect(func(): slot_tapped.emit(Inventory.PICKAXE))
+	barra.add_child(_picareta)
+	var sep := Control.new()
+	sep.custom_minimum_size.x = 6
+	sep.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	barra.add_child(sep)
 	for i in Inventory.SLOTS:
 		var b := ItemSlot.new()
 		b.indice = i
@@ -120,6 +132,18 @@ func _ready() -> void:
 	_aviso.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	_aviso.position += Vector2(40, 30)
 	add_child(_aviso)
+
+	# mensagens do inventário (cheio, não pode largar a picareta…)
+	_mensagem = Label.new()
+	_mensagem.theme_type_variation = "Subtitulo"
+	_contorno(_mensagem)
+	_mensagem.add_theme_color_override("font_color", Color("ffd27a"))
+	_mensagem.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 206)
+	_mensagem.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_mensagem.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_mensagem.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_mensagem.visible = false
+	add_child(_mensagem)
 
 	_feed = VBoxContainer.new()
 	_feed.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 16)
@@ -183,7 +207,10 @@ func update_status(st: Dictionary) -> void:
 		elif not id.is_empty():
 			qtd = "x%d" % sl["count"]
 		_slots[i].set_item(id, sl["rarity"], qtd, i == st["selected"])
-	var atual: Dictionary = st["slots"][st["selected"]] if st["selected"] < st["slots"].size() else {"item": 0}
+	_picareta.set_item(Inventory.PICKAXE_ID, 0, "", st["selected"] == Protocol.SELECTED_PICKAXE)
+	var atual: Dictionary = {"item": ItemDB.index_of(Inventory.PICKAXE_ID), "rarity": 0, "mag": 0, "count": 1}
+	if st["selected"] < st["slots"].size():
+		atual = st["slots"][st["selected"]]
 	var aid := ItemDB.id_of(atual["item"])
 	if aid.is_empty():
 		_nome_item.text = ""
@@ -207,7 +234,22 @@ func update_status(st: Dictionary) -> void:
 func current_item() -> String:
 	if _status.is_empty() or _status["slots"].is_empty():
 		return ""
+	if _status["selected"] == Protocol.SELECTED_PICKAXE:
+		return Inventory.PICKAXE_ID
 	return ItemDB.id_of(_status["slots"][_status["selected"]]["item"])
+
+
+## Aviso curto acima da barra (ex.: inventário cheio).
+func message(texto: String, segundos := 2.5) -> void:
+	_mensagem.text = texto
+	_mensagem.visible = not texto.is_empty()
+	_mensagem_t = segundos
+
+
+## Rótulo da tecla da picareta (F / ▶ / toque) no 1º espaço.
+func set_pickaxe_key(rotulo: String) -> void:
+	_picareta.rotulo = rotulo
+	_picareta.queue_redraw()
 
 
 func set_prompt(texto: String) -> void:
@@ -298,6 +340,11 @@ func _process(delta: float) -> void:
 		_marcador_t -= delta
 		if _marcador_t <= 0.0:
 			_marcador.queue_redraw()
+	if _mensagem_t > 0.0:
+		_mensagem_t -= delta
+		_mensagem.modulate.a = clampf(_mensagem_t / 0.4, 0.0, 1.0)
+		if _mensagem_t <= 0.0:
+			_mensagem.visible = false
 	_dano_t = maxf(0.0, _dano_t - delta)
 	_vinheta.color.a = _dano_t * 0.6
 	var caixa: Control = _acao.get_meta("caixa")

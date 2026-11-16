@@ -10,9 +10,10 @@ var touch_fire := false            # botão Atirar segurado
 var touch_reload := false          # pedido de recarga (um passo)
 var touch_interact := false        # botão Interagir segurado
 var morto := false                 # eliminado: não envia ações
-var selected := 0                  # espaço atual (vem do servidor)
-var _slot_pendente := 0            # 1..5
+var selected := 0                  # espaço atual (vem do servidor); Inventory.PICKAXE = picareta
+var _slot_pendente := 0            # 1..5; Protocol.SLOT_PICKAXE = picareta
 var bloqueado := false             # pausa
+var inventario_aberto := false     # tela de inventário: anda, mas não atira/mira/recarrega
 var _pulo_pendente := false
 var _agachar_alterna := false      # controle: R3 alterna agachar
 var _agachar_segurado := false     # teclado/mouse: segurar agacha
@@ -23,13 +24,18 @@ func _unhandled_input(e: InputEvent) -> void:
 		return
 	if e.is_action_pressed("jump"):
 		_pulo_pendente = true
+	if inventario_aberto:
+		return
 	for i in 5:
 		if e.is_action_pressed("slot_%d" % (i + 1)):
-			_slot_pendente = i + 1
+			select_slot(i)
+	if e.is_action_pressed("pickaxe"):
+		select_slot(Inventory.PICKAXE)
+	# roda do mouse / LB-RB: picareta -> 1 -> 2 -> ... -> 5 -> picareta
 	if e.is_action_pressed("slot_next"):
-		select_slot((selected + 1) % 5)
+		select_slot(next_in_cycle(selected, 1))
 	elif e.is_action_pressed("slot_prev"):
-		select_slot((selected + 4) % 5)
+		select_slot(next_in_cycle(selected, -1))
 	if e.is_action("crouch"):
 		if e is InputEventJoypadButton:
 			if e.is_pressed():
@@ -42,8 +48,18 @@ func request_jump() -> void:
 	_pulo_pendente = true
 
 
-## i: 0..4
+## Ordem da barra: picareta, 1, 2, 3, 4, 5 (com volta).
+static func next_in_cycle(atual: int, passo: int) -> int:
+	var pos := (atual + 1 + passo + 6) % 6       # picareta = posição 0
+	return pos - 1
+
+
+## i: 0..4 ou Inventory.PICKAXE
 func select_slot(i: int) -> void:
+	if i == Inventory.PICKAXE:
+		_slot_pendente = Protocol.SLOT_PICKAXE
+		selected = Inventory.PICKAXE
+		return
 	_slot_pendente = clampi(i, 0, 4) + 1
 	selected = _slot_pendente - 1
 
@@ -60,6 +76,10 @@ func make_cmd(seq: int, yaw: float, pitch: float) -> Protocol.InputCmd:
 		return c
 	c.slot = _slot_pendente
 	_slot_pendente = 0
+	if inventario_aberto:
+		touch_reload = false
+		c.move = Input.get_vector("move_left", "move_right", "move_back", "move_forward").limit_length(1.0)
+		return c
 	if Input.is_action_pressed("fire") or touch_fire:
 		c.buttons |= Protocol.BTN_FIRE
 	if Input.is_action_pressed("aim"):

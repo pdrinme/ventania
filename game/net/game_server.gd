@@ -7,11 +7,14 @@ extends Node
 
 signal player_joined(id: int, name: String)
 signal player_left(id: int)
+## Impacto da picareta no cenário (Etapa 5: vida das peças e coleta se ligam aqui).
+signal melee_hit(player_id: int, collider: Object, material: int, pos: Vector3)
 
 const MAX_FILA := 8          # entradas guardadas por jogador
 const MAX_POR_TICK := 2      # recupera atraso sem permitir "speed hack"
 const ESPERA_MAX := 6        # ticks esperando entrada antes de simular sem ela (~200 ms)
 const DUMMY_ID_BASE := 60001
+const MAX_OPS_INV_S := 12    # operações de inventário por segundo (evita spam)
 
 class Cliente:
 	var peer_id := 0
@@ -40,6 +43,17 @@ class Cliente:
 	var interact_steps := 0
 	var interact_chest := -1
 	var aiming := false
+	# picareta (relógio = simulados)
+	var swing_start := -1.0
+	var swing_prev := -1.0
+	var swing_hit := false
+	var combo := 0
+	var swings := 0          # golpes iniciados (diagnóstico/testes)
+	var melee_hits := 0      # impactos registrados (diagnóstico/testes)
+	# inventário
+	var drops := 0           # itens largados (espalha no chão)
+	var ops_janela := 0      # tick em que a janela de 1 s começou
+	var ops_na_janela := 0
 	var dead := false
 	var respawn_tick := 0
 	var dirty := true
@@ -173,6 +187,18 @@ func _receber(de: int, dados: PackedByteArray) -> void:
 			while c.fila.size() > MAX_FILA:
 				c.fila.pop_front()
 				c.descartados += 1
+		Protocol.C_INV:
+			if c == null or c.pawn == null:
+				return
+			var op := Protocol.unpack_inv(dados)
+			if op.is_empty():
+				return
+			if tick - c.ops_janela >= Protocol.TICK_RATE:
+				c.ops_janela = tick
+				c.ops_na_janela = 0
+			c.ops_na_janela += 1
+			var r := Inventory.Err.BUSY if c.ops_na_janela > MAX_OPS_INV_S else combat.inventory_op(c, op)
+			send_to(de, Protocol.pack_inv_result(op["req"], op["op"], r), true)
 
 
 func _entrar(de: int, nome: String) -> void:
@@ -202,9 +228,11 @@ func _entrar(de: int, nome: String) -> void:
 
 
 func _dar_kit(c: Cliente) -> void:
+	# a picareta já vem no Inventory (permanente); o treino dá também uma pistola na mão
 	if kit_inicial:
 		c.inv.add_item("faisca", 0)
 		c.inv.add_ammo("leve", 48)
+		c.inv.select(0)
 	c.dirty = true
 
 
@@ -220,6 +248,7 @@ func _reviver(c: Cliente) -> void:
 	c.inv = Inventory.new()
 	c.reload_end = -1.0
 	c.use_end = -1.0
+	c.swing_start = -1.0
 	_reaparecer(c)
 	_dar_kit(c)
 
@@ -258,9 +287,11 @@ func _status(c: Cliente) -> Dictionary:
 		restante = c.use_end - c.simulados
 		total = c.use_total
 	var ms := 1000.0 / Protocol.TICK_RATE
-	return {"hp": c.vit.health, "shield": c.vit.shield, "selected": c.inv.selected, "action": acao,
+	var sel := Protocol.SELECTED_PICKAXE if c.inv.pickaxe_selected() else c.inv.selected
+	return {"hp": c.vit.health, "shield": c.vit.shield, "selected": sel, "action": acao,
 			"action_left_ms": clampi(roundi(restante * ms), 0, 65535), "action_total_ms": clampi(roundi(total * ms), 0, 65535),
-			"slots": slots, "ammo": ItemDB.ammo_types().map(func(t): return c.inv.ammo[t])}
+			"slots": slots, "ammo": ItemDB.ammo_types().map(func(t): return c.inv.ammo[t]),
+			"materials": ItemDB.material_types().map(func(t): return c.inv.materials[t])}
 
 
 func _enviar_snapshots() -> void:

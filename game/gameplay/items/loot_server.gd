@@ -4,13 +4,16 @@ extends RefCounted
 ## pela função `broadcast(dados: PackedByteArray)` fornecida pelo GameServer.
 
 const PEGAR_DIST := 2.2
+const FOLGA_DIST := 0.8              # tolerância de latência para pegar pela tela de loot
+const PROXIMOS_DIST := 3.2           # itens listados na interface de loot
+const BLOQUEIO_DONO_TICKS := 2 * Protocol.TICK_RATE   # quem largou não recoleta na hora
 const BAU_DIST := 2.4
 const MUNICAO_AUTO_DIST := 1.3
 const ABRIR_BAU_PASSOS := 15         # segurar interagir 0,5 s
 const REABASTECER_BAU_TICKS := 45 * Protocol.TICK_RATE
 
 var broadcast: Callable
-var loot := {}                       # id -> {"id","item","rarity","count","mag","ammo","pos"}
+var loot := {}                       # id -> {"id","item","rarity","count","mag","ammo","mat","pos","dono","ate"}
 var chests: Array = []               # [{"pos","open","reopen_tick"}]
 var rng := RandomNumberGenerator.new()
 var _proximo := 1
@@ -36,13 +39,33 @@ func _sortear_chao(p: Vector3) -> void:
 		spawn_item(c, 0, int(ItemDB.consumable(c)["quantidade"]), -1, p)
 
 
-func spawn_item(item: String, raridade: int, count: int, mag: int, pos: Vector3) -> int:
-	return _criar({"item": ItemDB.index_of(item), "rarity": raridade, "count": count, "mag": mag, "ammo": 0, "pos": pos})
+## dono/ate: quem largou o item não o recoleta automaticamente até o tick "ate".
+func spawn_item(item: String, raridade: int, count: int, mag: int, pos: Vector3, dono := 0, tick := 0) -> int:
+	assert(ItemDB.is_slot_item(item), "só armas e consumíveis vão ao chão")
+	return _criar({"item": ItemDB.index_of(item), "rarity": raridade, "count": count, "mag": mag, "ammo": 0, "mat": 0,
+			"pos": pos, "dono": dono, "ate": tick + BLOQUEIO_DONO_TICKS if dono else 0})
 
 
-func spawn_ammo(tipo: String, pos: Vector3, quantidade := -1) -> int:
+func spawn_ammo(tipo: String, pos: Vector3, quantidade := -1, dono := 0, tick := 0) -> int:
 	var n := quantidade if quantidade > 0 else int(ItemDB.ammo(tipo)["caixa"])
-	return _criar({"item": 0, "rarity": 0, "count": n, "mag": -1, "ammo": ItemDB.ammo_types().find(tipo) + 1, "pos": pos})
+	return _criar({"item": 0, "rarity": 0, "count": n, "mag": -1, "ammo": ItemDB.ammo_types().find(tipo) + 1, "mat": 0,
+			"pos": pos, "dono": dono, "ate": tick + BLOQUEIO_DONO_TICKS if dono else 0})
+
+
+func spawn_material(tipo: String, pos: Vector3, quantidade: int, dono := 0, tick := 0) -> int:
+	return _criar({"item": 0, "rarity": 0, "count": quantidade, "mag": -1, "ammo": 0, "mat": ItemDB.material_types().find(tipo) + 1,
+			"pos": pos, "dono": dono, "ate": tick + BLOQUEIO_DONO_TICKS if dono else 0})
+
+
+static func is_reserve(l: Dictionary) -> bool:
+	return l["ammo"] != 0 or l.get("mat", 0) != 0
+
+
+## Itens (de espaço) perto de uma posição, do mais perto ao mais longe.
+func loot_near(pos: Vector3, raio := PROXIMOS_DIST) -> Array:
+	var out := loot.values().filter(func(l): return not is_reserve(l) and pos.distance_to(l["pos"]) <= raio)
+	out.sort_custom(func(a, b): return pos.distance_to(a["pos"]) < pos.distance_to(b["pos"]))
+	return out
 
 
 func _criar(l: Dictionary) -> int:
@@ -73,7 +96,7 @@ func nearest_loot(pos: Vector3) -> int:
 	var melhor := -1
 	var dist := PEGAR_DIST
 	for l in loot.values():
-		if l["ammo"] != 0:
+		if is_reserve(l):
 			continue
 		var d := pos.distance_to(l["pos"])
 		if d < dist:
@@ -89,37 +112,50 @@ func nearest_chest(pos: Vector3) -> int:
 	return -1
 
 
-## Pega um item do chão para o inventário. Retorna true se pegou algo.
-func pick_up(id: int, inv: Inventory, pos: Vector3) -> bool:
+## Pega um item do chão para o inventário. Nunca perde item: o que não coube fica
+## no chão (a mesma entrada, com a quantidade atualizada) e o item trocado (só com
+## `troca` explícita) cai em `pos_troca`. Retorna Inventory.Err.
+func pick_up(id: int, inv: Inventory, pos: Vector3, troca := -1, pos_troca := Vector3.INF) -> int:
 	var l: Dictionary = loot.get(id, {})
-	if l.is_empty() or l["ammo"] != 0:
-		return false
+	if l.is_empty():
+		return Inventory.Err.GONE
+	if is_reserve(l):
+		return Inventory.Err.INVALID
 	var item := ItemDB.id_of(l["item"])
-	var r := inv.add_item(item, l["rarity"], l["count"], l["mag"])
+	var r := inv.add_item(item, l["rarity"], l["count"], l["mag"], troca)
 	if r["taken"] <= 0:
-		return false
-	remove(id)
+		return r["error"]
 	if r["taken"] < l["count"]:
-		spawn_item(item, l["rarity"], l["count"] - r["taken"], -1, l["pos"])
+		l["count"] -= r["taken"]
+		broadcast.call(Protocol.pack_loot(l))
+	else:
+		remove(id)
 	var trocado: Inventory.Slot = r["dropped"]
 	if trocado:
-		spawn_item(trocado.item, trocado.rarity, maxi(1, trocado.count), trocado.mag, pos + Vector3(0, 0.1, 0))
-	return true
+		var onde: Vector3 = pos_troca if pos_troca != Vector3.INF else pos + Vector3(0, 0.02, 0)
+		spawn_item(trocado.item, trocado.rarity, maxi(1, trocado.count), trocado.mag, onde)
+	return Inventory.Err.OK
 
 
-## Coleta munição automaticamente ao passar perto. Retorna true se mudou o inventário.
-func auto_ammo(inv: Inventory, pos: Vector3) -> bool:
+## Coleta munição (e materiais) automaticamente ao passar perto. Retorna true se
+## mudou o inventário. Quem largou o item só recoleta depois de "ate".
+func auto_ammo(inv: Inventory, pos: Vector3, jogador := 0, tick := 0) -> bool:
 	var mudou := false
 	for l in loot.values().duplicate():
-		if l["ammo"] == 0 or pos.distance_to(l["pos"]) > MUNICAO_AUTO_DIST:
+		if not is_reserve(l) or pos.distance_to(l["pos"]) > MUNICAO_AUTO_DIST:
 			continue
-		var tipo: String = ItemDB.ammo_types()[l["ammo"] - 1]
-		var coube := inv.add_ammo(tipo, l["count"])
+		if jogador != 0 and l.get("dono", 0) == jogador and tick < int(l.get("ate", 0)):
+			continue
+		var municao: bool = l["ammo"] != 0
+		var tipo: String = ItemDB.ammo_types()[l["ammo"] - 1] if municao else ItemDB.material_types()[l["mat"] - 1]
+		var coube := inv.add_ammo(tipo, l["count"]) if municao else inv.add_material(tipo, l["count"])
 		if coube > 0:
 			mudou = true
-			remove(l["id"])
 			if coube < l["count"]:
-				spawn_ammo(tipo, l["pos"], l["count"] - coube)
+				l["count"] -= coube
+				broadcast.call(Protocol.pack_loot(l))
+			else:
+				remove(l["id"])
 	return mudou
 
 
@@ -153,7 +189,7 @@ func update(tick: int) -> void:
 				broadcast.call(Protocol.pack_u16_msg(Protocol.S_CHEST, i, 0))
 
 
-## Espalha o inventário de um jogador eliminado.
+## Espalha o inventário de um jogador eliminado (a picareta não cai: é permanente).
 func drop_inventory(inv: Inventory, pos: Vector3) -> void:
 	var i := 0
 	for s: Inventory.Slot in inv.drop_all():
@@ -165,4 +201,10 @@ func drop_inventory(inv: Inventory, pos: Vector3) -> void:
 			var ang := i * TAU / 6.0
 			spawn_ammo(tipo, pos + Vector3(cos(ang), 0.05, sin(ang)) * 1.6, inv.ammo[tipo])
 			inv.ammo[tipo] = 0
+			i += 1
+	for tipo in inv.materials:
+		if inv.materials[tipo] > 0:
+			var ang := i * TAU / 6.0
+			spawn_material(tipo, pos + Vector3(cos(ang), 0.05, sin(ang)) * 1.8, inv.materials[tipo])
+			inv.materials[tipo] = 0
 			i += 1

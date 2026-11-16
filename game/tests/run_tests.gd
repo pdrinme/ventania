@@ -20,7 +20,7 @@ func _init() -> void:
 			var caso: TestCase = script.new()
 			caso._atual = "%s::%s" % [arq.get_basename(), m]
 			caso.tree = self
-			caso.before_each()
+			await caso.before_each()   # pode esperar a física (mapa carregado)
 			await caso.call(m)   # testes podem ser assíncronos (esperar ticks de física)
 			caso.after_each()
 			total += 1

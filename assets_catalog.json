@@ -465,6 +465,22 @@
       "referencias": [],
       "notas": "Etapa 3",
       "atualizado_em": "2026-11-16"
+    },
+    {
+      "id": "picareta_01",
+      "nome": "Picareta Ventania (ferramenta permanente)",
+      "categoria": "armas",
+      "origem": "original",
+      "autor": "Projeto Ventania",
+      "licenca": "Original",
+      "url_origem": "",
+      "atribuicao": "",
+      "arquivo_fonte": "assets_src/armas/picareta_01.blend",
+      "arquivo_exportado": "game/assets/armas/picareta_01.glb",
+      "estado": "importado",
+      "referencias": [],
+      "notas": "Etapa 3 (preparação final): equipamento permanente; marcadores grip_r, grip_l, cabeca, centro_cabeca",
+      "atualizado_em": "2026-11-16"
     }
   ]
 }

@@ -136,6 +136,16 @@ O item comanda as mãos, nunca o contrário. Os marcadores ficam nos modelos (`g
 - telhado em pirâmide de 1,6 m;
 - colisões convexas iguais ao visual.
 
+### 4.3 Picareta e inventário (preparação final da Etapa 3, protocolo v4)
+- **Picareta permanente:** não é um item de espaço. O `Inventory` tem um espaço fixo interno (`selected = Inventory.PICKAXE`), e nenhuma operação a aceita: largar, trocar de posição, dividir, guardar num espaço ou cair ao morrer (`drop_all` só esvazia os 5 espaços e volta a seleção para ela). Todo jogador começa com ela na mão. Seleção: `InputCmd.slot = 6` (`SLOT_PICKAXE`); no status, `selected = 255`.
+- **Golpe:** decidido no servidor, no relógio de passos do jogador (`simulados`), igual ao tiro. Duração `Combat.melee_swing_steps()` (19 passos) e impacto em `melee_impact_step()` (8): um único raio da mira até 2,4 m, contra o cenário (física) e contra jogadores/bonecos (hitbox voltada no tempo). **No máximo um impacto por golpe** (`swing_hit`), e a cadência é validada pelo servidor. Golpes seguidos alternam o lado (`ACT_SWING`/`ACT_SWING_B` no snapshot, com o progresso). O cliente prevê o mesmo relógio, anima e mostra o impacto na hora; o servidor confirma com `S_MELEE` (para todos, com material, posição e normal) e aplica dano a jogadores (`S_HIT`).
+- **Material:** `ImpactMaterial` lê a meta `material` que o mapa grava no nó raiz de cada asset (madeira, pedra, metal, terra). Efeitos e sons dependem dele.
+- **Gancho da Etapa 5:** `GameServer.melee_hit(player_id, collider, material, pos)` é emitido a cada impacto no cenário. Vida das peças, rachaduras, destruição e coleta vão se ligar aí; os dados (`dano_construcao`, `recursos_por_golpe`) já estão em `itens.json`. Nada disso está implementado ainda.
+- **Inventário autoritativo:** o cliente pede operações por `C_INV` (canal confiável): trocar posições, dividir, largar (espaço, munição ou material, com quantidade) e pegar um item específico (com espaço a substituir). O servidor valida cada uma em `CombatServer.inventory_op` (alcance, limites, espaço livre, regras de descarte, até 12 operações/s) e responde `S_INV_RESULT` com um código (`Inventory.Err`). O estado novo vai sempre no `S_STATUS`; a interface nunca muda o inventário sozinha.
+- **Sem perda nem duplicação:** o que sai do inventário volta ao chamador e vira loot; o que não coube continua no chão (a mesma entrada, com a quantidade atualizada). Inventário cheio **nunca troca em silêncio**: com Interagir, a troca é pelo item na mão (o aviso diz "Trocar X por Y"); com a picareta na mão, aparece "Inventário cheio". Testes de conservação somam itens no inventário e no chão antes e depois de cada operação.
+- **Item largado:** cai 1,6 m à frente, no chão (raio para baixo), ou aos pés se houver parede no caminho. Quem largou não o recoleta automaticamente por 2 s.
+- **Dados:** `itens.json` → `regras` por categoria (pilha, coleta, descartável), que cada item pode sobrescrever; `ferramentas.picareta`; `materiais` (madeira, pedra e metal, com máximo de 999, ainda sem forma de obter).
+
 ## 5. Meta-servidor **[ADR-3]**
 
 - Python 3.11+ e **somente a biblioteca padrão**: `asyncio` (servidor HTTP próprio e enxuto), `sqlite3`, `hashlib` (PBKDF2), `hmac`, `secrets`, `json`, `unittest`.

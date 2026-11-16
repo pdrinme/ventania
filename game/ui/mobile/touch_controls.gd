@@ -3,8 +3,11 @@ extends Control
 ## Controles de toque (layout próprio do celular, não é o HUD do PC reduzido).
 ## - Joystick flutuante: toque em qualquer lugar da metade esquerda.
 ## - Olhar: arrastar na metade direita (fora dos botões).
-## - Botões: Pular e Agachar (alterna). Empurrar o joystick até a borda = correr.
+## - Botões: Pular e Agachar (alterna), Mochila (inventário). Empurrar o joystick até a
+##   borda = correr. A picareta e os itens são escolhidos tocando na barra.
 ## Tamanho dos botões: configuração interface/touch_button_scale.
+
+signal inventory_pressed
 
 const RAIO_JOY := 90.0
 const RAIO_BOTAO := 62.0
@@ -40,6 +43,7 @@ func _layout() -> void:
 		"agachar": {"centro": Vector2(t.x - r * 3.9, t.y - r * 1.1), "raio": r * 0.8, "dedo": -1, "texto": "Agachar"},
 		"recarregar": {"centro": Vector2(t.x - r * 4.0, t.y - r * 3.4), "raio": r * 0.7, "dedo": -1, "texto": "Recarga"},
 		"interagir": {"centro": Vector2(t.x - r * 6.0, t.y - r * 2.4), "raio": r * 0.75, "dedo": -1, "texto": "Pegar"},
+		"mochila": {"centro": Vector2(t.x - r * 1.0, r * 2.2), "raio": r * 0.62, "dedo": -1, "texto": "Mochila"},
 	}
 	queue_redraw()
 
@@ -105,6 +109,8 @@ func _apertar(nome: String) -> void:
 			sampler.touch_reload = true
 		"interagir":
 			sampler.touch_interact = true
+		"mochila":
+			inventory_pressed.emit()
 
 
 func _soltar(nome: String) -> void:

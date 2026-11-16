@@ -140,6 +140,12 @@
       "notas": "Etapa 3"
     },
     {
+      "id": "picareta_01",
+      "nome": "Picareta Ventania (ferramenta permanente)",
+      "categoria": "armas",
+      "notas": "Etapa 3 (preparação final): equipamento permanente; marcadores grip_r, grip_l, cabeca, centro_cabeca"
+    },
+    {
       "id": "municao_01",
       "nome": "Caixa de munição",
       "categoria": "baus_coletaveis",

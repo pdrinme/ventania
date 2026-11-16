@@ -11,6 +11,7 @@ extends Node3D
 
 const MODELO := "res://assets/personagens/recruta_base_01.glb"
 const DURACAO_TROCA := 0.22
+const DURACAO_GUARDAR := 0.12      # guarda o item atual antes de sacar o próximo
 const DURACAO_RECUO := 0.18
 
 var _modelo: Node3D
@@ -21,6 +22,7 @@ var aim: AimPoseModifier
 var rig: ItemRig
 var _item_idx := -1
 var _item_pedido := 0
+var _guardando := false            # guardando o item antigo (equip 1 -> 0) antes de trocar
 var _agachado := 0.0
 var _ar := 0.0
 var _tempo_no_ar := 0.0
@@ -173,11 +175,23 @@ static func _textura_clarao() -> ImageTexture:
 
 # ---------------- API ----------------
 
-## Item na mão (índice ItemDB; 0 = nenhum). Trocar dispara a animação de sacar.
+## Item na mão (índice ItemDB; 0 = nenhum). Trocar primeiro GUARDA o item atual
+## (equip 1 -> 0, DURACAO_GUARDAR) e só então saca o novo (equip 0 -> 1).
 func set_held(indice: int) -> void:
 	_item_pedido = indice
 	if _sk == null or indice == _item_idx:
+		_guardando = false
 		return
+	if rig.item_node and _item_idx > 0 and not _guardando and rig.equip > 0.05:
+		_guardando = true
+		return
+	if _guardando and rig.equip > 0.0:
+		return
+	_trocar_modelo(indice)
+
+
+func _trocar_modelo(indice: int) -> void:
+	_guardando = false
 	_item_idx = indice
 	if rig.item_node:
 		rig.item_node.queue_free()
@@ -190,6 +204,8 @@ func set_held(indice: int) -> void:
 	var caminho := ""
 	if com_arma:
 		caminho = "res://assets/armas/%s.glb" % ItemDB.weapon(id)["modelo"]
+	elif ItemDB.is_tool_item(id):
+		caminho = "res://assets/armas/%s.glb" % ItemDB.tool_def(id)["modelo"]
 	elif ItemDB.is_consumable(id):
 		caminho = "res://assets/baus_coletaveis/%s.glb" % ItemDB.consumable(id)["modelo"]
 	if not caminho.is_empty():
@@ -197,6 +213,11 @@ func set_held(indice: int) -> void:
 		rig.holder.add_child(rig.item_node)
 		_cano = rig.item_node.find_child("muzzle", true, false) as Node3D
 	rig.equip = 0.0
+
+
+## Item que está de fato na mão agora (pode estar guardando o anterior).
+func held_index() -> int:
+	return _item_idx
 
 
 ## Compatibilidade com o código antigo.
@@ -230,6 +251,13 @@ func fire() -> void:
 		_flash.rotation.z = randf() * TAU
 		_flash.scale = Vector3.ONE * (1.6 if cat == ItemRig.Cat.RIFLE and rig.item == "trovao" else randf_range(0.8, 1.2))
 		_flash_t = 0.05
+
+
+## Ponta da picareta no mundo (ou Vector3.INF se não estiver na mão).
+func pickaxe_tip() -> Vector3:
+	if not ItemDB.is_tool_item(rig.item) or rig.item_node == null:
+		return Vector3.INF
+	return _sk.global_transform * rig.pickaxe_tip()
 
 
 ## Posição do cano da arma na mão (origem dos traçantes); sem arma, à frente do peito.
@@ -273,7 +301,12 @@ func _process(delta: float) -> void:
 	_tree.set("parameters/agachar/blend_amount", _agachado)
 	_tree.set("parameters/solo_ar/blend_amount", _ar)
 	rig.sprint = move_toward(rig.sprint, 1.0 if h > Movement.WALK_SPEED + 0.6 and rig.ads < 0.1 else 0.0, delta * 5.0)
-	rig.equip = move_toward(rig.equip, 1.0, delta / DURACAO_TROCA)
+	if _guardando:
+		rig.equip = move_toward(rig.equip, 0.0, delta / DURACAO_GUARDAR)
+		if rig.equip <= 0.0:
+			_trocar_modelo(_item_pedido)
+	else:
+		rig.equip = move_toward(rig.equip, 1.0, delta / DURACAO_TROCA)
 	rig.recoil = move_toward(rig.recoil, 0.0, delta / DURACAO_RECUO * maxf(rig.recoil, 0.3))
 	if _flash_t > 0.0:
 		if _cano:

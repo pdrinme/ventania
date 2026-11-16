@@ -114,3 +114,40 @@ salvar("cura_ok", tom([520, 780], 0.2, 0.4, decai=0.1) + tom([780, 1040], 0.2, 0
 salvar("gole", tom([300, 200], 0.08, 0.4, decai=0.04), vol=0.4)
 salvar("atadura", [v * 0.6 for v in ruido_filtrado(int(TAXA * 0.15), 2500)], vol=0.35)
 salvar("aterrissar", mix(ruido_filtrado(int(TAXA * 0.1), 600), tom([90, 60], 0.1, 0.8)), vol=0.45)
+# picareta: corte de ar, impactos por material e sacar
+def whoosh(dur, f0, f1, vol=0.6):
+    n = int(TAXA * dur)
+    out, y = [], 0.0
+    for i in range(n):
+        t = i / TAXA
+        corte = f0 + (f1 - f0) * math.sin(math.pi * t / dur)
+        a = math.exp(-2 * math.pi * corte / TAXA)
+        y = (1 - a) * rnd.uniform(-1, 1) + a * y
+        out.append(y * math.sin(math.pi * t / dur) ** 1.5 * vol)
+    return out
+
+
+def batida(dur, corte, grave, decai, ressoa=None):
+    n = int(TAXA * dur)
+    r = ruido_filtrado(n, corte)
+    out = []
+    for i in range(n):
+        t = i / TAXA
+        s = r[i] * math.exp(-t / (decai * 0.4)) + math.sin(2 * math.pi * grave * t) * 0.8 * math.exp(-t / decai)
+        if ressoa:
+            s += sum(math.sin(2 * math.pi * f * t) for f in ressoa) * 0.18 * math.exp(-t / (decai * 3.5))
+        out.append(s * min(1.0, t / 0.001))
+    return out
+
+
+salvar("golpe_ar", whoosh(0.22, 300, 2200), vol=0.5)
+salvar("golpe_madeira", batida(0.25, 1400, 150, 0.05), vol=0.8)
+salvar("golpe_pedra", mix(batida(0.22, 4200, 220, 0.03), ruido_filtrado(int(TAXA * 0.2), 2500)[:int(TAXA * 0.2)] and
+       [v * math.exp(-(i / TAXA) / 0.06) * 0.4 for i, v in enumerate(ruido_filtrado(int(TAXA * 0.2), 2500))]), vol=0.75)
+salvar("golpe_metal", batida(0.6, 6000, 420, 0.04, ressoa=[1870, 2630, 3410]), vol=0.7)
+salvar("golpe_terra", batida(0.18, 700, 90, 0.04), vol=0.6)
+salvar("picareta_sacar", whoosh(0.16, 500, 1600, 0.4) + clique(900, 0.04, 0.5), vol=0.5)
+# inventário
+salvar("largar", tom([600, 380], 0.1, 0.45, decai=0.05), vol=0.5)
+salvar("inv_erro", tom([330, 300], 0.09, 0.45, onda="tri") + silencio(0.03) + tom([300, 260], 0.11, 0.45, onda="tri"), vol=0.45)
+salvar("inv_mover", clique(1500, 0.03, 0.5) + tom([900, 1100], 0.05, 0.3, decai=0.03), vol=0.45)

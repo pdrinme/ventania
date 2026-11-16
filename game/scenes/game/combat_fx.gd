@@ -234,6 +234,10 @@ func impact(pos: Vector3, normal: Vector3, em_jogador: bool) -> void:
 	p.global_position = pos + normal * 0.03
 	p.direction = normal if normal != Vector3.ZERO else Vector3.UP
 	p.color_ramp = _grad_jogador if em_jogador else _grad_cenario
+	p.initial_velocity_min = 1.5
+	p.initial_velocity_max = 4.5
+	p.scale_amount_min = 0.6
+	p.scale_amount_max = 1.2
 	p.restart()
 	p.emitting = true
 	var f := _clarões[i]
@@ -241,6 +245,50 @@ func impact(pos: Vector3, normal: Vector3, em_jogador: bool) -> void:
 	(f.mesh as QuadMesh).material.albedo_color = Color(1.0, 0.45, 0.4) if em_jogador else Color(1.0, 0.85, 0.5)
 	f.visible = true
 	_clarao_t[i] = 0.09
+
+
+## Cores e força das partículas do golpe de picareta, por material.
+## [cor inicial, cor final, velocidade mín., máx., escala, cor do clarão]
+const GOLPE := {
+	ImpactMaterial.MADEIRA: [Color("e0a35e"), Color(0.55, 0.36, 0.18, 0.0), 1.6, 3.8, 1.9, Color(1.0, 0.85, 0.6)],
+	ImpactMaterial.PEDRA: [Color("d6d1c6"), Color(0.55, 0.55, 0.52, 0.0), 1.0, 3.0, 1.7, Color(0.95, 0.95, 0.9)],
+	ImpactMaterial.METAL: [Color("fff6c8"), Color(1.0, 0.55, 0.15, 0.0), 3.5, 7.0, 0.8, Color(1.0, 0.95, 0.7)],
+	ImpactMaterial.TERRA: [Color("9a7846"), Color(0.35, 0.55, 0.25, 0.0), 1.2, 2.8, 1.5, Color(0.9, 0.85, 0.7)],
+	ImpactMaterial.NENHUM: [Color("e2dccf"), Color(0.6, 0.6, 0.6, 0.0), 1.2, 3.0, 1.4, Color(1.0, 0.95, 0.85)],
+}
+var _grad_golpe := {}
+var melee_impacts := 0               # testes/diagnóstico
+
+
+## Impacto da picareta: lascas de madeira, poeira de pedra, faíscas de metal…
+func melee_impact(pos: Vector3, normal: Vector3, material: int) -> void:
+	melee_impacts += 1
+	if material == ImpactMaterial.JOGADOR:
+		impact(pos, normal, true)
+		return
+	var g: Array = GOLPE.get(material, GOLPE[ImpactMaterial.NENHUM])
+	if not _grad_golpe.has(material):
+		var gr := Gradient.new()
+		gr.set_color(0, g[0])
+		gr.set_color(1, g[1])
+		_grad_golpe[material] = gr
+	var i := _prox_imp
+	_prox_imp = (_prox_imp + 1) % POOL_IMPACTO
+	var p := _impactos[i]
+	p.global_position = pos + normal * 0.04
+	p.direction = normal if normal != Vector3.ZERO else Vector3.UP
+	p.color_ramp = _grad_golpe[material]
+	p.initial_velocity_min = g[2]
+	p.initial_velocity_max = g[3]
+	p.scale_amount_min = 0.6 * g[4]
+	p.scale_amount_max = 1.2 * g[4]
+	p.restart()
+	p.emitting = true
+	var f := _clarões[i]
+	f.global_position = pos + normal * 0.05
+	(f.mesh as QuadMesh).material.albedo_color = g[5]
+	f.visible = true
+	_clarao_t[i] = 0.10
 
 
 func damage_number(pos: Vector3, dano: int, cabeca: bool, escudo: bool) -> void:

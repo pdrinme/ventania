@@ -155,12 +155,48 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 
 **Verificado** com capturas dentro do jogo (`game/tests/capturar_tracantes.gd`): rifle nos bonecos, alvo a 25 m, leque da espingarda com impactos e vista lateral saindo do cano.
 
+### Etapa 3 — Preparação final: picareta e inventário completo (v0.3.3) ✅
+**Diagnóstico antes de implementar:** já existiam os 5 espaços, a munição separada com máximo, as pilhas de consumíveis, os baús e o loot, o ItemRig com IK e as miniaturas. Faltavam a picareta (nada existia), as operações de inventário pedidas pelo cliente (não havia mensagem para isso), a tela de inventário e o material do que é atingido. A coleta com inventário cheio **trocava em silêncio** pelo item selecionado (corrigido). Nada foi refeito: tudo foi construído sobre `Inventory`, `LootServer`, `CombatServer`, `ItemRig`, `ItemSlot` e `CombatFx`.
+
+**Implementado:**
+- **Picareta permanente** (`picareta_01`, modelo original de 532 triângulos, pelo pipeline: gerador Blender → `export_glb.py` → `validate_glb.py` → catálogo → importação na Godot). Fica no 1º espaço à esquerda da barra (picareta → 1 → 2 → 3 → 4 → 5), não ocupa espaço, não é largada, trocada nem perdida ao morrer, e é o item inicial de todo jogador. Seleção por F, ► no controle, toque no espaço e no ciclo da roda/LB-RB.
+- **Animações** no ItemRig e no IK existentes (sem segundo sistema): segurar, correr, sacar e guardar (por cima do ombro), golpe A (de cima, na diagonal) e golpe B (horizontal), que se alternam nos golpes seguidos, com o tronco acompanhando. A troca de **qualquer** item agora guarda o anterior antes de sacar o próximo.
+- **Golpe no servidor:** impacto num quadro definido (passo 8 de 19), um único impacto por golpe, alcance e cadência validados, material (madeira, pedra, metal ou terra), 20 de dano em jogadores e bonecos, previsão no cliente e confirmação para todos (`S_MELEE`). Os outros jogadores veem a picareta e o golpe.
+- **Efeitos:** lascas, poeira ou faíscas por material, clarão no impacto e 9 sons novos sintetizados: corte de ar, impactos em madeira, pedra, metal e terra, sacar, largar, erro e mover.
+- **Inventário completo e autoritativo:**
+  - tela própria (Tab / Select / botão Mochila no toque) com os 5 espaços, a picareta, munição, materiais, itens próximos e detalhes do item;
+  - mover (arrastar, ou "Mover" e o destino), dividir e largar com escolha de quantidade, pegar e substituir escolhendo o espaço;
+  - limites de pilha vindos dos dados; o item largado vira loot para todos;
+  - inventário cheio avisa e nunca troca nem pega em silêncio;
+  - protocolo v4 (`C_INV`, `S_INV_RESULT`, `S_MELEE`, picareta na seleção e materiais no status).
+- **Preparado para a Etapa 5, sem sistema provisório:** o sinal `melee_hit` no servidor, `dano_construcao`/`recursos_por_golpe` nos dados e os materiais já no inventário e no status.
+
+**Testado (executado):**
+- 84 unitários (21 novos): picareta permanente; troca e seleção; limites de pilha; coleta parcial sem perda; substituição explícita; divisão; largar quantidades; conservação; protocolo v4. Com o mapa real: impacto no quadro certo, um por golpe, cadência, madeira/pedra/metal, fora de alcance, boneco, operações recusadas e picareta ao morrer.
+- Fumaça (pela rede): seleção dedicada, destaque no 1º espaço, golpe com impacto previsto e confirmado (3 de 3), **jogador remoto visto com a picareta golpeando**, abrir e fechar a tela, largar, recusar a picareta e pegar de volta pela lista de próximos.
+- Servidor dedicado com 2 clientes, encerramento limpo (exit 0) e desempenho do servidor: 24 jogadores a 0,96 ms/tick (antes ~1,0).
+- Capturas: `game/tests/capturar_picareta.gd` (fases do golpe, impactos por material, barra e tela de inventário).
+- Benchmark visual (`perf_visual`, 16 personagens, agora com a picareta golpeando): 6,90 ms por quadro, **igual à v0.3.2**. Esse valor é o limite de quadros do modo headless, então o método só mostra que não houve regressão grande. A medição real é no seu notebook.
+
+**Pendente / não validado:**
+- Teste em hardware real (notebook e celular) e uso com controle físico (a navegação por foco foi feita, mas não testada com um controle de verdade).
+- Vida das construções, rachaduras, destruição e coleta: Etapa 5 (ver abaixo).
+
 ### Etapa 4 — Mapa e sistemas Battle Royale ⬜
 Mapa pequeno (cerca de 600 m), construções ambientais, loot, Tormenta e zona segura, eliminações, espectador, vitória e encerramento.
 **Aceite:** partida completa do início ao fim (com clientes simulados), e benchmark do mapa nos 3 perfis.
 
 ### Etapa 5 — Construção ⬜
 Parede, piso, rampa e teto, com grade, edição, destruição, desabamento sem apoio e materiais, tudo sincronizado.
+**Requisitos registrados na preparação da picareta (v0.3.3):**
+- vida individual por peça de construção;
+- dano progressivo da picareta (`dano_construcao` em `itens.json`);
+- feedback de deterioração e rachaduras progressivas;
+- efeitos de impacto por material (a base já existe);
+- fragmentos e partículas na destruição, e destruição completa com vida zero;
+- deterioração e destruição sincronizadas entre jogadores;
+- coleta de materiais na destruição e por golpe (`recursos_por_golpe`) e integração ao inventário (os materiais já existem lá).
+- O ponto de ligação é o sinal `GameServer.melee_hit`.
 **Aceite:** testes de grade e conectividade, 2 clientes construindo e editando sem divergência, e o limite de peças medido.
 
 ### Etapa 6 — Inteligência artificial ⬜

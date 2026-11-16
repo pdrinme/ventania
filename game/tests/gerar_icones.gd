@@ -39,14 +39,17 @@ func _init() -> void:
 		itens[id] = "res://assets/armas/%s.glb" % ItemDB.weapon(id)["modelo"]
 	for id in ItemDB.data()["consumiveis"]:
 		itens[id] = "res://assets/baus_coletaveis/%s.glb" % ItemDB.consumable(id)["modelo"]
+	for id in ItemDB.data()["ferramentas"]:
+		itens[id] = "res://assets/armas/%s.glb" % ItemDB.tool_def(id)["modelo"]
 	itens["municao"] = "res://assets/baus_coletaveis/municao_01.glb"
 
 	for id in itens:
 		var m := (load(itens[id]) as PackedScene).instantiate() as Node3D
 		vp.add_child(m)
 		var arma := ItemDB.is_weapon(id)
+		var ferramenta := ItemDB.is_tool_item(id)
 		# armas: de lado com o cano para a direita, leve inclinação; outros: 3/4
-		m.rotation_degrees = Vector3(0, 90, 8) if arma else Vector3(0, 35, 0)
+		m.rotation_degrees = Vector3(0, 90, 8) if arma else (Vector3(-35, 90, 0) if ferramenta else Vector3(0, 35, 0))
 		await process_frame
 		var caixa := AABB()
 		var primeiro := true
@@ -55,8 +58,8 @@ func _init() -> void:
 			caixa = a if primeiro else caixa.merge(a)
 			primeiro = false
 		var centro := caixa.get_center()
-		cam.size = maxf(caixa.size.x, maxf(caixa.size.y, caixa.size.z)) * (1.12 if arma else 1.3)
-		var dir := Vector3(0, 0.25, 1).normalized() if arma else Vector3(0.0, 0.55, 1).normalized()
+		cam.size = maxf(caixa.size.x, maxf(caixa.size.y, caixa.size.z)) * (1.12 if arma else (1.05 if ferramenta else 1.3))
+		var dir := Vector3(0, 0.25, 1).normalized() if arma or ferramenta else Vector3(0.0, 0.55, 1).normalized()
 		cam.look_at_from_position(centro + dir * 10.0, centro, Vector3.UP)
 		for i in 4:
 			await process_frame

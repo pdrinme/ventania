@@ -1,5 +1,30 @@
 {
-  "_doc": "Itens de partida (armas, consumíveis, munição). Nome exibido das armas = tipo + nome (ex.: \"Rifle de Assalto Rajada\"). Valores de balanceamento iniciais; o servidor é a autoridade.",
+  "_doc": "Itens de partida (armas, consumíveis, munição, ferramentas e materiais). Nome exibido das armas = tipo + nome (ex.: \"Rifle de Assalto Rajada\"). Valores de balanceamento iniciais; o servidor é a autoridade. Regras de inventário por categoria em \"regras\" (cada item pode sobrescrever).",
+  "regras": {
+    "_doc": "pilha: máximo por pilha (armas 1; consumíveis no próprio item; munição/materiais usam \"max\", total carregado fora dos espaços). coleta: espaco (ocupa um dos 5 espaços), reserva (munição/materiais, fora dos espaços), nunca (não existe no chão). descartavel: pode ser largado no mundo.",
+    "armas": {
+      "pilha": 1,
+      "coleta": "espaco",
+      "descartavel": true
+    },
+    "consumiveis": {
+      "coleta": "espaco",
+      "descartavel": true
+    },
+    "municao": {
+      "coleta": "reserva",
+      "descartavel": true
+    },
+    "materiais": {
+      "coleta": "reserva",
+      "descartavel": true
+    },
+    "ferramentas": {
+      "pilha": 1,
+      "coleta": "nunca",
+      "descartavel": false
+    }
+  },
   "raridades": [
     {
       "id": "comum",
@@ -78,6 +103,21 @@
       "nome": "Cartuchos",
       "max": 80,
       "caixa": 10
+    }
+  },
+  "materiais": {
+    "_doc": "Materiais de construção (Etapa 5: coleta com a picareta e gasto ao construir). Já fazem parte do inventário e do status; ainda não há como obtê-los.",
+    "madeira": {
+      "nome": "Madeira",
+      "max": 999
+    },
+    "pedra": {
+      "nome": "Pedra",
+      "max": 999
+    },
+    "metal": {
+      "nome": "Metal",
+      "max": 999
     }
   },
   "armas": {
@@ -203,6 +243,26 @@
       "pilha": 3,
       "quantidade": 1,
       "peso": 14
+    }
+  },
+  "ferramentas": {
+    "picareta": {
+      "_doc": "Equipamento permanente: fora dos 5 espaços, não cai ao morrer, não pode ser largado nem trocado. Golpe: um raio da mira até \"alcance\"; o impacto acontece no passo \"impacto\" (fração do golpe) e cada golpe registra no máximo um impacto.",
+      "nome": "Picareta",
+      "tipo": "Ferramenta de coleta",
+      "modelo": "picareta_01",
+      "cadencia": 1.6,
+      "impacto": 0.42,
+      "alcance": 2.4,
+      "dano_jogador": 20,
+      "dano_construcao": 50,
+      "recursos_por_golpe": {
+        "_doc": "Etapa 5: recursos por golpe",
+        "madeira": 0,
+        "pedra": 0,
+        "metal": 0
+      },
+      "permanente": true
     }
   },
   "bau": {

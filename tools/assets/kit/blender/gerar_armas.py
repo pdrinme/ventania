@@ -7,6 +7,7 @@ Origem no punho (onde a mão segura).
   zumbido_01  submetralhadora (compacta, carregador em tambor)
   faisca_01   pistola (pequena, cano curto)
   gaviao_01   fuzil de precisão (longo, luneta)
+  picareta_01 picareta permanente (ferramenta de coleta; cabo para +Z, ponta para -Y)
 
 Uso: python tools/assets/kit/blender/gerar_armas.py [id ...]
 """
@@ -27,6 +28,8 @@ MARCADORES = {
     "zumbido_01": {"grip_r": (0, 0.03, -0.03), "grip_l": (0, -0.19, 0.02), "muzzle": (0, -0.36, 0.07), "mag": (0, -0.10, -0.06)},
     "faisca_01":  {"grip_r": (0, 0.0, -0.01), "grip_l": (0.025, 0.02, -0.06), "muzzle": (0, -0.22, 0.075), "mag": (0, 0.0, -0.08)},
     "gaviao_01":  {"grip_r": (0, 0.02, -0.03), "grip_l": (0, -0.30, 0.02), "muzzle": (0, -0.85, 0.07), "mag": (0, -0.14, -0.06)},
+    # picareta: cabo vertical (+Z), cabeça no alto; "cabeca" = ponto de impacto da ponta
+    "picareta_01": {"grip_r": (0, 0.0, 0.0), "grip_l": (0, 0.0, 0.20), "cabeca": (0, -0.31, 0.55), "centro_cabeca": (0, 0.0, 0.60)},
 }
 
 
@@ -35,6 +38,7 @@ def _base(partes, asset_id):
     o["tipo"] = "arma"
     for nome, pos in MARCADORES[asset_id].items():
         k.marcador(nome, pos, pai=o)
+    return o
     return o
 
 
@@ -102,7 +106,28 @@ def gaviao_01():
     _base(p, "gaviao_01")
 
 
-GERADORES = {f.__name__: f for f in (rajada_01, trovao_01, zumbido_01, faisca_01, gaviao_01)}
+def picareta_01():
+    """Picareta Ventania: cabo de madeira com empunhadura teal enrolada, cabeça de
+    metal com ponta curva para a frente e martelo curto atrás, anel amarelo de vento.
+    Variações cosméticas futuras: outro GLB com os mesmos marcadores."""
+    p = [
+        k.cilindro("cabo", 0.024, 0.78, (0, 0, 0.25), "madeira_media", lados=8),
+        k.cilindro("empunhadura", 0.031, 0.22, (0, 0, -0.01), "teal", lados=8),
+        k.toro("fita_1", 0.031, 0.008, (0, 0, 0.09), "teal_escuro", seg=8, seg_menor=4),
+        k.toro("fita_2", 0.031, 0.008, (0, 0, -0.11), "teal_escuro", seg=8, seg_menor=4),
+        k.esfera("pomo", 0.038, (0, 0, -0.16), "metal_escuro", segmentos=8, aneis=5),
+        k.caixa("colar", (0.075, 0.11, 0.12), (0, 0, 0.60), "metal_escuro", bevel=0.015),
+        k.cilindro("ponta", 0.046, 0.27, (0, -0.18, 0.585), "metal_claro", lados=8, rot=(100, 0, 0), raio_topo=0.006),
+        k.cilindro("martelo", 0.042, 0.15, (0, 0.125, 0.60), "metal_claro", lados=8, rot=(-90, 0, 0), raio_topo=0.03),
+        k.caixa("face_martelo", (0.07, 0.025, 0.07), (0, 0.205, 0.60), "metal_escuro", bevel=0.008),
+        k.toro("anel_vento", 0.05, 0.012, (0, 0, 0.60), "amarelo_sol", rot=(0, 90, 0), seg=12, seg_menor=4),
+        k.caixa("topo", (0.05, 0.05, 0.04), (0, 0, 0.675), "amarelo_sol", bevel=0.01),
+    ]
+    o = _base(p, "picareta_01")
+    o["tipo"] = "ferramenta"
+
+
+GERADORES = {f.__name__: f for f in (rajada_01, trovao_01, zumbido_01, faisca_01, gaviao_01, picareta_01)}
 
 
 def main():

@@ -63,7 +63,8 @@ Eles ficam em arquivos de dados e serão ajustados com testes de jogo.
 
 - **Munição** em 4 tipos (leve, média, pesada e cartuchos) com limite por tipo.
 - **Recarga** por pente, cancelada ao trocar de arma.
-- **Inventário:** 5 slots rápidos (armas e consumíveis), mais materiais e munição separados.
+- **Inventário:** picareta permanente no 1º espaço à esquerda, depois 5 espaços (armas e consumíveis), mais munição e materiais separados (reservas com máximo por tipo). Tela de inventário (Tab / botão Select / botão Mochila no toque) para ver detalhes, mover entre espaços (arrastar ou "Mover"), dividir pilhas, largar quantidades e pegar itens próximos escolhendo o espaço a substituir.
+- **Picareta:** ferramenta permanente (não cai, não é largada nem trocada). Golpe de ~0,6 s com impacto único no meio do movimento, até 2,4 m. Causa 20 de dano em jogadores. Na Etapa 5, danifica construções e coleta materiais (madeira, pedra e metal). Controles: F no teclado, ► (direcional direito) no controle, toque no 1º espaço da barra; a roda do mouse e LB/RB passam por ela no ciclo.
 - **Cura e escudo:** Curativo (+15 de vida até 75, 2,5 s), Kit de cura (+100, 7 s), Célula de escudo pequena (+25 até 50, 2 s) e Célula de escudo grande (+50 até 100, 4 s). O símbolo de cura é um coração coral, e não uma cruz.
 - **Baús** com abertura segurando o botão e loot pela tabela da raridade. Também há loot no chão e caixas de munição.
 - **Eliminação:** em Solo, a eliminação é direta. Em Dupla e Esquadrão há um estado "caído" com revive, que entra **depois** do básico (Etapa 4+).

@@ -60,3 +60,30 @@ static func pellet_damage(arma_id: String, raridade: int, cabeca: bool) -> int:
 	if cabeca:
 		d *= float(ItemDB.weapon(arma_id)["cabeca"])
 	return roundi(d)
+
+
+# ---------- picareta ----------
+
+## Duração de um golpe em passos (cliente e servidor contam igual).
+static func melee_swing_steps() -> int:
+	return maxi(6, roundi(Protocol.TICK_RATE / float(ItemDB.tool_def(Inventory.PICKAXE_ID)["cadencia"])))
+
+
+## Passo do golpe em que o impacto é registrado (o mesmo quadro da animação).
+static func melee_impact_step() -> int:
+	var n := melee_swing_steps()
+	return clampi(roundi(n * float(ItemDB.tool_def(Inventory.PICKAXE_ID)["impacto"])), 1, n - 1)
+
+
+static func melee_range() -> float:
+	return float(ItemDB.tool_def(Inventory.PICKAXE_ID)["alcance"])
+
+
+## Raio do golpe contra o cenário. Retorna {} ou {"pos","normal","material","collider","t"}.
+static func melee_trace(espaco: PhysicsDirectSpaceState3D, origem: Vector3, dir: Vector3) -> Dictionary:
+	var q := PhysicsRayQueryParameters3D.create(origem, origem + dir * melee_range(), Pawn.LAYER_WORLD)
+	var r := espaco.intersect_ray(q)
+	if r.is_empty():
+		return {}
+	return {"pos": r["position"], "normal": r["normal"], "material": ImpactMaterial.of(r["collider"]),
+			"collider": r["collider"], "t": origem.distance_to(r["position"])}
