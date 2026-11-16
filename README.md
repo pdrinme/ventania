@@ -1,4 +1,4 @@
-# Projeto Ventania (codinome provisório)
+# Projeto Ventania 
 
 Battle Royale 3D original em terceira pessoa, com construção, bots, lobby social,
 progressão persistente, passe de batalha gratuito e loja rotativa de cosméticos.
