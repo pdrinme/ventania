@@ -1,0 +1,17 @@
+{
+  "_doc": "Paleta única do kit visual. Cada cor é um quadrado de 32 px num atlas 256x256 (8x8), em ordem de linha. Todos os assets do kit usam o material M_paleta_ventania e escolhem a cor pela UV. Ver docs/art/GUIA_DE_ESTILO.md.",
+  "atlas_px": 256,
+  "celula_px": 32,
+  "cores": [
+    ["madeira_clara", "#E3A963"], ["madeira_media", "#B8773D"], ["madeira_escura", "#7A4A26"], ["pedra_clara", "#A7A196"],
+    ["pedra_media", "#7F7A73"], ["pedra_escura", "#55524F"], ["metal_claro", "#AEC0CC"], ["metal_escuro", "#5A6B7A"],
+    ["folha_clara", "#86DB5C"], ["folha_media", "#4DB043"], ["folha_escura", "#2E7D3C"], ["tronco", "#8A5A3B"],
+    ["grama", "#6CC24A"], ["terra", "#A87B4F"], ["agua", "#4FB7E8"], ["areia", "#F0DCA2"],
+    ["pele_1", "#F6CDAA"], ["pele_2", "#DDA073"], ["pele_3", "#A86B45"], ["pele_4", "#6E4530"],
+    ["cabelo_castanho", "#5A3A28"], ["cabelo_preto", "#2A2526"], ["branco", "#F4F1EA"], ["preto", "#24252C"],
+    ["azul_tormenta", "#4A3FB0"], ["teal", "#22B8A8"], ["teal_escuro", "#167C84"], ["coral", "#FF6B5B"],
+    ["amarelo_sol", "#FFC93C"], ["roxo", "#8A5CD6"], ["rosa", "#FF8FB8"], ["laranja", "#FF9433"],
+    ["azul_ceu", "#8FD3FF"], ["cinza_tecido", "#6B6F80"], ["jeans", "#3F5C9A"], ["couro", "#6B4429"],
+    ["lente", "#A6ECFF"], ["dourado", "#E8B43A"], ["vermelho", "#D83A3A"], ["verde_militar", "#5D7041"]
+  ]
+}

@@ -1,0 +1,26 @@
+# Referências visuais de estudo: ficam só na máquina local, nunca no repositório
+references/**
+!references/README.md
+!references/*/
+!references/*/.gitkeep
+
+# Blender
+*.blend1
+*.blend2
+
+# Godot
+game/.godot/
+game/**/*.import.bak
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Pesquisa: material local nunca vai para o repositório
+research/**/local/**
+!research/**/local/**/.gitkeep
+
+# Builds exportadas e dados do meta-servidor
+builds/
+backend/data/

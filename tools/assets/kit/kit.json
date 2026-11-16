@@ -1,0 +1,113 @@
+{
+  "_doc": "Manifesto do kit visual inicial (assets gerados por código, originais).",
+  "assets": [
+    {
+      "id": "parede_madeira",
+      "nome": "Parede de madeira",
+      "categoria": "construcoes",
+      "notas": "Peça de construção do jogador, grade 4 m"
+    },
+    {
+      "id": "parede_pedra",
+      "nome": "Parede de pedra",
+      "categoria": "construcoes",
+      "notas": "Peça de construção do jogador, grade 4 m"
+    },
+    {
+      "id": "parede_metal",
+      "nome": "Parede de metal",
+      "categoria": "construcoes",
+      "notas": "Peça de construção do jogador, grade 4 m"
+    },
+    {
+      "id": "piso_madeira",
+      "nome": "Piso de madeira",
+      "categoria": "construcoes",
+      "notas": "Peça de construção do jogador, grade 4 m"
+    },
+    {
+      "id": "piso_pedra",
+      "nome": "Piso de pedra",
+      "categoria": "construcoes",
+      "notas": "Peça de construção do jogador, grade 4 m"
+    },
+    {
+      "id": "piso_metal",
+      "nome": "Piso de metal",
+      "categoria": "construcoes",
+      "notas": "Peça de construção do jogador, grade 4 m"
+    },
+    {
+      "id": "rampa_madeira",
+      "nome": "Rampa de madeira",
+      "categoria": "construcoes",
+      "notas": "Peça de construção do jogador, grade 4 m"
+    },
+    {
+      "id": "rampa_pedra",
+      "nome": "Rampa de pedra",
+      "categoria": "construcoes",
+      "notas": "Peça de construção do jogador, grade 4 m"
+    },
+    {
+      "id": "rampa_metal",
+      "nome": "Rampa de metal",
+      "categoria": "construcoes",
+      "notas": "Peça de construção do jogador, grade 4 m"
+    },
+    {
+      "id": "teto_madeira",
+      "nome": "Teto de madeira",
+      "categoria": "construcoes",
+      "notas": "Peça de construção do jogador, grade 4 m"
+    },
+    {
+      "id": "teto_pedra",
+      "nome": "Teto de pedra",
+      "categoria": "construcoes",
+      "notas": "Peça de construção do jogador, grade 4 m"
+    },
+    {
+      "id": "teto_metal",
+      "nome": "Teto de metal",
+      "categoria": "construcoes",
+      "notas": "Peça de construção do jogador, grade 4 m"
+    },
+    {
+      "id": "arvore_redonda_01",
+      "nome": "Árvore de copa redonda",
+      "categoria": "cenario",
+      "notas": "Coleta: madeira"
+    },
+    {
+      "id": "pinheiro_01",
+      "nome": "Pinheiro estilizado",
+      "categoria": "cenario",
+      "notas": "Coleta: madeira"
+    },
+    {
+      "id": "pedra_01",
+      "nome": "Pedra",
+      "categoria": "cenario",
+      "notas": "Coleta: pedra"
+    },
+    {
+      "id": "arbusto_01",
+      "nome": "Arbusto",
+      "categoria": "cenario",
+      "notas": "Sem colisão (esconderijo)"
+    },
+    {
+      "id": "bau_ventania_01",
+      "nome": "Baú Ventania",
+      "categoria": "baus_coletaveis",
+      "notas": "Tampa articulada, animação 'abrir'"
+    },
+    {
+      "id": "recruta_base_01",
+      "nome": "Recruta (personagem-base)",
+      "categoria": "personagens",
+      "notas": "Esqueleto padrão humanoide (nomes Godot), animações idle e acenar"
+    }
+  ]
+}

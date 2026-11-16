@@ -1,0 +1,70 @@
+; Projeto Godot do Ventania. Configuração mínima criada na preparação do
+; pipeline de assets; a Etapa 1 completa este arquivo (autoloads, input etc.).
+
+config_version=5
+
+[application]
+
+config/name="Ventania"
+config/version="0.1.0"
+config/description="Battle Royale cartunesco original, leve, para jogar com amigos."
+run/main_scene="res://scenes/boot/boot.tscn"
+config/features=PackedStringArray("4.7")
+config/icon="res://assets/ui/icone.png"
+boot_splash/bg_color=Color(0.0863, 0.4863, 0.5176, 1)
+boot_splash/show_image=false
+
+[autoload]
+
+Log="*res://autoload/log.gd"
+Audio="*res://autoload/audio.gd"
+Settings="*res://autoload/settings.gd"
+InputManager="*res://autoload/input_manager.gd"
+Meta="*res://autoload/meta.gd"
+SceneManager="*res://autoload/scene_manager.gd"
+
+[debug]
+
+file_logging/enable_file_logging=true
+file_logging/enable_file_logging.pc=true
+gdscript/warnings/untyped_declaration=0
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=4
+
+[gui]
+
+theme/default_font_multichannel_signed_distance_field=false
+common/snap_controls_to_pixels=true
+
+[importer_defaults]
+
+scene={
+"import_script/path": "res://pipeline/post_import.gd",
+"meshes/generate_lods": true,
+"meshes/create_shadow_meshes": true,
+"meshes/light_baking": 0,
+"skins/use_named_skins": true,
+"animation/import": true,
+"gltf/embedded_image_handling": 1
+}
+texture={
+"compress/mode": 2,
+"mipmaps/generate": true
+}
+
+[rendering]
+
+anti_aliasing/quality/msaa_3d=0
+environment/defaults/default_clear_color=Color(0.56, 0.83, 1, 1)
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_s3tc_bptc=true
+textures/vram_compression/import_etc2_astc=true
+textures/canvas_textures/default_texture_filter=0

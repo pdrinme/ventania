@@ -1,0 +1,98 @@
+[
+  {
+    "file": "parede_madeira.glb",
+    "asset_id": "parede_madeira",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "parede_pedra.glb",
+    "asset_id": "parede_pedra",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "parede_metal.glb",
+    "asset_id": "parede_metal",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "piso_madeira.glb",
+    "asset_id": "piso_madeira",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "piso_pedra.glb",
+    "asset_id": "piso_pedra",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "piso_metal.glb",
+    "asset_id": "piso_metal",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "rampa_madeira.glb",
+    "asset_id": "rampa_madeira",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "rampa_pedra.glb",
+    "asset_id": "rampa_pedra",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "rampa_metal.glb",
+    "asset_id": "rampa_metal",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "teto_madeira.glb",
+    "asset_id": "teto_madeira",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "teto_pedra.glb",
+    "asset_id": "teto_pedra",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "teto_metal.glb",
+    "asset_id": "teto_metal",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  }
+]

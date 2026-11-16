@@ -1,0 +1,8 @@
+# Assets atuais são pequenos (< 1 MB no total): sem Git LFS por enquanto.
+# Reavaliar quando houver arquivos grandes (texturas/áudio > 5 MB).
+* text=auto eol=lf
+*.blend binary
+*.glb   binary
+*.png   binary
+*.wav   binary
+*.woff2 binary

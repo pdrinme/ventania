@@ -1,0 +1,15 @@
+{
+  "_doc": "Orçamentos por categoria para o LOD0. Ver docs/assets/IMPORTACAO_GODOT_E_OTIMIZACAO.md. Valores iniciais, revisados após medições em hardware real.",
+  "categorias": {
+    "personagens":         {"max_tris": 6000, "max_materiais": 2, "max_textura_px": 1024, "max_ossos": 60, "permite_animacao": true},
+    "armas":               {"max_tris": 1500, "max_materiais": 1, "max_textura_px": 512,  "max_ossos": 8,  "permite_animacao": true},
+    "mochilas_acessorios": {"max_tris": 1200, "max_materiais": 1, "max_textura_px": 512,  "max_ossos": 8,  "permite_animacao": true},
+    "construcoes":         {"max_tris": 300,  "max_materiais": 1, "max_textura_px": 512,  "max_ossos": 0,  "permite_animacao": false},
+    "cenario":             {"max_tris": 2500, "max_materiais": 2, "max_textura_px": 512,  "max_ossos": 0,  "permite_animacao": false},
+    "baus_coletaveis":     {"max_tris": 800,  "max_materiais": 1, "max_textura_px": 256,  "max_ossos": 4,  "permite_animacao": true},
+    "texturas_materiais":  {"max_tris": 0,    "max_materiais": 0, "max_textura_px": 1024, "max_ossos": 0,  "permite_animacao": false},
+    "animacoes":           {"max_tris": 6000, "max_materiais": 2, "max_textura_px": 1024, "max_ossos": 60, "permite_animacao": true}
+  },
+  "licencas_permitidas": ["Original", "CC0-1.0", "CC-BY-4.0", "CC-BY-3.0", "OFL-1.1", "MIT", "Apache-2.0"],
+  "origens_permitidas": ["original", "terceiros_licenciado"]
+}
