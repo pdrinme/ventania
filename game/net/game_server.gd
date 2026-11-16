@@ -1,8 +1,9 @@
 class_name GameServer
 extends Node
-## Servidor autoritativo da partida (ENet). Recebe entradas, simula o movimento
-## (Movement.step) e envia snapshots. Roda dentro do jogo (treino local, em um
-## mundo 3D separado) ou como servidor dedicado (--servidor).
+## Servidor autoritativo da partida (ENet). Recebe entradas, simula movimento
+## (Movement) e combate (CombatServer), administra o loot (LootServer) e envia
+## snapshots. Roda dentro do jogo (treino local, em um mundo 3D separado) ou como
+## servidor dedicado (--servidor).
 
 signal player_joined(id: int, name: String)
 signal player_left(id: int)
@@ -10,6 +11,7 @@ signal player_left(id: int)
 const MAX_FILA := 8          # entradas guardadas por jogador
 const MAX_POR_TICK := 2      # recupera atraso sem permitir "speed hack"
 const ESPERA_MAX := 6        # ticks esperando entrada antes de simular sem ela (~200 ms)
+const DUMMY_ID_BASE := 60001
 
 class Cliente:
 	var peer_id := 0
@@ -20,21 +22,55 @@ class Cliente:
 	var ultimo_seq := 0
 	var ultimo_cmd := Protocol.InputCmd.new()
 	var esperando := 0       # ticks seguidos sem entrada nova
-	var simulados := 0       # passos simulados (para medir velocidade efetiva / testes)
+	var simulados := 0       # passos simulados = relógio de combate deste jogador
 	var descartados := 0     # entradas jogadas fora por fila cheia (diagnóstico)
 	var inventados := 0      # passos simulados sem entrada do cliente (diagnóstico)
 	var maior_fila := 0
+	# combate
+	var inv := Inventory.new()
+	var vit := Vitals.new()
+	var fire_next := 0.0
+	var reload_end := -1.0
+	var reload_total := 0.0
+	var use_end := -1.0
+	var use_total := 0.0
+	var prev_fire := false
+	var prev_reload := false
+	var prev_interact := false
+	var interact_steps := 0
+	var interact_chest := -1
+	var aiming := false
+	var dead := false
+	var respawn_tick := 0
+	var dirty := true
 
 var world: CampoTreino
 var peer: ENetMultiplayerPeer
 var tick := 0
 var clientes := {}           # peer_id -> Cliente
+var loot: LootServer
+var combat: CombatServer
+var bonecos: Array = []      # [{"id", "pawn", "vit", "last_hit"}]
+var kit_inicial := true      # treino: reaparece com uma pistola e munição
 var _proximo_id := 1
 var _spawns := 0
 
 
-func _init(mundo: CampoTreino) -> void:
+func _init(mundo: CampoTreino, semente_loot := 0) -> void:
 	world = mundo
+	combat = CombatServer.new(self)
+	loot = LootServer.new(mundo, func(d): broadcast(d, true), semente_loot)
+
+
+func _ready() -> void:
+	for i in CampoTreino.DUMMIES.size():
+		var p := Pawn.new()
+		p.entity_id = DUMMY_ID_BASE + i
+		world.add_child.call_deferred(p)
+		p.position = CampoTreino.DUMMIES[i]
+		var v := Vitals.new()
+		v.shield = 50
+		bonecos.append({"id": p.entity_id, "pawn": p, "vit": v, "last_hit": 0})
 
 
 func start(porta: int, bind_ip := "*") -> Error:
@@ -69,6 +105,16 @@ func _physics_process(dt: float) -> void:
 	for c: Cliente in clientes.values():
 		if c.pawn:
 			_simular(c, dt)
+			if c.dead and tick >= c.respawn_tick:
+				_reviver(c)
+	combat.update_dummies()
+	loot.update(tick)
+	for c: Cliente in clientes.values():
+		if c.pawn:
+			combat.record(tick, c.id, c.pawn.global_position, c.pawn.crouched)
+			if c.dirty:
+				c.dirty = false
+				send_to(c.peer_id, Protocol.pack_status(_status(c)), true)
 	if tick % Protocol.SNAPSHOT_EVERY == 0:
 		_enviar_snapshots()
 
@@ -95,8 +141,10 @@ func _simular(c: Cliente, dt: float) -> void:
 			c.ultimo_cmd = cmd
 			Movement.step(c.pawn, cmd, dt)
 			c.simulados += 1
-	if c.pawn.global_position.y < CampoTreino.ALTURA_MORTE:
-		_reaparecer(c)
+			if not c.dead:
+				combat.process(c, cmd)
+	if c.pawn.global_position.y < CampoTreino.ALTURA_MORTE and not c.dead:
+		combat.eliminate(c, c.id, "")
 
 
 func _receber(de: int, dados: PackedByteArray) -> void:
@@ -107,7 +155,7 @@ func _receber(de: int, dados: PackedByteArray) -> void:
 				return
 			var h := Protocol.unpack_hello(dados)
 			if h.is_empty() or h["protocol"] != Protocol.GAME_PROTOCOL:
-				_enviar(de, Protocol.pack_reject("Versão do jogo diferente da do servidor. Atualize o jogo."), true)
+				send_to(de, Protocol.pack_reject("Versão do jogo diferente da do servidor. Atualize o jogo."), true)
 				peer.disconnect_peer(de, false)
 				return
 			_entrar(de, _limpar_nome(h["name"]))
@@ -131,7 +179,7 @@ func _entrar(de: int, nome: String) -> void:
 	var c := Cliente.new()
 	c.peer_id = de
 	c.id = _proximo_id
-	_proximo_id = (_proximo_id % 65000) + 1
+	_proximo_id = (_proximo_id % 60000) + 1
 	c.nome = nome
 	c.pawn = Pawn.new()
 	c.pawn.entity_id = c.id
@@ -139,19 +187,41 @@ func _entrar(de: int, nome: String) -> void:
 	world.add_child(c.pawn)
 	clientes[de] = c
 	_reaparecer(c)
-	_enviar(de, Protocol.pack_welcome(c.id, tick, CampoTreino.NOME), true)
+	_dar_kit(c)
+	send_to(de, Protocol.pack_welcome(c.id, tick, CampoTreino.NOME), true)
 	for outro: Cliente in clientes.values():
-		_enviar(de, Protocol.pack_player_info(outro.id, outro.nome), true)
+		send_to(de, Protocol.pack_player_info(outro.id, outro.nome), true)
 		if outro.peer_id != de:
-			_enviar(outro.peer_id, Protocol.pack_player_info(c.id, c.nome), true)
+			send_to(outro.peer_id, Protocol.pack_player_info(c.id, c.nome), true)
+	for i in bonecos.size():
+		send_to(de, Protocol.pack_player_info(bonecos[i]["id"], "Boneco %d" % (i + 1)), true)
+	for m in loot.full_state():
+		send_to(de, m, true)
 	_log("entrou: %s (id %d)" % [nome, c.id])
 	player_joined.emit(c.id, nome)
+
+
+func _dar_kit(c: Cliente) -> void:
+	if kit_inicial:
+		c.inv.add_item("faisca", 0)
+		c.inv.add_ammo("leve", 48)
+	c.dirty = true
 
 
 func _reaparecer(c: Cliente) -> void:
 	c.pawn.global_position = world.spawn_point(_spawns)
 	c.pawn.velocity = Vector3.ZERO
 	_spawns += 1
+
+
+func _reviver(c: Cliente) -> void:
+	c.dead = false
+	c.vit.reset()
+	c.inv = Inventory.new()
+	c.reload_end = -1.0
+	c.use_end = -1.0
+	_reaparecer(c)
+	_dar_kit(c)
 
 
 func _on_conectou(id: int) -> void:
@@ -164,28 +234,77 @@ func _on_desconectou(id: int) -> void:
 	var c: Cliente = clientes.get(id)
 	clientes.erase(id)
 	if c and c.pawn:
+		if not c.dead:
+			loot.drop_inventory(c.inv, c.pawn.global_position)
 		c.pawn.queue_free()
-		for outro: Cliente in clientes.values():
-			_enviar(outro.peer_id, Protocol.pack_player_left(c.id), true)
+		broadcast(Protocol.pack_player_left(c.id), true)
 		_log("saiu: %s (id %d)" % [c.nome, c.id])
 		player_left.emit(c.id)
+
+
+func _status(c: Cliente) -> Dictionary:
+	var slots := []
+	for s: Inventory.Slot in c.inv.slots:
+		slots.append({"item": ItemDB.index_of(s.item), "rarity": s.rarity, "mag": s.mag, "count": s.count})
+	var acao := 0
+	var restante := 0.0
+	var total := 0.0
+	if c.reload_end >= 0.0:
+		acao = 1
+		restante = c.reload_end - c.simulados
+		total = c.reload_total
+	elif c.use_end >= 0.0:
+		acao = 2
+		restante = c.use_end - c.simulados
+		total = c.use_total
+	var ms := 1000.0 / Protocol.TICK_RATE
+	return {"hp": c.vit.health, "shield": c.vit.shield, "selected": c.inv.selected, "action": acao,
+			"action_left_ms": clampi(roundi(restante * ms), 0, 65535), "action_total_ms": clampi(roundi(total * ms), 0, 65535),
+			"slots": slots, "ammo": ItemDB.ammo_types().map(func(t): return c.inv.ammo[t])}
 
 
 func _enviar_snapshots() -> void:
 	var estados: Array = []
 	for c: Cliente in clientes.values():
 		if c.pawn:
-			estados.append(c.pawn.to_state())
+			var e := c.pawn.to_state()
+			var s := c.inv.current()
+			e.weapon = ItemDB.index_of(s.item) if ItemDB.is_weapon(s.item) and not c.dead else 0
+			if c.dead:
+				e.flags |= Protocol.F_DEAD
+			if c.aiming:
+				e.flags |= Protocol.F_AIMING
+			if c.reload_end >= 0.0:
+				e.flags |= Protocol.F_RELOADING
+			estados.append(e)
+	for b in bonecos:
+		var e: Protocol.EntityState = (b["pawn"] as Pawn).to_state()
+		e.flags |= Protocol.F_DUMMY | Protocol.F_ON_FLOOR
+		estados.append(e)
 	for c: Cliente in clientes.values():
 		if c.pawn:
-			_enviar(c.peer_id, Protocol.pack_snapshot(tick, c.ultimo_seq, estados), false, Protocol.CH_SNAPSHOT)
+			send_to(c.peer_id, Protocol.pack_snapshot(tick, c.ultimo_seq, estados), false, Protocol.CH_SNAPSHOT)
 
 
-func _enviar(para: int, dados: PackedByteArray, confiavel: bool, canal := Protocol.CH_RELIABLE) -> void:
+func send_to(para: int, dados: PackedByteArray, confiavel: bool, canal := Protocol.CH_RELIABLE) -> void:
+	if peer == null:
+		return
 	peer.set_target_peer(para)
 	peer.set_transfer_channel(canal)
 	peer.transfer_mode = MultiplayerPeer.TRANSFER_MODE_RELIABLE if confiavel else MultiplayerPeer.TRANSFER_MODE_UNRELIABLE_ORDERED
 	peer.put_packet(dados)
+
+
+func broadcast(dados: PackedByteArray, confiavel: bool) -> void:
+	for c: Cliente in clientes.values():
+		if c.pawn:
+			send_to(c.peer_id, dados, confiavel, Protocol.CH_RELIABLE if confiavel else Protocol.CH_SNAPSHOT)
+
+
+func broadcast_except(peer_id: int, dados: PackedByteArray, confiavel: bool) -> void:
+	for c: Cliente in clientes.values():
+		if c.pawn and c.peer_id != peer_id:
+			send_to(c.peer_id, dados, confiavel, Protocol.CH_RELIABLE if confiavel else Protocol.CH_SNAPSHOT)
 
 
 static func _limpar_nome(n: String) -> String:

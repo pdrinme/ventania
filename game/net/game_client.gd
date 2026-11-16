@@ -10,6 +10,14 @@ signal disconnected
 signal snapshot_received(snap: Dictionary)
 signal player_info(id: int, name: String)
 signal player_left(id: int)
+signal status_received(st: Dictionary)
+signal shot_received(shot: Dictionary)
+signal hit_confirmed(hit: Dictionary)
+signal damaged(info: Dictionary)
+signal eliminated(info: Dictionary)
+signal loot_spawned(l: Dictionary)
+signal loot_removed(id: int)
+signal chest_changed(id: int, open: bool)
 
 const TEMPO_CONEXAO_S := 6.0
 
@@ -76,6 +84,29 @@ func _receber(dados: PackedByteArray) -> void:
 			player_info.emit(i["id"], i["name"])
 		Protocol.S_PLAYER_LEFT:
 			player_left.emit(Protocol.unpack_player_left(dados))
+		Protocol.S_STATUS:
+			var st := Protocol.unpack_status(dados)
+			if not st.is_empty():
+				status_received.emit(st)
+		Protocol.S_SHOT:
+			var sh := Protocol.unpack_shot(dados)
+			if not sh.is_empty():
+				shot_received.emit(sh)
+		Protocol.S_HIT:
+			hit_confirmed.emit(Protocol.unpack_hit(dados))
+		Protocol.S_DAMAGED:
+			damaged.emit(Protocol.unpack_damaged(dados))
+		Protocol.S_ELIM:
+			eliminated.emit(Protocol.unpack_elim(dados))
+		Protocol.S_LOOT:
+			var l := Protocol.unpack_loot(dados)
+			if not l.is_empty():
+				loot_spawned.emit(l)
+		Protocol.S_LOOT_GONE:
+			loot_removed.emit(Protocol.unpack_u16_msg(dados)[0])
+		Protocol.S_CHEST:
+			var c := Protocol.unpack_u16_msg(dados)
+			chest_changed.emit(c[0], c[1] == 1)
 
 
 func send_inputs(cmds: Array) -> void:

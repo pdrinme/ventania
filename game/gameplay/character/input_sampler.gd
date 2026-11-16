@@ -6,6 +6,12 @@ extends Node
 var touch_move := Vector2.ZERO     # joystick virtual (x direita, y frente)
 var touch_crouch := false          # botão de agachar (alterna)
 var touch_jump := false
+var touch_fire := false            # botão Atirar segurado
+var touch_reload := false          # pedido de recarga (um passo)
+var touch_interact := false        # botão Interagir segurado
+var morto := false                 # eliminado: não envia ações
+var selected := 0                  # espaço atual (vem do servidor)
+var _slot_pendente := 0            # 1..5
 var bloqueado := false             # pausa
 var _pulo_pendente := false
 var _agachar_alterna := false      # controle: R3 alterna agachar
@@ -17,6 +23,13 @@ func _unhandled_input(e: InputEvent) -> void:
 		return
 	if e.is_action_pressed("jump"):
 		_pulo_pendente = true
+	for i in 5:
+		if e.is_action_pressed("slot_%d" % (i + 1)):
+			_slot_pendente = i + 1
+	if e.is_action_pressed("slot_next"):
+		select_slot((selected + 1) % 5)
+	elif e.is_action_pressed("slot_prev"):
+		select_slot((selected + 4) % 5)
 	if e.is_action("crouch"):
 		if e is InputEventJoypadButton:
 			if e.is_pressed():
@@ -29,15 +42,33 @@ func request_jump() -> void:
 	_pulo_pendente = true
 
 
+## i: 0..4
+func select_slot(i: int) -> void:
+	_slot_pendente = clampi(i, 0, 4) + 1
+	selected = _slot_pendente - 1
+
+
 func make_cmd(seq: int, yaw: float, pitch: float) -> Protocol.InputCmd:
 	var c := Protocol.InputCmd.new()
 	c.seq = seq
 	c.yaw = yaw
 	c.pitch = pitch
-	if bloqueado:
+	if bloqueado or morto:
 		_pulo_pendente = false
 		_agachar_segurado = false
+		touch_reload = false
 		return c
+	c.slot = _slot_pendente
+	_slot_pendente = 0
+	if Input.is_action_pressed("fire") or touch_fire:
+		c.buttons |= Protocol.BTN_FIRE
+	if Input.is_action_pressed("aim"):
+		c.buttons |= Protocol.BTN_AIM
+	if Input.is_action_pressed("reload") or touch_reload:
+		c.buttons |= Protocol.BTN_RELOAD
+	touch_reload = false
+	if Input.is_action_pressed("interact") or touch_interact:
+		c.buttons |= Protocol.BTN_INTERACT
 	var mov := Input.get_vector("move_left", "move_right", "move_back", "move_forward")
 	if touch_move.length() > mov.length():
 		mov = touch_move

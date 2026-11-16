@@ -13,7 +13,7 @@ para um pequeno grupo de amigos.
 
 ## Status
 
-**Etapa 2 (personagem e gameplay básico): concluída.** Dá para correr, pular e agachar em terceira pessoa num campo de treino, sozinho ou com amigos via servidor dedicado. Ainda não há armas (Etapa 3).
+**Etapa 3 (combate e inventário): concluída.** Campo de treino com 5 armas, raridades, baús, consumíveis, vida e escudo, e tiro decidido pelo servidor com compensação de latência, sozinho (com bonecos de treino) ou com amigos. Ainda não há partida Battle Royale com Tormenta (Etapa 4).
 Veja [ROADMAP.md](ROADMAP.md).
 
 ## Documentos

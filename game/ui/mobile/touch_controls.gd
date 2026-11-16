@@ -35,8 +35,11 @@ func _layout() -> void:
 	var r := RAIO_BOTAO * _escala
 	var t := size
 	_botoes = {
+		"atirar": {"centro": Vector2(t.x - r * 1.6, t.y - r * 4.2), "raio": r * 1.1, "dedo": -1, "texto": "Atirar"},
 		"pular": {"centro": Vector2(t.x - r * 1.5, t.y - r * 1.6), "raio": r, "dedo": -1, "texto": "Pular"},
 		"agachar": {"centro": Vector2(t.x - r * 3.9, t.y - r * 1.1), "raio": r * 0.8, "dedo": -1, "texto": "Agachar"},
+		"recarregar": {"centro": Vector2(t.x - r * 4.0, t.y - r * 3.4), "raio": r * 0.7, "dedo": -1, "texto": "Recarga"},
+		"interagir": {"centro": Vector2(t.x - r * 6.0, t.y - r * 2.4), "raio": r * 0.75, "dedo": -1, "texto": "Pegar"},
 	}
 	queue_redraw()
 
@@ -74,6 +77,7 @@ func _toque(e: InputEventScreenTouch) -> void:
 		for nome in _botoes:
 			if _botoes[nome]["dedo"] == e.index:
 				_botoes[nome]["dedo"] = -1
+				_soltar(nome)
 	queue_redraw()
 
 
@@ -84,7 +88,8 @@ func _arrasto(e: InputEventScreenDrag) -> void:
 		_joy_pos = _joy_centro + d
 		sampler.touch_move = Vector2(d.x, -d.y) / raio   # para cima = frente
 		queue_redraw()
-	elif e.index == _olhar_dedo and camera:
+	elif camera and (e.index == _olhar_dedo or (_botoes.has("atirar") and _botoes["atirar"]["dedo"] == e.index)):
+		# arrastar o dedo no botão Atirar também mira (padrão de jogos de toque)
 		camera.add_look(e.relative * float(Settings.get_value("controls", "touch_sensitivity")) * 1.4)
 
 
@@ -94,6 +99,20 @@ func _apertar(nome: String) -> void:
 			sampler.touch_jump = true
 		"agachar":
 			sampler.touch_crouch = not sampler.touch_crouch
+		"atirar":
+			sampler.touch_fire = true
+		"recarregar":
+			sampler.touch_reload = true
+		"interagir":
+			sampler.touch_interact = true
+
+
+func _soltar(nome: String) -> void:
+	match nome:
+		"atirar":
+			sampler.touch_fire = false
+		"interagir":
+			sampler.touch_interact = false
 
 
 func _draw() -> void:

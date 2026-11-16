@@ -19,11 +19,25 @@ passo "Godot: importação"
 "$GODOT" --headless --path game --import >/dev/null 2>&1
 "$GODOT" --headless --path game -s res://tests/test_asset_import.gd 2>&1 | grep -E "ASSETS_IMPORTADOS|FALHA"; checar "${PIPESTATUS[0]}" "importação"
 
+# Erros de script interrompem um teste sem marcar falha: qualquer "SCRIPT ERROR" reprova o grupo.
+rodar_godot() {
+	local saida
+	saida=$("$@" 2>&1); local cod=$?
+	echo "$saida" | grep -E "$FILTRO"
+	if echo "$saida" | grep -q "SCRIPT ERROR"; then
+		echo "$saida" | grep -A2 "SCRIPT ERROR" | head -12
+		return 1
+	fi
+	return $cod
+}
+
 passo "Godot: testes unitários"
-"$GODOT" --headless --path game -s res://tests/run_tests.gd 2>&1 | grep -E "TESTES|FALHOU|NÃO COMPILOU"; checar "${PIPESTATUS[0]}" "unitários"
+FILTRO="TESTES|FALHOU|NÃO COMPILOU"
+rodar_godot "$GODOT" --headless --path game -s res://tests/run_tests.gd; checar $? "unitários"
 
 passo "Godot: teste de fumaça (jogo completo)"
-timeout 120 "$GODOT" --headless --path game -- --teste-fumaca 2>&1 | grep -E "FUMACA|FALHOU|SCRIPT ERROR"; checar "${PIPESTATUS[0]}" "fumaça"
+FILTRO="FUMACA|FALHOU"
+rodar_godot timeout 150 "$GODOT" --headless --path game -- --teste-fumaca; checar $? "fumaça"
 
 passo "Integração cliente <-> meta-servidor"
 PORTA=$(python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()")

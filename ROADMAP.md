@@ -97,9 +97,29 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 3. O servidor inventava passos quando uma entrada atrasava. Agora ele espera até ~200 ms e processa duas entradas por tick para recuperar o atraso.
 4. O HUD tinha tamanho zero (`set_anchors_preset` preserva o tamanho) e não herdava o tema dentro de CanvasLayer. Corrigido.
 
-### Etapa 3 — Combate e inventário ⬜
-Armas (dados em .tres), disparo hitscan validado no servidor, munição, recarga, dano, vida, escudo, inventário de 5 slots, coleta, baús e raridade.
-**Aceite:** testes unitários de dano, munição e inventário, e um combate com 2 clientes locais.
+### Etapa 3 — Combate e inventário ✅
+- ✅ 5 armas originais: Rajada (fuzil), Trovão (escopeta, 10 projéteis), Zumbido (submetralhadora), Faísca (pistola) e Gavião (precisão, exata quando mirando). Modelos próprios, que aparecem na mão do personagem, com animações de locomoção "segurando arma".
+- ✅ 5 raridades (Comum → Lendário) que aumentam o dano e reduzem o tempo de recarga. Os dados ficam em `data/itens.json`, para balancear sem mexer no código.
+- ✅ Disparo **decidido no servidor**: o raio passa pela mira, a dispersão é determinística (cliente e servidor calculam os mesmos traçantes) e varia ao mirar, mover, agachar e estar no ar. As paredes bloqueiam o tiro, e há bônus na cabeça.
+- ✅ **Compensação de latência**: o servidor testa o tiro contra onde o alvo estava na tela de quem atirou (até 400 ms), com hitboxes analíticas iguais para todos os trajes.
+- ✅ Munição de 4 tipos (reserva separada), recarga (manual e automática com o pente vazio), armas automáticas e semiautomáticas.
+- ✅ Vida 100 e escudo 100 (o escudo absorve primeiro). Consumíveis: curativo (+15 até 75), kit de cura (+100), célula pequena (+25 de escudo até 50) e grande (+50 até 100), com tempo de uso.
+- ✅ Inventário de 5 espaços: troca pelo espaço selecionado quando cheio, consumíveis empilham e a munição é coletada ao passar por cima.
+- ✅ Baús (segurar Interagir por 0,5 s), loot no chão sorteado por raridade e itens largados ao ser eliminado. No treino, os baús reabastecem e o jogador reaparece em 4 s com uma pistola.
+- ✅ Bonecos de treino (alvos com escudo, que se regeneram).
+- ✅ HUD: vida e escudo, 5 espaços com a cor da raridade, munição, barra de recarga/uso, aviso de interação, feed de eliminações, tela de eliminado, marcador de acerto (amarelo na cabeça), números de dano, flash de dano e nome sobre os jogadores. Controles de toque: Atirar (arrastar o dedo nele também mira), Recarga, Pegar e toque nos espaços.
+- ✅ Testes:
+  - 53 unitários (itens, inventário, vida/escudo, hitbox, dispersão, protocolo v2, loot e baús);
+  - fumaça atirando num boneco;
+  - **jogador contra jogador no servidor dedicado** (3 acertos, 72 de dano confirmados).
+- ⚠️ Não validado em hardware real: o celular (APK 0.3.0 gerado), o tiroteio com latência real de internet e o Windows.
+- ⬜ Pendente:
+  - sons de tiro e de acerto (Etapa 12);
+  - o ângulo da arma na mão e animações de disparo/recarga;
+  - o efeito da distância no dano;
+  - lista de "quem me acertou" (direção do dano).
+
+**Problemas encontrados e resolvidos:** o tamanho da mensagem de tiro estava errado (os traçantes dos outros eram descartados); o executor contava como aprovado um teste interrompido por erro de script (agora qualquer `SCRIPT ERROR` reprova); a arma pedida antes do visual ficar pronto era ignorada; e o atalho de interagir no controle colidia com o de recarregar (agora é o Y).
 
 ### Etapa 4 — Mapa e sistemas Battle Royale ⬜
 Mapa pequeno (cerca de 600 m), construções ambientais, loot, Tormenta e zona segura, eliminações, espectador, vitória e encerramento.

@@ -13,13 +13,15 @@ func _init() -> void:
 		await physics_frame
 		if jogo.pawn:
 			break
-	jogo.camera.yaw = 200.0     # vira para as construções
-	jogo.camera.pitch = -8.0
+	jogo.camera.yaw = 10.0      # olha para os bonecos de treino e a torre
+	jogo.camera.pitch = -6.0
 	Input.action_press("move_forward")
-	Input.action_press("sprint")
-	for i in 40:
+	for i in 25:
 		await physics_frame
-	Input.action_release("sprint")
+	Input.action_press("fire")
+	for i in 3:
+		await physics_frame
+	Input.action_release("fire")
 	for i in 3:
 		await process_frame
 	root.get_texture().get_image().save_png(saida)

@@ -8,6 +8,22 @@ const LIMITE := 110.0
 const ALTURA_MORTE := -30.0
 
 var com_ambiente := true   # céu/sol/neblina só no cliente
+var chest_nodes: Array[Node3D] = []
+
+## Baús: [posição, rotação Y]. O índice é o id do baú na rede.
+const CHESTS := [
+	[Vector3(-16, 0.22, -10.6), 0.0], [Vector3(0, 8.22, -26.6), 0.0], [Vector3(16, 4.22, -10), 90.0],
+	[Vector3(-7, 0, 3), 30.0], [Vector3(10, 0, 5), -40.0], [Vector3(-34, 0, -28), 0.0], [Vector3(36, 0, 30), 180.0],
+]
+## Pontos de loot no chão (sorteados no início da partida).
+const LOOT_POINTS := [
+	Vector3(-16, 0.22, -9), Vector3(0, 4.22, -18), Vector3(16, 0.22, -9), Vector3(16, 4.22, -11),
+	Vector3(-16, 1.7, 6), Vector3(-24, 0, 12), Vector3(24, 0, 12), Vector3(-26, 0, -18), Vector3(26, 0, -20),
+	Vector3(0, 0, 22), Vector3(-10, 0, 24), Vector3(12, 0, 24), Vector3(-40, 0, 0), Vector3(40, 0, 0),
+	Vector3(0, 0, -40), Vector3(-3, 0, 8), Vector3(3, 0, 8),
+]
+## Bonecos de treino (alvos que não revidam).
+const DUMMIES := [Vector3(-5, 0, -2), Vector3(0, 0, -4), Vector3(5, 0, -2)]
 
 
 func _ready() -> void:
@@ -118,5 +134,9 @@ func _props() -> void:
 		var ang := rnd.randf() * TAU
 		var dist := rnd.randf_range(32.0, LIMITE - 8.0)
 		_peca(c + tipos[i % tipos.size()] + ".glb", Vector3(cos(ang) * dist, 0, sin(ang) * dist), rnd.randf() * 360.0)
-	_peca("res://assets/baus_coletaveis/bau_ventania_01.glb", Vector3(-16, 0.22, -10.5))
-	_peca("res://assets/baus_coletaveis/bau_ventania_01.glb", Vector3(0, 8.22, -26))
+	for dados_bau in CHESTS:
+		var bau := (load("res://assets/baus_coletaveis/bau_ventania_01.glb") as PackedScene).instantiate() as Node3D
+		bau.position = dados_bau[0]
+		bau.rotation_degrees.y = dados_bau[1]
+		add_child(bau)
+		chest_nodes.append(bau)

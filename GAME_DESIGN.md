@@ -48,7 +48,8 @@ Eles ficam em arquivos de dados e serão ajustados com testes de jogo.
 ## 5. Combate
 
 - **Raridades** (cor e multiplicador de status): Comum (cinza), Incomum (verde), Raro (azul), Épico (roxo), Lendário (dourado).
-- **Arquétipos de arma** (nomes originais a definir):
+- **Armas implementadas (Etapa 3)**, com valores em `game/data/itens.json`: **Rajada** (fuzil), **Trovão** (escopeta), **Zumbido** (submetralhadora), **Faísca** (pistola) e **Gavião** (precisão). Os explosivos ficam para depois.
+- **Arquétipos de arma:**
 
 | Arquétipo | Papel | Notas |
 |---|---|---|
@@ -62,7 +63,7 @@ Eles ficam em arquivos de dados e serão ajustados com testes de jogo.
 - **Munição** em 4 tipos (leve, média, pesada e cartuchos) com limite por tipo.
 - **Recarga** por pente, cancelada ao trocar de arma.
 - **Inventário:** 5 slots rápidos (armas e consumíveis), mais materiais e munição separados.
-- **Cura e escudo** (nomes originais a definir): curativo pequeno (+15 de vida até 75, rápido), kit grande (+100 de vida, lento), célula pequena (+25 de escudo até 50) e célula grande (+50 de escudo).
+- **Cura e escudo:** Curativo (+15 de vida até 75, 2,5 s), Kit de cura (+100, 7 s), Célula de escudo pequena (+25 até 50, 2 s) e Célula de escudo grande (+50 até 100, 4 s). O símbolo de cura é um coração coral, e não uma cruz.
 - **Baús** com abertura segurando o botão e loot pela tabela da raridade. Também há loot no chão e caixas de munição.
 - **Eliminação:** em Solo, a eliminação é direta. Em Dupla e Esquadrão há um estado "caído" com revive, que entra **depois** do básico (Etapa 4+).
 

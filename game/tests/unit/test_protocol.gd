@@ -12,7 +12,10 @@ func _cmd(seq: int, mx: float, my: float, yaw: float, botoes: int) -> Protocol.I
 
 
 func test_entradas_ida_e_volta() -> void:
-	var dados := Protocol.pack_inputs([_cmd(7, 0.5, 0.5, 1.0, Protocol.BTN_JUMP), _cmd(8, -1, 0, 6.0, Protocol.BTN_CROUCH | Protocol.BTN_SPRINT)])
+	var c2 := _cmd(8, -1, 0, 6.0, Protocol.BTN_CROUCH | Protocol.BTN_SPRINT | Protocol.BTN_FIRE)
+	c2.slot = 3
+	c2.view_tick = 123456
+	var dados := Protocol.pack_inputs([_cmd(7, 0.5, 0.5, 1.0, Protocol.BTN_JUMP), c2])
 	var lista := Protocol.unpack_inputs(dados)
 	assert_eq(lista.size(), 2)
 	assert_eq(lista[0].seq, 7)
@@ -20,14 +23,34 @@ func test_entradas_ida_e_volta() -> void:
 	assert_true(absf(lista[0].yaw - 1.0) < 0.001)
 	assert_true(absf(rad_to_deg(lista[0].pitch) + 20.0) < 0.02)
 	assert_true(lista[0].has(Protocol.BTN_JUMP))
-	assert_true(lista[1].has(Protocol.BTN_CROUCH) and lista[1].has(Protocol.BTN_SPRINT))
+	assert_true(lista[1].has(Protocol.BTN_CROUCH) and lista[1].has(Protocol.BTN_SPRINT) and lista[1].has(Protocol.BTN_FIRE))
+	assert_eq(lista[1].slot, 3)
+	assert_eq(lista[1].view_tick, 123456)
+
+
+func test_mensagens_de_combate() -> void:
+	var st := {"hp": 80, "shield": 25, "selected": 2, "action": 1, "action_left_ms": 900, "action_total_ms": 2300,
+			"slots": [], "ammo": [10, 20, 3, 0]}
+	for i in 5:
+		st["slots"].append({"item": i, "rarity": i % 5, "mag": i * 3, "count": i})
+	var r := Protocol.unpack_status(Protocol.pack_status(st))
+	assert_eq(r["hp"], 80)
+	assert_eq(r["slots"][4]["mag"], 12)
+	assert_eq(r["ammo"], [10, 20, 3, 0])
+	var tiro := Protocol.unpack_shot(Protocol.pack_shot(7, Vector3(1, 2, 3), [{"end": Vector3(4, 5, 6), "hit": true}]))
+	assert_eq(tiro["shooter"], 7)
+	assert_true(tiro["ends"][0]["hit"])
+	var l := Protocol.unpack_loot(Protocol.pack_loot({"id": 9, "item": 2, "rarity": 3, "count": 1, "ammo": 0, "pos": Vector3(1, 0, 1)}))
+	assert_eq(l["rarity"], 3)
+	var bau := Protocol.unpack_u16_msg(Protocol.pack_u16_msg(Protocol.S_CHEST, 4, 1))
+	assert_eq(bau, [4, 1])
 
 
 func test_entrada_saneada() -> void:
 	var c := _cmd(1, 1.0, 1.0, 0.0, 0xFF)   # diagonal > 1 e botões desconhecidos
 	var l := Protocol.unpack_inputs(Protocol.pack_inputs([c]))
 	assert_true(l[0].move.length() <= 1.0001, "movimento limitado a 1")
-	assert_eq(l[0].buttons, Protocol.BTN_JUMP | Protocol.BTN_SPRINT | Protocol.BTN_CROUCH)
+	assert_eq(l[0].buttons, Protocol.BTN_ALL, "bit desconhecido (128) descartado")
 
 
 func test_pacotes_invalidos() -> void:

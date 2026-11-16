@@ -126,18 +126,47 @@ func _jogar(tree: SceneTree) -> void:
 			var c := Protocol.InputCmd.new()
 			c.seq = seq
 			outro.send_inputs([c])
-		if jogo._remotos.size() == 1:
+		if jogo.remote_player_count() == 1:
 			break
 	_checar(outro.connected, "segundo jogador conectou")
-	_checar(jogo._remotos.size() == 1, "jogador 1 vê o jogador 2")
+	_checar(jogo.remote_player_count() == 1, "jogador 1 vê o jogador 2")
 	_checar(jogo.server.player_count() == 2, "servidor com 2 jogadores")
 	outro.close()
 	outro.queue_free()
 	for i in 90:
 		await tree.physics_frame
-		if jogo._remotos.is_empty():
+		if jogo.remote_player_count() == 0:
 			break
-	_checar(jogo._remotos.is_empty(), "jogador 2 saiu e sumiu da tela")
+	_checar(jogo.remote_player_count() == 0, "jogador 2 saiu e sumiu da tela")
+
+	await _combate(tree, jogo)
+
+
+## Combate: começa com a pistola, mira num boneco de treino e atira.
+func _combate(tree: SceneTree, jogo) -> void:
+	_checar(jogo.combat_hud.current_item() == "faisca", "começa com a pistola Faísca")
+	_checar(jogo.remote_player_count() == 0 and jogo._remotos.size() == CampoTreino.DUMMIES.size(), "bonecos de treino visíveis")
+	_checar(not jogo._loot.is_empty(), "itens no chão recebidos (%d)" % jogo._loot.size())
+	var alvo: Vector3 = CampoTreino.DUMMIES[1] + Vector3(0, 1.0, 0)
+	for tentativa in 3:
+		var p: Vector3 = jogo.pawn.global_position + Vector3(0, Combat.EYE_STAND, 0)
+		var d := alvo - p
+		jogo.camera.yaw = rad_to_deg(atan2(-d.x, -d.z))
+		jogo.camera.pitch = rad_to_deg(atan2(d.y, Vector2(d.x, d.z).length()))
+		var r := Combat.aim_ray(jogo.pawn.global_position, false, jogo.camera.yaw_rad(), jogo.camera.pitch_rad())
+		d = alvo - (r["origin"] as Vector3)   # corrige o deslocamento do ombro
+		jogo.camera.yaw = rad_to_deg(atan2(-d.x, -d.z))
+		jogo.camera.pitch = rad_to_deg(atan2(d.y, Vector2(d.x, d.z).length()))
+	var antes: int = jogo.hits_confirmed
+	var mag_antes: int = jogo._status["slots"][0]["mag"]
+	Input.action_press("fire")
+	for i in 3:
+		await tree.physics_frame
+	Input.action_release("fire")
+	for i in 20:
+		await tree.physics_frame
+	_checar(jogo.hits_confirmed > antes, "tiro acertou o boneco (acertos confirmados: %d)" % (jogo.hits_confirmed - antes))
+	_checar(jogo._status["slots"][0]["mag"] == mag_antes - 1, "pistola semiautomática gastou 1 bala (%d -> %d)" % [mag_antes, jogo._status["slots"][0]["mag"]])
 
 
 func _ir(tree: SceneTree, cena: String) -> void:

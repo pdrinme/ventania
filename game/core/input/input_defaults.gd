@@ -19,7 +19,7 @@ const ACTIONS := {
 	"fire": {"label": "Atirar / usar", "mouse": [MOUSE_BUTTON_LEFT], "axis": [[JOY_AXIS_TRIGGER_RIGHT, 1.0]], "remap": true},
 	"aim": {"label": "Mirar", "mouse": [MOUSE_BUTTON_RIGHT], "axis": [[JOY_AXIS_TRIGGER_LEFT, 1.0]], "remap": true},
 	"reload": {"label": "Recarregar", "keys": [KEY_R], "joy": [JOY_BUTTON_X], "remap": true},
-	"interact": {"label": "Interagir", "keys": [KEY_E], "joy": [JOY_BUTTON_X], "remap": true},
+	"interact": {"label": "Interagir", "keys": [KEY_E], "joy": [JOY_BUTTON_Y], "remap": true},
 	"build_mode": {"label": "Modo construção", "keys": [KEY_Q], "joy": [JOY_BUTTON_B], "remap": true},
 	"edit_mode": {"label": "Modo edição", "keys": [KEY_G], "joy": [JOY_BUTTON_DPAD_DOWN], "remap": true},
 	"slot_next": {"label": "Próximo item", "mouse": [MOUSE_BUTTON_WHEEL_DOWN], "joy": [JOY_BUTTON_RIGHT_SHOULDER], "remap": false},

@@ -7,14 +7,14 @@ para calibrar perfis gráficos e orçamentos antes do gameplay (Etapa 2).
 
 | Plataforma | Arquivo | Como abrir |
 |---|---|---|
-| Windows 10/11 (64 bits) | `Ventania-0.2.0-windows.zip` | Extraia e abra `Ventania.exe`. O Windows pode avisar "aplicativo não reconhecido": clique em **Mais informações → Executar assim mesmo** (o executável não tem assinatura digital). |
-| Linux (64 bits) | `Ventania-0.2.0-linux.zip` | Extraia, rode `chmod +x ventania.x86_64` e depois `./ventania.x86_64`. |
-| Android | ainda não disponível | Veja a seção 5. |
+| Windows 10/11 (64 bits) | `Ventania-0.3.0-windows.zip` | Extraia e abra `Ventania.exe`. O Windows pode avisar "aplicativo não reconhecido": clique em **Mais informações → Executar assim mesmo** (o executável não tem assinatura digital). |
+| Linux (64 bits) | `Ventania-0.3.0-linux.zip` | Extraia, rode `chmod +x ventania.x86_64` e depois `./ventania.x86_64`. |
+| Android | `ventania-0.3.0.apk` | Permita "instalar apps de fontes desconhecidas" e abra o arquivo. É uma versão de depuração, para teste. |
 
 Requisito gráfico: OpenGL 3.3 (PC) ou OpenGL ES 3.0 (celular). Quase qualquer
 GPU integrada a partir de 2012 atende.
 
-## 2. Jogar (Etapa 2)
+## 2. Jogar (Etapas 2 e 3)
 
 **Treino sozinho:** Menu → **Jogar: campo de treino**.
 
@@ -26,10 +26,16 @@ GPU integrada a partir de 2012 atende.
 | Pular | Espaço | A | Botão Pular |
 | Agachar | Ctrl (segurar) | R3 (alterna) | Botão Agachar (alterna) |
 | Mirar (zoom) | Botão direito | LT | — |
+| Atirar / usar item | Botão esquerdo | RT | Botão Atirar (arraste nele para mirar) |
+| Recarregar | R | X | Botão Recarga |
+| Pegar item / abrir baú (segurar) | E | Y | Botão Pegar |
+| Trocar de espaço | 1–5 ou roda do mouse | LB / RB | Tocar no espaço |
 | Pausa | Esc | Start | Botão II / voltar |
 
-Para testar: suba as rampas da torre de pedra (8 m), passe agachado pelo túnel
-baixo de madeira e pule do telhado da caixa de metal.
+Para testar: atire nos três **bonecos de treino** à frente do ponto inicial,
+abra os baús (há um no topo da torre de pedra e outro no telhado da caixa de
+metal), troque de arma, use curativos e células de escudo. Com um amigo no mesmo
+servidor, dá para trocar tiros de verdade. Quem é eliminado reaparece em 4 s.
 
 **Jogar com amigos (mesma rede ou VPN):**
 1. Em um PC, abra um terminal na pasta do jogo e rode o servidor:

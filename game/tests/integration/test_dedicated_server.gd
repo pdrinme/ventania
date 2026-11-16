@@ -49,7 +49,52 @@ func _init() -> void:
 			b.send_inputs([c2])
 		if seq_a > 90 and r["posicoes"].size() > 20:
 			break
+	# --- combate: A para, mira em B (posição vista no snapshot) e atira com a pistola inicial
+	var combate := {"pos_a": Vector3.ZERO, "pos_b": Vector3.ZERO, "tick": 0, "acertos": 0, "dano_b": 0, "hp_b": 100}
+	a.snapshot_received.connect(func(s):
+		combate["tick"] = s["tick"]
+		for e: Protocol.EntityState in s["entities"]:
+			if e.id == a.my_id:
+				combate["pos_a"] = e.position
+			elif e.id == b.my_id:
+				combate["pos_b"] = e.position)
+	a.hit_confirmed.connect(func(h):
+		if h["target"] == b.my_id:
+			combate["acertos"] += 1)
+	b.damaged.connect(func(d): combate["dano_b"] += d["damage"])
+	b.status_received.connect(func(st): combate["hp_b"] = st["hp"] + st["shield"])
+	for i in 300:
+		await physics_frame
+		a.poll()
+		b.poll()
+		var parar := i < 30
+		seq_a += 1
+		var c := Protocol.InputCmd.new()
+		c.seq = seq_a
+		c.view_tick = combate["tick"]
+		if not parar:
+			var alvo: Vector3 = combate["pos_b"] + Vector3(0, 1.0, 0)
+			var d: Vector3 = alvo - (combate["pos_a"] + Vector3(0, Combat.EYE_STAND, 0))
+			c.yaw = atan2(-d.x, -d.z)
+			c.pitch = atan2(d.y, Vector2(d.x, d.z).length())
+			var mira := Combat.aim_ray(combate["pos_a"], false, c.yaw, c.pitch)
+			d = alvo - (mira["origin"] as Vector3)
+			c.yaw = atan2(-d.x, -d.z)
+			c.pitch = atan2(d.y, Vector2(d.x, d.z).length())
+			c.buttons = Protocol.BTN_FIRE if i % 8 < 2 else 0     # semiautomática: aperta e solta
+		a.send_inputs([c])
+		seq_b += 1
+		var c2 := Protocol.InputCmd.new()
+		c2.seq = seq_b
+		b.send_inputs([c2])
+		if combate["acertos"] >= 3 and combate["hp_b"] < 100:
+			break
+	print("COMBATE acertos=%d dano_b=%d vida+escudo_b=%d" % [combate["acertos"], combate["dano_b"], combate["hp_b"]])
+
 	var falhas := 0
+	if combate["acertos"] < 3 or combate["dano_b"] <= 0 or combate["hp_b"] >= 100:
+		printerr("FALHA: combate entre jogadores não registrou dano")
+		falhas += 1
 	if not (a.connected and b.connected):
 		printerr("FALHA: clientes não conectaram (a=%s b=%s)" % [a.connected, b.connected])
 		falhas += 1
