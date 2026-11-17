@@ -39,6 +39,7 @@
 | `game/assets/audio/jogo/*.wav` (31 efeitos, incluindo golpes da picareta por material e sons do inventário) | Projeto Ventania (`tools/audio/gerar_sons_jogo.py`, síntese) | Original | Original |
 | `game/assets/armas/picareta_01.glb` (picareta permanente, 532 triângulos) | Projeto Ventania (`tools/assets/kit/blender/gerar_armas.py`) | Original | Original. Design próprio; variações cosméticas futuras usam os mesmos marcadores |
 | `game/assets/ui/icones/*.png` (miniaturas do inventário, incluindo a picareta) | Projeto Ventania (`game/tests/gerar_icones.gd`, renderizadas dos modelos originais) | Original | Original |
+| `game/data/nomes_jogadores.txt` (1000 nomes de jogadores dos bots) | Lista fornecida pelo dono do projeto | Projeto | Uso no projeto |
 | `game/assets/ui/icone.png` | Projeto Ventania (`tools/assets/kit/gerar_icone.py`) | Original | Original |
 | `game/assets/texturas_materiais/paleta_ventania.png`, `toon_paleta.gdshader`, `M_paleta_ventania.tres` | Projeto Ventania | Original | Original |
 

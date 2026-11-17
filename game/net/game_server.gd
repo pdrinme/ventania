@@ -80,6 +80,7 @@ var tempo_bots_us := 0       # custo acumulado dos cérebros (diagnóstico)
 var tempo_tick_us := 0       # custo acumulado do tick inteiro (diagnóstico)
 var ticks_medidos := 0
 var _proximo_bot := 0
+var _rng_nomes := RandomNumberGenerator.new()   # semente aleatória: nomes novos a cada partida
 var kit_inicial := true      # treino: reaparece com uma pistola e munição
 var _proximo_id := 1
 var _spawns := 0
@@ -430,8 +431,7 @@ func add_bot(dificuldade: String) -> Cliente:
 	c.id = _proximo_id
 	_proximo_id = (_proximo_id % 60000) + 1
 	c.peer_id = -c.id
-	var nomes: Array = cfg["nomes"]
-	c.nome = "%s (%s)" % [nomes[_proximo_bot % nomes.size()], cfg["dificuldades"][dificuldade]["nome"]]
+	c.nome = _nome_bot()
 	_proximo_bot += 1
 	c.pawn = Pawn.new()
 	c.pawn.entity_id = c.id
@@ -443,6 +443,22 @@ func add_bot(dificuldade: String) -> Cliente:
 	_reaparecer(c)
 	broadcast(Protocol.pack_player_info(c.id, c.nome), true)
 	return c
+
+
+## Nome sorteado da lista de nomes de jogadores, sem repetir na partida nem
+## coincidir com quem está jogando (a dificuldade não aparece no nome).
+func _nome_bot() -> String:
+	var lista := BotCerebro.nomes()
+	var usados := {}
+	for o: Cliente in clientes.values():
+		usados[o.nome.to_lower()] = true
+	if lista.is_empty():
+		return "Jogador%d" % (_proximo_bot + 1)
+	for i in 50:
+		var n := lista[_rng_nomes.randi() % lista.size()]
+		if not usados.has(n.to_lower()):
+			return n
+	return lista[_rng_nomes.randi() % lista.size()] + str(_proximo_bot)
 
 
 func remove_bot(c: Cliente) -> void:

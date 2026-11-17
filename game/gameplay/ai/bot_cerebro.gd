@@ -59,6 +59,16 @@ func _init(s: GameServer, cli: GameServer.Cliente, dificuldade: String, semente:
 
 
 static var _cfg := {}
+static var _nomes: PackedStringArray = []
+
+
+## Nomes de jogadores para os bots (data/nomes_jogadores.txt, um por linha).
+static func nomes() -> PackedStringArray:
+	if _nomes.is_empty():
+		for l in FileAccess.get_file_as_string("res://data/nomes_jogadores.txt").split("\n"):
+			if not l.strip_edges().is_empty():
+				_nomes.append(l.strip_edges())
+	return _nomes
 
 
 static func config() -> Dictionary:
