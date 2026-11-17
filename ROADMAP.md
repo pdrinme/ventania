@@ -11,6 +11,7 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 - **M4 — "Com estilo"** (Etapa 13): os primeiros cosméticos originais, equipáveis e visíveis na partida.
 - ✅ **v1.0.0** (Etapa 12): M3 entregue: pacotes do jogo e do servidor completo, com os guias.
 - ✅ **v1.1.0** (Etapa 13): M4 entregue: 9 trajes originais novos, picareta-âncora, 2 planadores, animações de entrada e loja com imagens reais e visualizador 3D.
+- ✅ **v1.2.1**: correção das paredes com janela/porta invisíveis na 1.2.0.
 - ✅ **v1.2.0** (revisão de qualidade): IA e navegação, escadas reais e interiores mobiliados, rampas, mapa com regiões, tela de resultado, mira no celular e desempenho. Medido antes e depois; detalhes abaixo.
 
 ## Ajuste proposto à ordem original (aguarda aprovação)
@@ -734,20 +735,24 @@ Feita sobre o código existente, sem reconstruir sistemas. Primeiro auditei e me
 - `capturar_mira_celular`: segurar e soltar, FOV, BTN_AIM, apagado com a picareta; sem sobreposição em 16:9, 19,5:9, 20:9, 4:3 e 960×540.
 
 **8. Desempenho ✅ (medido sem GPU — ver limitação)**
-- `perf_categorias` (câmera parada na Vila Brisa, perfil Médio): as construções caíram de 219 para 86 chamadas de desenho e de 83 mil para 29 mil primitivas; o quadro, de 79 para 62 ms.
-- `bench_mapa`, v1.1.0 → v1.2.0, mesma máquina:
+- `perf_categorias` (câmera parada na Vila Brisa, perfil Médio): as construções caíram de 219 para 86 chamadas de desenho (a geometria é a mesma; só foi juntada).
+- `bench_mapa`, v1.1.0 → v1.2.0 (com a correção da 1.2.1), mesma máquina:
 
-| Perfil | Rota | Chamadas de desenho | Primitivas | FPS médio | Pior quadro |
-|---|---|---|---|---|---|
-| Baixo | por fora | 98 → 70 | 61 mil → 56 mil | 24,5 → 28,2 | 67 → 67 ms |
-| Baixo | por dentro | 117 → 79 | 82 mil → 61 mil | 23,2 → 28,3 | 72 → 59 ms |
-| Médio | por fora | 193 → 143 | 114 mil → 106 mil | 17,1 → 17,6 | 90 → 77 ms |
-| Médio | por dentro | 268 → 191 | 180 mil → 138 mil | 14,3 → 15,0 | 116 → 136 ms |
-| Alto | por fora | 303 → 204 | 145 mil → 131 mil | 7,0 → 8,1 | 213 → 245 ms |
-| Alto | por dentro | 276 → 219 | 201 mil → 158 mil | 5,4 → 5,7 | 234 → 270 ms |
+| Perfil | Rota | Chamadas de desenho | Primitivas | FPS médio |
+|---|---|---|---|---|
+| Baixo | por fora | 98 → 70 | 61 mil → 62 mil | 24,5 → 27,6 |
+| Baixo | por dentro | 117 → 81 | 82 mil → 80 mil | 23,2 → 24,9 |
+| Médio | por fora | 193 → 141 | 114 mil → 113 mil | 17,1 → 16,8 |
+| Médio | por dentro | 268 → 191 | 180 mil → 185 mil | 14,3 → 13,2 |
+| Alto | por fora | 303 → 206 | 145 mil → 143 mil | 7,0 → 7,9 |
+| Alto | por dentro | 276 → 224 | 201 mil → 215 mil | 5,4 → 4,9 |
 
-  - Carga do mapa: 2,29 → 2,06 s.
+  - Carga do mapa: 2,29 → 2,12 s.
   - Memória estática: 80,7 → 85,4 MB (+4,7 MB de mobília e escadas). Memória de vídeo: 22–34 MB, igual.
+  - Na renderização por software o custo é de preenchimento de pixels, e o FPS fica praticamente igual. A redução de chamadas de desenho (−25% a −32%) é o que pesa em GPUs modestas e celulares; isso ainda precisa ser medido em hardware real.
+- **Correção na v1.2.1:** na 1.2.0, a malha única das paredes editadas perdia os ladrilhos ao juntar malhas indexadas (molduras) e não indexadas (ladrilhos). Paredes com janela ou porta ficavam invisíveis, mas com colisão.
+  - Os números publicados na 1.2.0 tinham sido medidos com esse erro e foram refeitos acima.
+  - Novo teste unitário `test_malha_editada_tem_todos_os_ladrilhos`.
 - Perfis Baixo/Médio/Alto ganharam "Detalhes do cenário": distância de detalhe, densidade da vegetação decorativa e partículas.
 - Mobília só a até 40 m e sem sombra.
 - IA escalonada (2,5–7 Hz, 1 Hz longe de humanos; orçamentos de raios e de A* por tick).

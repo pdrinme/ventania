@@ -303,6 +303,7 @@ O cliente guarda apenas um *cache* de leitura do perfil, para exibir o lobby rap
 **Revisão de qualidade (v1.2.0):**
 - Medido antes de otimizar (`tests/perf/perf_categorias.gd`): as construções eram 2/3 das chamadas de desenho, porque as paredes com janela/porta viravam até 9 ladrilhos mais molduras, cada um num MultiMesh.
 - Correção: uma malha por (tipo, material, máscara), em cache. Na vista da vila, as construções passaram de 219 para 86 chamadas.
+  - Os ladrilhos recortados não são indexados e as molduras são. A moldura é desindexada antes de juntar; misturar os dois fazia o SurfaceTool perder os ladrilhos (bug da 1.2.0, corrigido na 1.2.1).
 - Perfis Baixo/Médio/Alto ganharam "Detalhes do cenário": distância de detalhe, densidade da vegetação decorativa sem colisão e partículas.
 - Benchmark `tests/perf/bench_mapa.gd`, por fora e por dentro dos edifícios: números no ROADMAP (revisão de qualidade).
 

@@ -198,3 +198,25 @@ func test_props_bloqueiam() -> void:
 		await _andar(60, _cmd(Vector2(0, 1)))
 		assert_true(pawn.global_position.z > -3.0, "%s bloqueia (z=%.2f)" % [nome, pawn.global_position.z])
 		n.free()
+
+
+## Peça editada (janela/porta) desenhada numa malha só: todos os triângulos dos
+## ladrilhos presentes + as molduras precisam estar nela (regressão da v1.2.0: os
+## ladrilhos sumiam ao misturar malhas indexadas e não indexadas).
+func test_malha_editada_tem_todos_os_ladrilhos() -> void:
+	for tipo in [Grade.PAREDE_X, Grade.PISO]:
+		for mat in 3:
+			for mask in [Grade.full_mask(tipo) & ~((1 << 1) | (1 << 4)), Grade.full_mask(tipo) & ~(1 << 4)]:
+				if not Grade.valid_mask(tipo, mask):
+					continue
+				var tiles := Grade.tile_meshes(tipo, mat)
+				var esperado := 0
+				var t := Grade.tiles_of(tipo)
+				for k in t.x * t.y:
+					if mask & (1 << k) != 0 and tiles[k] != null:
+						esperado += (tiles[k].surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
+				esperado += Grade.frame_boxes(tipo, mask).size() * 36
+				var m: Mesh = BuildClient._malha_editada(tipo, mat, mask)
+				var a: Array = m.surface_get_arrays(0)
+				var n: int = (a[Mesh.ARRAY_INDEX] as PackedInt32Array).size() if a[Mesh.ARRAY_INDEX] != null else (a[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
+				assert_eq(n, esperado, "tipo %d material %d máscara %d: todos os triângulos" % [tipo, mat, mask])

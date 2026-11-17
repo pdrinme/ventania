@@ -108,6 +108,16 @@ static var _molduras := {}
 static var _malhas_editadas := {}
 
 
+## Cópia sem índices de uma malha (mesmo formato dos ladrilhos recortados).
+static func _desindexada(m: Mesh) -> Mesh:
+	var st := SurfaceTool.new()
+	st.create_from(m, 0)
+	st.deindex()
+	var out := st.commit()
+	out.surface_set_material(0, m.surface_get_material(0))
+	return out
+
+
 ## Malha única de uma peça editada: ladrilhos presentes + molduras das aberturas.
 static func _malha_editada(tipo: int, material: int, mask: int) -> Mesh:
 	var chave := Vector3i(tipo, material, mask)
@@ -124,7 +134,9 @@ static func _malha_editada(tipo: int, material: int, mask: int) -> Mesh:
 				st.append_from(m, sfc, Transform3D.IDENTITY)
 				if mat == null:
 					mat = m.surface_get_material(sfc)
-	var moldura := _moldura(material)
+	# os ladrilhos NÃO são indexados e a moldura é: misturar os dois faz o SurfaceTool
+	# guardar só os índices da moldura e sumir com os ladrilhos (paredes invisíveis)
+	var moldura := _desindexada(_moldura(material))
 	for f in Grade.frame_boxes(tipo, mask):
 		st.append_from(moldura, 0, Transform3D(Basis.from_scale(f[1]), f[0]))
 		if mat == null:
