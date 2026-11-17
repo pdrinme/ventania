@@ -112,7 +112,7 @@ func _draw() -> void:
 			var mp := 8.0
 			draw_texture_rect(_icone, Rect2(mp, mp, size.x - mp * 2, size.y - mp * 2), false)
 	elif item.is_empty():
-		_caixa(rect, Color(0.04, 0.2, 0.23, 0.55), Color(0.04, 0.2, 0.23, 0.55))
+		_caixa(rect, Color(VentaniaTheme.NOITE_CLARA, 0.72), Color(VentaniaTheme.NOITE, 0.72))
 	else:
 		var cores := _cores() if ItemDB.is_weapon(item) else [Color("8a9bab"), Color("4b5866")]
 		_caixa(rect, cores[0], cores[1])
@@ -121,10 +121,12 @@ func _draw() -> void:
 		if _icone:
 			var m := 6.0
 			draw_texture_rect(_icone, Rect2(m, m + 2, size.x - m * 2, size.y - m * 2 - 10), false)
-	var contorno := Color.WHITE if selecionado else Color(1, 1, 1, 0.25)
-	_contorno(rect, contorno, 4.0 if selecionado else 2.0)
+	# contorno grosso escuro (linguagem do redesign); selecionado: amarelo por fora
+	_contorno(rect, VentaniaTheme.TINTA, 3.0)
+	if selecionado:
+		_contorno(rect.grow(4), VentaniaTheme.AMARELO, 4.0)
 	if marcado:
-		_contorno(rect.grow(3), Color("ffc93c"), 3.0)
+		_contorno(rect.grow(3), Color.WHITE, 3.0)
 	if has_focus():
 		_contorno(rect.grow(6), Color("ffc93c", 0.9), 3.0)
 	var fonte := get_theme_default_font()

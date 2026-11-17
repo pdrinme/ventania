@@ -448,8 +448,37 @@ Servidor dedicado (export headless), salas, reconexão, validação e antimanipu
   - suíte: servidor dedicado com `--salas=2`.
 - ⏳ **Falta (só com hardware real):** a partida com 2 PCs + 1 Android, conforme o roteiro em `docs/TESTE_EM_HARDWARE.md` §2.2.
 
-### Etapa 8 — Lobby e social ⬜
+### Etapa 8 — Lobby e social ✅ (+ redesign da interface)
 Login, identidade, lobby com o personagem em destaque, grupos, amigos, convites, seleção de modo, matchmaking com bots, sala privada e entrada na partida.
+
+- ✅ **Contas:**
+  - nome (3–16 caracteres) e senha, guardada com PBKDF2-SHA256 (200 mil iterações, salt próprio);
+  - sessão por token aleatório (o banco guarda só o hash; validade de 30 dias);
+  - limite de 8 tentativas de login por minuto, por nome e por IP;
+  - sem e-mail e sem dados pessoais.
+- ✅ **Amigos e presença:**
+  - pedido pelo nome, aceitar, recusar e remover;
+  - situação de cada amigo: no lobby, procurando, em partida ou offline;
+  - eventos por long-polling (`/v1/events`), sem WebSocket.
+- ✅ **Grupo** de até 4: convite (só para amigos online), aceitar ou recusar, sair, expulsar, passar a liderança. Só o líder escolhe o modo e começa.
+- ✅ **Matchmaking com bots:**
+  - cada sala do servidor dedicado se anuncia por heartbeat (`--meta`, `--segredo`);
+  - o grupo vai para a sala pública em espera, do mesmo modo e com vagas, que tiver mais gente; as vagas ficam reservadas por 90 s;
+  - os bots completam a partida.
+- ✅ **Ticket de entrada:** HMAC-SHA256 com conta, nome, sala e validade. Sem ticket válido, o servidor recusa. O nome dentro da partida é o da conta, não o que o cliente diz.
+- ✅ **Sala privada:** código de 5 letras, outro grupo entra pelo código e a partida só começa quando o dono manda (botão na tela de espera).
+- ✅ **Lobby novo:** o personagem e o grupo em 3D com placas de nome (coroa no líder), vagas "+" para convidar, cartão de modo, JOGAR/CANCELAR com o tempo de busca, gaveta de amigos, convites e avisos, login e cadastro, e modos offline sem conta.
+- ✅ **Redesign da interface ("adesivo ao vento"):**
+  - fundo noturno com rajadas de vento (shader);
+  - contorno grosso escuro e sombra dura;
+  - botões inclinados, com o amarelo só na ação principal;
+  - ícones desenhados por código (nenhuma imagem de terceiros);
+  - HUD com barras de vida e escudo numeradas, chips de material longe dos botões de toque, espaços do inventário na nova paleta e botões de toque com "Atirar" em destaque.
+- ✅ **Testes:**
+  - 10 testes novos do meta-servidor (16 no total);
+  - ticket Python ↔ GDScript;
+  - `test_lobby.gd`, ponta a ponta com processos reais (meta-servidor + servidor dedicado com 2 salas + 4 contas, 17 verificações).
+- ⏳ **Falta:** testar com amigos de verdade (2 PCs + celular) usando o meta-servidor, conforme `docs/TESTE_EM_HARDWARE.md` §2.3. Os cosméticos no lobby chegam com o Armário e a Loja (Etapas 9–11).
 
 ### Etapa 9 — Inventário e progressão ⬜
 Inventário persistente, nível, XP, missões, recompensas, Faíscas (com ledger) e histórico de desbloqueios, tudo validado pelo servidor.

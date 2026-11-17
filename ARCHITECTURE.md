@@ -190,6 +190,20 @@ O item comanda as mãos, nunca o contrário. Os marcadores ficam nos modelos (`g
   - Os arquivos são validados por um script em `tools/` antes do servidor subir. Se a configuração for inválida, o servidor não inicia.
 - **Responsabilidades:** contas e sessões, amigos e presença, grupos e convites, fila de matchmaking, criação de salas privadas, início e encerramento dos processos de partida, aplicação dos resultados (XP, missões, moeda), passe, loja e inventário.
 
+### 5.1 Como ficou na Etapa 8
+- **Módulos:**
+  - `contas.py`: cadastro, login, sessões e limite de tentativas;
+  - `social.py`: amigos no SQLite; grupos, convites, presença e eventos em memória (se o servidor reiniciar, cada um volta a ficar sozinho);
+  - `partidas.py`: salas anunciadas por heartbeat, fila, reservas, tickets e sala privada.
+- Uma tarefa de 1 s expira presença e convites e roda o casamento da fila.
+- **Segredo dos servidores:** vem de `VENTANIA_SEGREDO`/`server_secret`; se não houver, é gerado na primeira execução, guardado no banco e mostrado no log.
+- **Servidor de partida:** `MetaLink` manda o heartbeat (estado, humanos, contas presentes) e recebe as ordens "privada" e "começar".
+  - `Ticket.verify` confere o HMAC, a porta e a validade.
+  - A mesma conta voltando assume o personagem (usa a ficha de reconexão).
+  - A marca `priv` no ticket faz a sala saber que é privada antes do próximo heartbeat.
+- **Cliente:** o autoload `Meta` guarda a sessão em `user://session.cfg`, mantém o laço de long-polling e repassa sinais (grupo, amigos, convite, partida encontrada).
+  - Se a sala se anunciou como `127.0.0.1` (mesmo PC do meta), o cliente usa o endereço do meta-servidor.
+
 ## 6. Identidade, sessões e segurança
 
 - **Conta:** nome de usuário e senha (PBKDF2-SHA256 com salt e 200k iterações). O token de sessão é aleatório e fica guardado no cliente. Não há e-mail nem dados pessoais.

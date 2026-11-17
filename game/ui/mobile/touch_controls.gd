@@ -163,7 +163,8 @@ func _draw() -> void:
 		var raio := RAIO_JOY * _escala
 		draw_circle(_joy_centro, raio, Color(1, 1, 1, 0.18))
 		draw_arc(_joy_centro, raio, 0, TAU, 48, Color(1, 1, 1, 0.5), 3.0)
-		draw_circle(_joy_pos, raio * 0.42, Color(1, 0.79, 0.24, 0.85))
+		draw_circle(_joy_pos, raio * 0.42, Color(VentaniaTheme.AMARELO, 0.9))
+		draw_arc(_joy_pos, raio * 0.42, 0, TAU, 32, VentaniaTheme.TINTA, 3.0, true)
 	else:
 		var p := Vector2(size.x * 0.16, size.y * 0.72)
 		draw_arc(p, RAIO_JOY * _escala, 0, TAU, 48, Color(1, 1, 1, 0.25), 3.0)
@@ -173,6 +174,11 @@ func _draw() -> void:
 			continue
 		var b: Dictionary = _botoes[nome]
 		var ativo: bool = b["dedo"] != -1 or (nome == "agachar" and sampler and sampler.touch_crouch)
-		draw_circle(b["centro"], b["raio"], Color(0.13, 0.72, 0.66, 0.85) if ativo else Color(0.06, 0.31, 0.34, 0.6))
-		draw_arc(b["centro"], b["raio"], 0, TAU, 48, Color(1, 0.79, 0.24, 0.9), 3.0)
-		draw_string(fonte, b["centro"] + Vector2(-b["raio"], 7), b["texto"], HORIZONTAL_ALIGNMENT_CENTER, b["raio"] * 2, int(20 * _escala), Color.WHITE)
+		# redesign: disco escuro translúcido com contorno grosso; Atirar em amarelo (ação principal)
+		var principal: bool = nome == "atirar"
+		var fundo := Color(VentaniaTheme.AMARELO, 0.92 if ativo else 0.78) if principal else (Color(VentaniaTheme.NOITE_CLARA, 0.9) if ativo else Color(VentaniaTheme.NOITE, 0.55))
+		draw_circle(b["centro"] + Vector2(0, 4), b["raio"], Color(VentaniaTheme.TINTA, 0.45))
+		draw_circle(b["centro"], b["raio"], fundo)
+		draw_arc(b["centro"], b["raio"] - 1.5, 0, TAU, 48, VentaniaTheme.TINTA if principal else Color(1, 1, 1, 0.75 if ativo else 0.45), 3.0, true)
+		var cor_txt := VentaniaTheme.TINTA if principal else Color.WHITE
+		draw_string(VentaniaTheme.FONTE_FORTE, b["centro"] + Vector2(-b["raio"], 7), b["texto"], HORIZONTAL_ALIGNMENT_CENTER, b["raio"] * 2, int(19 * _escala), cor_txt)

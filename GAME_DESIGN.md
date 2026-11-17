@@ -145,6 +145,12 @@ até 6 slots).
 - Personagens com proporções levemente exageradas (mãos e cabeça maiores) e **um esqueleto padrão para todos**.
 - Cenário legível: cada ponto de interesse tem sua cor ou silhueta, e as construções do jogador são bem visíveis.
 - UI: tipografia grossa e arredondada (fonte OFL), cards com cor de raridade e animações curtas.
+- **Linguagem visual da interface (redesign da Etapa 8, "adesivo ao vento"):**
+  - fundo noturno (azul-petróleo → índigo) com rajadas de vento animadas;
+  - contorno grosso escuro e sombra dura deslocada, como adesivo ou HQ;
+  - botões levemente inclinados (o vento empurrando), com o texto da ação em caixa alta;
+  - amarelo só para a ação principal (JOGAR, Atirar no toque) e branco para as secundárias;
+  - cartões escuros translúcidos e foco sempre visível (contorno amarelo).
 
 ## 12. Fora do escopo inicial
 

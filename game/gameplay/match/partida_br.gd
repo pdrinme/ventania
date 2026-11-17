@@ -72,7 +72,12 @@ func update() -> void:
 		Protocol.MATCH_ESPERA:
 			var n := jogadores().size()
 			var minimo := int(config.get("min_jogadores", 2))
-			if n >= minimo or (n >= 1 and t >= _ticks(float(config.get("espera_maxima_s", 90)))):
+			if server.privada:
+				# sala privada: quem decide é o dono (pelo lobby)
+				if server.forcar_inicio and n >= 1:
+					server.forcar_inicio = false
+					_mudar(Protocol.MATCH_CONTAGEM)
+			elif n >= minimo or (n >= 1 and t >= _ticks(float(config.get("espera_maxima_s", 90)))):
 				_mudar(Protocol.MATCH_CONTAGEM)
 		Protocol.MATCH_CONTAGEM:
 			if jogadores().is_empty() and not config.get("somente_bots", false):

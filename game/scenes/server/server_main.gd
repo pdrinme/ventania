@@ -11,6 +11,10 @@ extends Node
 ##   --min-jogadores=2      humanos para começar a contagem
 ##   --config=arquivo.json  sobrescreve data/partida.json
 ##   --relatorio=30         a cada N s, registra banda e tempo de tick de cada sala
+##   --meta=http://IP:8080  liga as salas ao meta-servidor (lobby, matchmaking, salas privadas)
+##   --segredo=TEXTO        segredo compartilhado com o meta-servidor (aparece no log dele)
+##   --anunciar=IP          endereço que os jogadores usam para chegar aqui (padrão: o meta descobre)
+##   --aceitar-sem-conta    com --meta, aceita também quem entra direto pelo endereço
 
 const SALAS_MAX := 8
 
@@ -25,8 +29,20 @@ func _ready() -> void:
 	var n_salas := 1
 	var max_jog := Protocol.MAX_PLAYERS
 	var cfg := PartidaBR.carregar_config()
+	var meta := ""
+	var segredo := ""
+	var anunciar := ""
+	var sem_conta := false
 	for a in OS.get_cmdline_user_args():
-		if a.begins_with("--porta="):
+		if a.begins_with("--meta="):
+			meta = a.trim_prefix("--meta=")
+		elif a.begins_with("--segredo="):
+			segredo = a.trim_prefix("--segredo=")
+		elif a.begins_with("--anunciar="):
+			anunciar = a.trim_prefix("--anunciar=")
+		elif a == "--aceitar-sem-conta":
+			sem_conta = true
+		elif a.begins_with("--porta="):
 			porta = int(a.trim_prefix("--porta="))
 		elif a.begins_with("--modo="):
 			modo = a.trim_prefix("--modo=")
@@ -60,6 +76,8 @@ func _ready() -> void:
 		vp.add_child(mundo)
 		var s := GameServer.new(mundo, 0, modo, cfg.duplicate(true))
 		s.max_jogadores = max_jog
+		s.segredo_tickets = segredo if not meta.is_empty() else ""
+		s.ticket_obrigatorio = not sem_conta
 		s.outras_salas = ", ".join(portas.filter(func(p): return p != porta + i).map(func(p): return str(p)))
 		vp.add_child(s)
 		var e := s.start(porta + i)
@@ -68,6 +86,18 @@ func _ready() -> void:
 			get_tree().quit(1)
 			return
 		salas.append(s)
+	if not meta.is_empty():
+		if segredo.is_empty():
+			Log.error("servidor", "--meta precisa de --segredo (o segredo aparece no log do meta-servidor)")
+			get_tree().quit(1)
+			return
+		var link := MetaLink.new()
+		link.url = meta
+		link.segredo = segredo
+		link.anunciar = anunciar
+		link.salas = salas
+		add_child(link)
+		Log.info("servidor", "ligado ao meta-servidor %s (%s)" % [meta, "tickets obrigatórios" if not sem_conta else "tickets opcionais"])
 	Log.info("servidor", "modo: %s, %d sala(s), até %d jogadores por sala" % [modo, n_salas, max_jog])
 	Log.info("servidor", "%s — servidor dedicado pronto. Jogadores entram com o endereço deste PC e a porta %s (UDP)." % [
 			Version.full(), " ou ".join(portas.map(func(p): return str(p)))])

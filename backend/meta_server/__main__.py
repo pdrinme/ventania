@@ -12,8 +12,11 @@ from .http import serve
 async def principal(cfg: config.Config) -> None:
     con = db.connect(cfg.db_abs())
     versao = db.migrate(con)
-    app = App(con)
+    app = App(con, cfg)
     servidor = await serve(app.router, cfg.host, cfg.port, cfg.max_body_bytes, cfg.request_timeout_s)
+    tarefa = asyncio.create_task(app.tick())
+    logging.info("segredo dos servidores de partida: %s (use --segredo=... no servidor dedicado; "
+                 "defina VENTANIA_SEGREDO ou server_secret na configuração para fixar outro)", app.segredo)
     enderecos = ", ".join(f"{s.getsockname()[0]}:{s.getsockname()[1]}" for s in servidor.sockets)
     logging.info("Ventania meta-servidor %s ouvindo em %s (banco v%d: %s)", SERVER_VERSION, enderecos, versao, cfg.db_abs())
     parar = asyncio.Event()
@@ -28,6 +31,7 @@ async def principal(cfg: config.Config) -> None:
             await parar.wait()
         except asyncio.CancelledError:
             pass
+    tarefa.cancel()
     con.close()
     logging.info("meta-servidor encerrado")
 

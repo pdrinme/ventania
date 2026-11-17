@@ -16,10 +16,7 @@ var _abas: TabContainer
 
 
 func _ready() -> void:
-	var fundo := ColorRect.new()
-	fundo.color = VentaniaTheme.TEAL_ESCURO
-	fundo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(fundo)
+	add_child(VentaniaTheme.background())
 
 	var margem := MarginContainer.new()
 	margem.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

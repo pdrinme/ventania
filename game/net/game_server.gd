@@ -54,6 +54,7 @@ class Cliente:
 	var aiming := false
 	var bot: BotCerebro = null      # bot do servidor (sem conexão); null = humano
 	var token := 0                  # ficha de sessão (reconexão)
+	var conta := 0                  # conta do meta-servidor (ticket); 0 = sem conta
 	var desconectado_tick := -1     # >= 0: caiu e está esperando reconectar
 	var bytes_env := 0              # banda (só a carga útil dos pacotes, sem o cabeçalho do ENet)
 	var bytes_rec := 0
@@ -102,6 +103,11 @@ var _rng_nomes := RandomNumberGenerator.new()   # semente aleatória: nomes novo
 var max_jogadores := 16      # humanos por sala (sala cheia = recusa com mensagem)
 var outras_salas := ""       # dica na recusa de sala cheia (ex.: "porta 24801")
 var expulsos := 0            # diagnóstico/testes
+var segredo_tickets := ""    # Etapa 8: se definido, confere tickets do meta-servidor
+var ticket_obrigatorio := true   # false: aceita também quem entra direto pelo endereço (sem conta)
+var porta := 0
+var privada := false         # sala privada (meta-servidor): só começa quando o dono mandar
+var forcar_inicio := false   # sala privada: o dono mandou começar
 var reconexoes := 0
 var kit_inicial := true      # treino: reaparece com uma pistola e munição
 var _proximo_id := 1
@@ -136,7 +142,8 @@ func _ready() -> void:
 		bonecos.append({"id": p.entity_id, "pawn": p, "vit": v, "last_hit": 0})
 
 
-func start(porta: int, bind_ip := "*") -> Error:
+func start(p_porta: int, bind_ip := "*") -> Error:
+	porta = p_porta
 	peer = ENetMultiplayerPeer.new()
 	peer.set_bind_ip(bind_ip)
 	var e := peer.create_server(porta, Protocol.MAX_PLAYERS + 4, 3, 0, 0)   # folga: recusar "sala cheia" com mensagem e reconexões
@@ -259,12 +266,34 @@ func _receber(de: int, dados: PackedByteArray) -> bool:
 				return true
 			if h["token"] != 0 and _reconectar(de, h["token"]):
 				return true
+			var nome := _limpar_nome(h["name"])
+			var conta := 0
+			if not segredo_tickets.is_empty() and (ticket_obrigatorio or not h["ticket"].is_empty()):
+				var t := Ticket.verify(segredo_tickets, h["ticket"], porta)
+				if t.is_empty():
+					send_to(de, Protocol.pack_reject("Entre pelo lobby: ticket de partida inválido ou vencido."), true)
+					_desligar(de)
+					return true
+				conta = int(t["acc"])
+				nome = _limpar_nome(str(t["name"]))
+				if t.get("priv", false):
+					privada = true          # já sabe antes do próximo heartbeat
+				for o: Cliente in clientes.values():
+					if o.conta == conta and o.pawn and o.bot == null:
+						# mesma conta voltando (outro aparelho ou ficha perdida): assume o personagem
+						if o.token != 0 and _reconectar(de, o.token):
+							return true
+						send_to(de, Protocol.pack_reject("Essa conta já está nesta partida."), true)
+						_desligar(de)
+						return true
 			if humanos() >= max_jogadores:
 				var dica := (" Tente outra sala: %s." % outras_salas) if not outras_salas.is_empty() else ""
 				send_to(de, Protocol.pack_reject("Sala cheia (%d jogadores).%s" % [max_jogadores, dica]), true)
 				_desligar(de)
 				return true
-			_entrar(de, _limpar_nome(h["name"]))
+			_entrar(de, nome)
+			if clientes.has(de):
+				clientes[de].conta = conta
 		Protocol.C_INPUT:
 			if c == null or c.pawn == null:
 				return false
@@ -351,6 +380,8 @@ func _entrar(de: int, nome: String) -> void:
 ## Tudo que um cliente precisa ao entrar (ou ao reconectar): nomes, loot, construções.
 func _estado_completo(de: int, c: Cliente) -> void:
 	for outro: Cliente in clientes.values():
+		if outro.pawn == null:
+			continue                    # conexão que ainda não se apresentou (sem nome)
 		send_to(de, Protocol.pack_player_info(outro.id, outro.nome), true)
 		if outro.peer_id != de:
 			send_to(outro.peer_id, Protocol.pack_player_info(c.id, c.nome), true)
@@ -424,6 +455,11 @@ func _expirar_desconectados() -> void:
 		if c.desconectado_tick >= 0 and tick - c.desconectado_tick > JANELA_RECONEXAO_S * Protocol.TICK_RATE:
 			clientes.erase(c.peer_id)
 			_sair(c)
+
+
+## Contas presentes (para o meta-servidor saber quem já chegou).
+func accounts() -> Array:
+	return clientes.values().filter(func(c): return c.conta > 0 and c.pawn != null).map(func(c): return c.conta)
 
 
 func humanos() -> int:

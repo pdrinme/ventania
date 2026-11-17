@@ -57,9 +57,10 @@ func _ready() -> void:
 	vit.custom_minimum_size.x = 260
 	vit.position.y -= 40
 	add_child(vit)
-	_escudo = _barra(AZUL, 18)
+	vit.add_theme_constant_override("separation", 9)
+	_escudo = _barra(AZUL, 20, true)
 	vit.add_child(_escudo)
-	_vida = _barra(VERDE, 22)
+	_vida = _barra(VERDE, 26, true)
 	vit.add_child(_vida)
 	_vida_txt = Label.new()
 	_vida_txt.theme_type_variation = "Pequeno"
@@ -171,19 +172,40 @@ func _ready() -> void:
 			"slots": [], "ammo": []})
 
 
-func _barra(cor: Color, altura: int) -> ProgressBar:
+## Barra no estilo do redesign: trilho escuro com contorno grosso, preenchimento
+## com brilho no topo e o número dentro (vida/escudo).
+func _barra(cor: Color, altura: int, com_numero := false) -> ProgressBar:
 	var p := ProgressBar.new()
-	p.custom_minimum_size = Vector2(240, altura)
+	p.custom_minimum_size = Vector2(260, altura)
 	p.max_value = 100
 	p.show_percentage = false
 	var fill := StyleBoxFlat.new()
 	fill.bg_color = cor
-	fill.set_corner_radius_all(6)
+	fill.set_corner_radius_all(8)
+	fill.border_color = cor.lightened(0.35)
+	fill.border_width_top = 3 if altura >= 18 else 0
 	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0, 0, 0, 0.45)
-	bg.set_corner_radius_all(6)
+	bg.bg_color = Color(VentaniaTheme.NOITE, 0.8)
+	bg.set_corner_radius_all(10)
+	bg.border_color = VentaniaTheme.TINTA
+	bg.set_border_width_all(3 if altura >= 18 else 2)
+	bg.expand_margin_left = 3
+	bg.expand_margin_right = 3
+	bg.expand_margin_top = 3
+	bg.expand_margin_bottom = 3
 	p.add_theme_stylebox_override("fill", fill)
 	p.add_theme_stylebox_override("background", bg)
+	if com_numero:
+		var n := Label.new()
+		n.name = "Numero"
+		n.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		n.offset_left = 10
+		n.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		n.add_theme_font_override("font", VentaniaTheme.FONTE_FORTE)
+		n.add_theme_font_size_override("font_size", altura - 4)
+		_contorno(n)
+		n.add_theme_constant_override("outline_size", 6)
+		p.add_child(n)
 	return p
 
 
@@ -196,7 +218,9 @@ func update_status(st: Dictionary) -> void:
 	_status = st
 	_vida.value = st["hp"]
 	_escudo.value = st["shield"]
-	_vida_txt.text = "Vida %d · Escudo %d" % [st["hp"], st["shield"]]
+	_vida_txt.text = ""
+	(_vida.get_node("Numero") as Label).text = "%d" % st["hp"]
+	(_escudo.get_node("Numero") as Label).text = "%d" % st["shield"]
 	var tipos := ItemDB.ammo_types()
 	for i in _slots.size():
 		var sl: Dictionary = st["slots"][i] if i < st["slots"].size() else {"item": 0, "rarity": 0, "mag": 0, "count": 0}
@@ -278,12 +302,13 @@ func _desenhar_balao() -> void:
 	var larg := w_tecla + w_texto + 30
 	var r := Rect2(Vector2(-larg / 2, -26), Vector2(larg, 48))
 	var fundo := StyleBoxFlat.new()
-	fundo.bg_color = Color(0.06, 0.26, 0.29, 0.92)
+	fundo.bg_color = Color(VentaniaTheme.NOITE, 0.94)
 	fundo.set_corner_radius_all(14)
-	fundo.set_border_width_all(2)
-	fundo.border_color = _balao_cor
-	fundo.shadow_color = Color(0, 0, 0, 0.3)
-	fundo.shadow_size = 4
+	fundo.set_border_width_all(3)
+	fundo.border_color = _balao_cor          # cor da raridade do item
+	fundo.shadow_color = Color(VentaniaTheme.TINTA, 0.8)
+	fundo.shadow_offset = Vector2(0, 4)
+	fundo.shadow_size = 1
 	_balao.draw_style_box(fundo, r)
 	# tecla (com anel de progresso ao segurar)
 	var c := r.position + Vector2(10 + w_tecla / 2, 24)

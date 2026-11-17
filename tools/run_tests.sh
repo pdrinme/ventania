@@ -98,6 +98,19 @@ passo "Etapa 7: rede — 2 salas, sala cheia, reconexão, banda, relevância, re
 FILTRO="REDE|FALHOU|kbit|entidades"
 rodar_godot timeout 400 "$GODOT" --headless --path game -s res://tests/integration/test_rede.gd; checar $? "rede"
 
+passo "Etapa 8: lobby de ponta a ponta (meta-servidor + servidor dedicado com 2 salas + clientes)"
+TMPDB=$(mktemp -d)
+PORTA_META=$(python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()")
+PORTA=$(python3 -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()")
+(cd backend && VENTANIA_DB="$TMPDB/meta.sqlite3" VENTANIA_SEGREDO="segredo-dos-testes" exec python3 -m meta_server --host 127.0.0.1 --port "$PORTA_META") >"$TMPDB/meta.log" 2>&1 &
+PIDM=$!
+"$GODOT" --headless --path game -- --servidor --modo=br --salas=2 --porta="$PORTA" --config=res://tests/integration/partida_rapida.json --min-jogadores=2 --bots=8 --meta="http://127.0.0.1:$PORTA_META" --segredo="segredo-dos-testes" >"$TMPDB/srv.log" 2>&1 &
+PIDS=$!
+for i in $(seq 1 150); do grep -q "servidor dedicado pronto" "$TMPDB/srv.log" 2>/dev/null && break; sleep 0.1; done
+FILTRO="LOBBY|FALHOU"
+rodar_godot timeout 300 "$GODOT" --headless --path game -s res://tests/integration/test_lobby.gd -- "http://127.0.0.1:$PORTA_META"; checar $? "lobby"
+kill "$PIDS" "$PIDM" 2>/dev/null; wait "$PIDS" "$PIDM" 2>/dev/null; rm -rf "$TMPDB"
+
 passo "Etapa 5: custo das construções (limite de peças)"
 "$GODOT" --headless --path game -s res://tests/perf/perf_construcao.gd -- 1200 2>&1 | grep PERF_CONSTRUCAO
 

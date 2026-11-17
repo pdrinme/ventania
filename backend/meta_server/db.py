@@ -11,6 +11,34 @@ MIGRACOES = [
             value TEXT NOT NULL
         );
     """),
+    (2, "contas, sessões e amizades (Etapa 8)", """
+        CREATE TABLE accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            username_norm TEXT NOT NULL UNIQUE,
+            pass_salt BLOB NOT NULL,
+            pass_hash BLOB NOT NULL,
+            pass_iter INTEGER NOT NULL,
+            created_at INTEGER NOT NULL
+        );
+        CREATE TABLE sessions (
+            token_hash BLOB PRIMARY KEY,
+            account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            created_at INTEGER NOT NULL,
+            expires_at INTEGER NOT NULL
+        );
+        CREATE INDEX sessions_account ON sessions(account_id);
+        CREATE TABLE friendships (
+            a INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            b INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            requester INTEGER NOT NULL,
+            status TEXT NOT NULL CHECK (status IN ('pending', 'accepted')),
+            created_at INTEGER NOT NULL,
+            PRIMARY KEY (a, b),
+            CHECK (a < b)
+        );
+        CREATE INDEX friendships_b ON friendships(b);
+    """),
 ]
 
 

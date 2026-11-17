@@ -10,7 +10,8 @@ from dataclasses import dataclass, field
 from urllib.parse import parse_qs, urlsplit
 
 log = logging.getLogger("meta.http")
-STATUS = {200: "OK", 201: "Created", 400: "Bad Request", 404: "Not Found", 405: "Method Not Allowed",
+STATUS = {200: "OK", 201: "Created", 400: "Bad Request", 401: "Unauthorized", 403: "Forbidden", 404: "Not Found",
+          405: "Method Not Allowed", 409: "Conflict", 429: "Too Many Requests",
           408: "Request Timeout", 413: "Payload Too Large", 500: "Internal Server Error"}
 
 
@@ -21,6 +22,7 @@ class Request:
     query: dict
     headers: dict
     body: bytes = b""
+    peer: str = ""          # IP de quem pediu
 
     def json(self):
         if not self.body:
@@ -103,6 +105,8 @@ async def serve(router: Router, host: str, port: int, max_body: int, timeout_s: 
         req = None
         try:
             req = await asyncio.wait_for(_ler(reader, max_body), timeout_s)
+            info = writer.get_extra_info("peername")
+            req.peer = info[0] if info else ""
             resp = await router.dispatch(req)
         except HttpError as e:
             resp = Response(e.status, {"error": e.message})

@@ -5,7 +5,7 @@ extends Control
 ## Na edição, a ajuda da edição.
 
 var modo: BuildMode
-var _rotulo_mats: Label
+var _mats: Array[Label] = []      # chips de material (madeira, pedra, metal)
 var _barra: Control
 var _ajuda: Label
 
@@ -16,15 +16,40 @@ const CORES := [Color("c98a4b"), Color("a7a196"), Color("8fa3b4")]
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_rotulo_mats = Label.new()
-	_rotulo_mats.theme_type_variation = "Subtitulo"
-	_rotulo_mats.add_theme_color_override("font_outline_color", Color("24252c"))
-	_rotulo_mats.add_theme_constant_override("outline_size", 8)
-	_rotulo_mats.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 16)
-	_rotulo_mats.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	_rotulo_mats.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_rotulo_mats.position.y -= 40
-	add_child(_rotulo_mats)
+	# materiais: chips compactos acima da vida (canto inferior esquerdo), longe
+	# dos botões de toque, que ficam à direita
+	var linha := HBoxContainer.new()
+	linha.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	linha.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	linha.offset_left = 16
+	linha.offset_bottom = -150
+	linha.add_theme_constant_override("separation", 8)
+	linha.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(linha)
+	for i in 3:
+		var chip := PanelContainer.new()
+		var sb := VentaniaTheme._caixa(Color(VentaniaTheme.NOITE, 0.78), 14, VentaniaTheme.TINTA, 2, 0)
+		sb.content_margin_left = 8
+		sb.content_margin_right = 12
+		sb.content_margin_top = 2
+		sb.content_margin_bottom = 2
+		chip.add_theme_stylebox_override("panel", sb)
+		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 6)
+		chip.add_child(h)
+		var cor := Panel.new()
+		var sc := VentaniaTheme._caixa(CORES[i], 4, VentaniaTheme.TINTA, 2, 0)
+		cor.add_theme_stylebox_override("panel", sc)
+		cor.custom_minimum_size = Vector2(16, 16)
+		cor.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(cor)
+		var n := Label.new()
+		n.add_theme_font_override("font", VentaniaTheme.FONTE_FORTE)
+		n.add_theme_font_size_override("font_size", 19)
+		h.add_child(n)
+		_mats.append(n)
+		linha.add_child(chip)
 	_barra = Control.new()
 	_barra.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	_barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -45,7 +70,8 @@ func _process(_delta: float) -> void:
 	if modo == null:
 		return
 	var m: Array = modo.materials()
-	_rotulo_mats.text = "Madeira %d   Pedra %d   Metal %d" % [m[0] if m.size() > 0 else 0, m[1] if m.size() > 1 else 0, m[2] if m.size() > 2 else 0]
+	for i in 3:
+		_mats[i].text = str(m[i] if m.size() > i else 0)
 	_barra.visible = modo.ativo and modo.editando < 0
 	if modo.editando >= 0:
 		_ajuda.text = "EDITANDO — Atirar: liga/desliga o ladrilho · Editar: confirmar · Recarregar: restaurar · Esc: cancelar"

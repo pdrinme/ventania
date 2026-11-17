@@ -133,6 +133,7 @@ func _ready() -> void:
 	add_child(chests)
 	tormenta = StormVisual.new()
 	add_child(tormenta)
+	_montar_privada(camada, p)
 	hud.resume_requested.connect(func(): _pausar(false))
 	hud.quit_requested.connect(_sair)
 	_atualizar_toque(InputManager.device)
@@ -179,6 +180,9 @@ func _ready() -> void:
 			return
 		host = "127.0.0.1"
 	var nome: String = Settings.get_value("network", "player_name")
+	client.ticket = p.get("ticket", "")      # partida do lobby: o servidor usa o nome da conta
+	if Meta.logged_in():
+		nome = Meta.account["username"]
 	if client.connect_to(host, porta, nome) != OK:
 		_falhar("Endereço inválido: %s:%d" % [host, porta])
 		return
@@ -957,6 +961,8 @@ func _sair() -> void:
 	if _saindo:
 		return
 	_saindo = true
+	if not client.ticket.is_empty():
+		Meta.match_left()          # o grupo volta ao lobby
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	if client:
 		client.close()
@@ -1055,9 +1061,49 @@ func _em_partida() -> bool:
 	return e == Protocol.MATCH_JOGO or e == Protocol.MATCH_FIM or e == Protocol.MATCH_ONIBUS
 
 
+var _privada_ui: Control
+
+
+## Sala privada (lobby): mostra o código e, para o dono, o botão de começar.
+func _montar_privada(camada: CanvasLayer, p: Dictionary) -> void:
+	var codigo: String = p.get("private_code", "")
+	if codigo.is_empty():
+		return
+	var col := VBoxContainer.new()
+	col.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	col.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	col.offset_top = 110
+	col.theme = get_tree().root.theme
+	camada.add_child(col)
+	var chip := PanelContainer.new()
+	chip.theme_type_variation = "Chip"
+	chip.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var t := Label.new()
+	t.add_theme_font_override("font", VentaniaTheme.FONTE_FORTE)
+	t.text = "SALA PRIVADA · CÓDIGO %s" % codigo + ("" if p.get("dono_privada", false) else " · o dono começa a partida")
+	chip.add_child(t)
+	col.add_child(chip)
+	if p.get("dono_privada", false):
+		var b := Button.new()
+		b.theme_type_variation = "BotaoPrimario"
+		b.add_theme_font_size_override("font_size", 24)
+		b.text = "COMEÇAR PARTIDA"
+		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		b.custom_minimum_size = Vector2(300, 64)
+		b.focus_mode = Control.FOCUS_NONE
+		b.pressed.connect(func():
+			b.disabled = true
+			Meta.private_start()
+			hud.flash("Começando…", 2.0))
+		col.add_child(b)
+	_privada_ui = col
+
+
 func _on_match(m: Dictionary) -> void:
 	var antes: int = _partida.get("estado", Protocol.MATCH_TREINO)
 	_partida = m
+	if _privada_ui:
+		_privada_ui.visible = m["estado"] == Protocol.MATCH_ESPERA
 	match_hud.set_match(m)
 	if m["estado"] != antes:
 		match m["estado"]:

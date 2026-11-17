@@ -71,6 +71,16 @@ godot --headless --path game -- --servidor --porta=24800
 
 Por padrão o servidor roda partidas Battle Royale seguidas (começa com 2+ jogadores, ou depois de 90 s com 1). Opções: `--modo=treino` (campo de treino), `--min-jogadores=N`, `--config=arquivo.json` (sobrescreve `game/data/partida.json`).
 
+Mais opções do servidor:
+- Etapa 7: `--salas=N` (várias partidas num processo), `--bots=N`, `--max-jogadores=N`, `--relatorio=S` (banda e tick no log).
+- Etapa 8: `--meta=http://IP:8080 --segredo=XXXX` liga as salas ao lobby (matchmaking, salas privadas, tickets). O segredo aparece no log do meta-servidor.
+
+Exemplo completo com lobby:
+
+```bash
+godot --headless --path game -- --servidor --salas=2 --bots=16 --meta=http://127.0.0.1:8080 --segredo=XXXX
+```
+
 Todos os testes (Python, Godot, fumaça, integração, servidor dedicado e desempenho):
 
 ```bash

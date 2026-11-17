@@ -30,6 +30,12 @@ func _ready() -> void:
 	_info = Label.new()
 	_info.theme_type_variation = "Pequeno"
 	_info.position = Vector2(16, 30)
+	var sb := VentaniaTheme._caixa(Color(VentaniaTheme.TINTA, 0.45), 12, Color.TRANSPARENT, 0, 0)
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	sb.content_margin_top = 2
+	sb.content_margin_bottom = 2
+	_info.add_theme_stylebox_override("normal", sb)
 	_info.add_theme_color_override("font_outline_color", Color("24252c"))
 	_info.add_theme_constant_override("outline_size", 6)
 	add_child(_info)

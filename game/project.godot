@@ -11,7 +11,7 @@ config/description="Battle Royale cartunesco original, leve, para jogar com amig
 run/main_scene="res://scenes/boot/boot.tscn"
 config/features=PackedStringArray("4.7")
 config/icon="res://assets/ui/icone.png"
-boot_splash/bg_color=Color(0.0863, 0.4863, 0.5176, 1)
+boot_splash/bg_color=Color(0.047, 0.24, 0.31, 1)
 boot_splash/show_image=false
 
 [autoload]

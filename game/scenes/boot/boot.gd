@@ -13,10 +13,7 @@ func _ready() -> void:
 		SceneManager.go("server")
 		return
 
-	var fundo := ColorRect.new()
-	fundo.color = VentaniaTheme.TEAL_ESCURO
-	fundo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(fundo)
+	add_child(VentaniaTheme.background())
 	var titulo := Label.new()
 	titulo.theme_type_variation = "Titulo"
 	titulo.text = "VENTANIA"

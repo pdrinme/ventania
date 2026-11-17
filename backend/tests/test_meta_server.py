@@ -19,6 +19,9 @@ from meta_server.http import serve  # noqa: E402
 class ServidorDeTeste:
     """Sobe o servidor numa thread com porta livre e banco em memória."""
 
+    def __init__(self, cfg=None):
+        self.cfg = cfg
+
     def __enter__(self):
         self.con = db.connect(":memory:")
         db.migrate(self.con)
@@ -27,7 +30,7 @@ class ServidorDeTeste:
 
         def rodar():
             asyncio.set_event_loop(self.loop)
-            self.srv = self.loop.run_until_complete(serve(App(self.con).router, "127.0.0.1", 0, 1024, 2.0))
+            self.srv = self.loop.run_until_complete(serve(App(self.con, self.cfg).router, "127.0.0.1", 0, 1024, 2.0))
             self.porta = self.srv.sockets[0].getsockname()[1]
             pronto.set()
             self.loop.run_forever()
@@ -41,9 +44,11 @@ class ServidorDeTeste:
         self.loop.call_soon_threadsafe(self.srv.close)
         self.loop.call_soon_threadsafe(self.loop.stop)
         self.thread.join(5)
+        self.con.close()
 
-    def get(self, caminho, metodo="GET", corpo=None):
-        req = urllib.request.Request(f"http://127.0.0.1:{self.porta}{caminho}", method=metodo, data=corpo)
+    def get(self, caminho, metodo="GET", corpo=None, cabecalhos=None):
+        req = urllib.request.Request(f"http://127.0.0.1:{self.porta}{caminho}", method=metodo, data=corpo,
+                                     headers=cabecalhos or {})
         try:
             with urllib.request.urlopen(req, timeout=5) as r:
                 return r.status, json.loads(r.read() or b"null")

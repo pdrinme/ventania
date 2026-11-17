@@ -7,11 +7,11 @@ para calibrar perfis gráficos e orçamentos antes do gameplay (Etapa 2).
 
 | Plataforma | Arquivo | Como abrir |
 |---|---|---|
-| Windows 10/11 (64 bits) | `Ventania-0.7.0-windows.zip` | Extraia e abra `Ventania.exe`. O Windows pode avisar "aplicativo não reconhecido": clique em **Mais informações → Executar assim mesmo** (o executável não tem assinatura digital). |
-| Linux (64 bits) | `Ventania-0.7.0-linux.zip` | Extraia, rode `chmod +x ventania.x86_64` e depois `./ventania.x86_64`. |
-| Android | `ventania-0.7.0.apk` | Permita "instalar apps de fontes desconhecidas" e abra o arquivo. É uma versão de depuração, para teste. |
-| Servidor dedicado (Linux) | `VentaniaServidor-0.7.0-linux.zip` | Extraia e rode `./ventania_servidor.x86_64 --headless -- --servidor` (ver a seção 2.1). |
-| Servidor dedicado (Windows) | `VentaniaServidor-0.7.0-windows.zip` | Extraia e rode `VentaniaServidor.console.exe --headless -- --servidor` num terminal. |
+| Windows 10/11 (64 bits) | `Ventania-0.8.0-windows.zip` | Extraia e abra `Ventania.exe`. O Windows pode avisar "aplicativo não reconhecido": clique em **Mais informações → Executar assim mesmo** (o executável não tem assinatura digital). |
+| Linux (64 bits) | `Ventania-0.8.0-linux.zip` | Extraia, rode `chmod +x ventania.x86_64` e depois `./ventania.x86_64`. |
+| Android | `ventania-0.8.0.apk` | Permita "instalar apps de fontes desconhecidas" e abra o arquivo. É uma versão de depuração, para teste. |
+| Servidor dedicado (Linux) | `VentaniaServidor-0.8.0-linux.zip` | Extraia e rode `./ventania_servidor.x86_64 --headless -- --servidor` (ver a seção 2.1). |
+| Servidor dedicado (Windows) | `VentaniaServidor-0.8.0-windows.zip` | Extraia e rode `VentaniaServidor.console.exe --headless -- --servidor` num terminal. |
 
 Requisito gráfico: OpenGL 3.3 (PC) ou OpenGL ES 3.0 (celular). Quase qualquer
 GPU integrada a partir de 2012 atende.
@@ -108,6 +108,25 @@ cerca de 30–40 bytes de cabeçalho por pacote, o que dá cerca de 15–20 kbit
 Mesmo somando, fica muito abaixo de qualquer 3G/4G ou Wi-Fi doméstico.
 
 Ligue **Configurações → Gráficos → Mostrar FPS** para ver o FPS durante a partida e me mande o número (parado, correndo e olhando para as construções).
+
+### 2.3 Lobby, amigos e partidas pelo meta-servidor (Etapa 8)
+
+1. **No PC que hospeda** (Python 3.11+): `cd backend` e depois `python3 -m meta_server`. O log mostra a linha `segredo dos servidores de partida: XXXX`.
+2. **No mesmo PC**, rode o servidor de partida ligado a ele:
+   `./ventania_servidor.x86_64 --headless -- --servidor --salas=2 --bots=16 --meta=http://127.0.0.1:8080 --segredo=XXXX`
+3. Libere no firewall a porta **8080 TCP** (meta-servidor) e as portas **24800–24801 UDP** (salas).
+4. **Em cada aparelho:**
+   - em **Configurações → Servidor**, use `http://IP-DO-PC:8080`;
+   - no lobby, toque em **Entrar → Não tenho conta: criar uma**.
+5. **Amigos e grupo:** em **Amigos**, adicione o outro pelo nome e aceite o pedido; depois use **Convidar** (ou o "+" ao lado do seu personagem). O convidado toca em **Aceitar**.
+6. **Partida:** o líder escolhe **Battle Royale** no cartão de modo e toca em **JOGAR**. O grupo inteiro entra na mesma sala, e os bots completam a partida.
+7. **Sala privada:**
+   - escolha **Sala privada → Criar sala** e passe o código de 5 letras;
+   - os outros entram por **Sala privada → Entre com um código**;
+   - o dono toca em **COMEÇAR PARTIDA** na tela de espera.
+8. Mande na conversa o que estranhar: textos cortados, botões pequenos no celular, demoras para o convite aparecer.
+
+Sem conta ou com o servidor desligado, os modos **Battle Royale solo**, **Campo de treino** e **Servidor por endereço** continuam funcionando.
 
 ## 3. Rodar o teste de desempenho
 

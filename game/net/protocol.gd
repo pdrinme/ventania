@@ -4,7 +4,7 @@ extends RefCounted
 ## Cliente envia ENTRADAS (não posições); servidor envia SNAPSHOTS do estado.
 ## Ver ARCHITECTURE §4.
 
-const GAME_PROTOCOL := 8
+const GAME_PROTOCOL := 9
 const DEFAULT_PORT := 24800
 const TICK_RATE := 30            # simulação (Hz)
 const SNAPSHOT_EVERY := 2        # snapshot a cada N ticks (15 Hz)
@@ -166,12 +166,20 @@ static func _u16_yaw(v: int) -> float:
 
 ## token: ficha de sessão recebida no S_WELCOME (0 = jogador novo). Com uma ficha
 ## válida, o servidor devolve o mesmo personagem (reconexão).
-static func pack_hello(name: String, token := 0) -> PackedByteArray:
+const MAX_TICKET := 600
+
+
+## v9: + ticket do meta-servidor (texto "base64.hmac"; vazio quando não há conta).
+static func pack_hello(name: String, token := 0, ticket := "") -> PackedByteArray:
 	var b := _buf()
 	b.put_u8(C_HELLO)
 	b.put_u16(GAME_PROTOCOL)
 	b.put_utf8_string(name.substr(0, MAX_NAME))
 	b.put_u64(token)
+	var t := ticket.to_ascii_buffer()
+	b.put_u16(t.size() if t.size() <= MAX_TICKET else 0)
+	if t.size() <= MAX_TICKET:
+		b.put_data(t)
 	return b.data_array
 
 
@@ -186,9 +194,14 @@ static func unpack_hello(data: PackedByteArray) -> Dictionary:
 	if tam > 64 or b.get_position() + tam > data.size():
 		return {}
 	b.seek(3)
-	var r := {"protocol": proto, "name": b.get_utf8_string(), "token": 0}
+	var r := {"protocol": proto, "name": b.get_utf8_string(), "token": 0, "ticket": ""}
 	if b.get_position() + 8 <= data.size():
 		r["token"] = b.get_u64()
+	if b.get_position() + 2 <= data.size():
+		var n := b.get_u16()
+		if n > MAX_TICKET or b.get_position() + n > data.size():
+			return {}
+		r["ticket"] = data.slice(b.get_position(), b.get_position() + n).get_string_from_ascii()
 	return r
 
 

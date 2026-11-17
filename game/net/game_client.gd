@@ -40,6 +40,7 @@ var _inicio := 0.0
 var _encerrado := false
 # Etapa 7: reconexão, medição de banda e simulador de rede ruim
 var token := 0                 # ficha de sessão do servidor (WELCOME)
+var ticket := ""               # ticket do meta-servidor (partida encontrada); vazio = sem conta
 var host_atual := ""
 var porta_atual := 0
 var bytes_env := 0             # carga útil (sem cabeçalhos do ENet/UDP)
@@ -108,7 +109,7 @@ func poll() -> void:
 	if status == MultiplayerPeer.CONNECTION_CONNECTED and not _hello_enviado:
 		_hello_enviado = true
 		Protocol.configure_peer(peer.get_peer(1))
-		_enviar(Protocol.pack_hello(_nome, token), true, Protocol.CH_RELIABLE)
+		_enviar(Protocol.pack_hello(_nome, token, ticket), true, Protocol.CH_RELIABLE)
 	elif status != MultiplayerPeer.CONNECTION_CONNECTED and not connected \
 			and Time.get_ticks_msec() / 1000.0 - _inicio > TEMPO_CONEXAO_S:
 		_encerrado = true

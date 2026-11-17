@@ -10,9 +10,9 @@ var base_url := "http://127.0.0.1:8080"
 var session_token := ""
 
 
-func request_json(method: HTTPClient.Method, path: String, body: Variant = null) -> Dictionary:
+func request_json(method: HTTPClient.Method, path: String, body: Variant = null, timeout_s := TIMEOUT_S) -> Dictionary:
 	var req := HTTPRequest.new()
-	req.timeout = TIMEOUT_S
+	req.timeout = timeout_s
 	add_child(req)
 	var headers := PackedStringArray(["Accept: application/json",
 			"X-Ventania-Version: %s" % Version.GAME, "X-Ventania-Protocol: %d" % Version.PROTOCOL])
