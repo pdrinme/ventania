@@ -11,6 +11,7 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 - **M4 — "Com estilo"** (Etapa 13): os primeiros cosméticos originais, equipáveis e visíveis na partida.
 - ✅ **v1.0.0** (Etapa 12): M3 entregue: pacotes do jogo e do servidor completo, com os guias.
 - ✅ **v1.1.0** (Etapa 13): M4 entregue: 9 trajes originais novos, picareta-âncora, 2 planadores, animações de entrada e loja com imagens reais e visualizador 3D.
+- ✅ **v1.2.0** (revisão de qualidade): IA e navegação, escadas reais e interiores mobiliados, rampas, mapa com regiões, tela de resultado, mira no celular e desempenho. Medido antes e depois; detalhes abaixo.
 
 ## Ajuste proposto à ordem original (aguarda aprovação)
 
@@ -658,6 +659,105 @@ Criação dos primeiros cosméticos originais do jogo, com modelagem própria no
   - O tempo de quadro foi medido em renderização por software (sem GPU no ambiente). Ele só vale como comparação: 26 ms contra 40 ms a 14 m, e 27 contra 32 ms a 45 m.
 - ⬜ **Não incluído nesta etapa:** mochilas, novos emotes, acessórios avulsos, trilhas de queda e som das bolhas do aquário.
 - ⏳ **Falta (só com pessoas e aparelhos reais):** ver as skins de outro jogador numa partida com 2 PCs + celular, e medir em GPU real (`docs/TESTE_EM_HARDWARE.md`).
+
+### Revisão de qualidade — gameplay, IA, construções, mapa, interface e desempenho ✅ (v1.2.0)
+
+Feita sobre o código existente, sem reconstruir sistemas. Primeiro auditei e medi; depois corrigi a causa de cada problema e medi de novo. Linha de base da IA: o código anterior rodando com a física real do jogo.
+
+**Problemas reais encontrados**
+
+| Área | Causa |
+|---|---|
+| Bots presos | A navegação só conhecia o chão. Encostas acima de 29° viravam paredes (o personagem sobe até 50°). Os contêineres fechavam os corredores do Porto. O bot cortava a quina das portas. Travado, pulava e recalculava a MESMA rota para sempre. A rota era refeita a cada decisão (5 Hz), então o travamento nem era percebido. |
+| Testes de bots | `time_scale` 4 distorcia a física (passo de 0,13 s); agora `--fixed-fps 30`. |
+| Rampas lentas | `move_and_slide` projetava a velocidade no plano da rampa e o "grudar no chão" ainda empurrava contra ela: 47% da velocidade numa rampa de 45°. |
+| Escadas | As casas tinham uma rampa de construção de 45° no lugar da escada. |
+| Vitória exigia Esc | No PC, o mouse continuava capturado quando o resultado aparecia. |
+| Desempenho | As paredes com janela/porta (quase todas as das casas) eram desenhadas em até 9 pedaços + molduras: 2/3 das chamadas de desenho da ilha. |
+
+**1. IA e navegação ✅**
+- Navegação em vários níveis, com recuperação de travamento (monitor de progresso que distingue esperar de estar preso: manobra → evitar a aresta e recalcular → desistir do alvo).
+- Percepção com memória; o tiro ouvido vira investigação; o dano revela só a direção.
+- Estados novos: cobertura, recuar, perseguir, investigar.
+- Mira que assenta, rajadas, distância preferida por arma.
+- Loot pelo valor para o inventário; exploração de edifícios.
+- Dificuldade muda a qualidade das decisões. Detalhes em GAME_DESIGN §8 e ARCHITECTURE §8.2.
+- `test_navegacao` (um bot vai até cada baú e ponto de loot do mapa, partindo de 30 m):
+
+| | Antes | Depois |
+|---|---|---|
+| Destinos alcançados | 93% | **99%** (138/139) |
+| Em andares de cima | 0 de 7 | **6 de 6** |
+| Tempo preso somado | 122 s | **3 s** |
+
+- `test_bots` (partida completa, 23 bots, física do jogo):
+  - tempo preso (> 3 s sem progresso): de 3,9–10,4% do tempo vivo (58 episódios) para **0,09%**;
+  - comportamentos usados: cobertura 11×, perseguir/investigar 26×, 155 s em andares de cima, Tormenta, cura, saque e combate;
+  - colocação média por dificuldade: Difícil 9,6 · Médio 11,5 · Fácil 15,0 (eliminações 2,2 · 0,8 · 0,2);
+  - custo: cerca de 0,04 ms por bot por tick; tick médio de 4,8 ms (de 33 ms).
+- ⬜ **Limitação:** uma cabana numa encosta íngreme do sudeste. Partindo do sul, o desvio passa do limite de 40 s do teste.
+
+**2. Escadas reais ✅**
+- Escada em U com degraus em todos os 7 edifícios de vários andares: madeira (casas), concreto (lojas/prédios), metal (galpões). Gerador `gerar_interiores.py`.
+- Colisão pelo meio dos pisos; guarda-corpo do vão só no último andar.
+- `test_escadas`: 14/14 subidas e descidas (andando e correndo); tranco máximo de 4 mm por passo; subida andando a 4,26 m/s (95% do plano).
+- Os bots usam as escadas (andares 6/6 no `test_navegacao`).
+- ⬜ **Não incluído:** escadas externas; as torres da Pedreira e do Mirante continuam rampas.
+
+**3. Rampas ✅**
+- `floor_constant_speed`, com o mesmo código no servidor e na predição.
+- `test_rampas`, velocidade ao longo da rampa em relação ao plano:
+
+| Inclinação | Antes | Depois |
+|---|---|---|
+| 10° | 93% | 99% |
+| 20° | 83% | 98% |
+| 30° | 70% | 97% |
+| 45° | 47% | 96% |
+
+- Plano inalterado; descida inalterada (no chão o tempo todo), sem escorregar e sem salto no topo.
+
+**4. Interiores ✅**
+- 24 móveis novos no pipeline, distribuídos por tipo de cômodo, com regras de passagem.
+- `test_interiores`: 265 móveis em 149 cômodos, todos os modelos usados. Nenhum atravessa parede, nenhum sobreposto, todos no piso, meio de todos os cômodos livre.
+- Baú encostado na parede e loot em cima de mesas e balcões.
+
+**5. Mapa ✅**
+- Cor e contorno por região (derivados das construções), nomes no mapa completo e no minimapa, chip da região atual.
+- `capturar_mapa` (PC e celular simulado): região detectada certa nos 6 POIs, nenhuma fora deles.
+
+**6. Tela de resultado ✅**
+- Jogar de novo / Voltar ao lobby / Assistir; mouse livre; foco para teclado e controle; personagem e estatísticas do servidor (protocolo 12).
+- `capturar_resultado`: eliminado e vitória numa partida local real; clique de mouse e Enter funcionam sem Esc.
+
+**7. Botão Mirar no celular ✅**
+- `capturar_mira_celular`: segurar e soltar, FOV, BTN_AIM, apagado com a picareta; sem sobreposição em 16:9, 19,5:9, 20:9, 4:3 e 960×540.
+
+**8. Desempenho ✅ (medido sem GPU — ver limitação)**
+- `perf_categorias` (câmera parada na Vila Brisa, perfil Médio): as construções caíram de 219 para 86 chamadas de desenho e de 83 mil para 29 mil primitivas; o quadro, de 79 para 62 ms.
+- `bench_mapa`, v1.1.0 → v1.2.0, mesma máquina:
+
+| Perfil | Rota | Chamadas de desenho | Primitivas | FPS médio | Pior quadro |
+|---|---|---|---|---|---|
+| Baixo | por fora | 98 → 70 | 61 mil → 56 mil | 24,5 → 28,2 | 67 → 67 ms |
+| Baixo | por dentro | 117 → 79 | 82 mil → 61 mil | 23,2 → 28,3 | 72 → 59 ms |
+| Médio | por fora | 193 → 143 | 114 mil → 106 mil | 17,1 → 17,6 | 90 → 77 ms |
+| Médio | por dentro | 268 → 191 | 180 mil → 138 mil | 14,3 → 15,0 | 116 → 136 ms |
+| Alto | por fora | 303 → 204 | 145 mil → 131 mil | 7,0 → 8,1 | 213 → 245 ms |
+| Alto | por dentro | 276 → 219 | 201 mil → 158 mil | 5,4 → 5,7 | 234 → 270 ms |
+
+  - Carga do mapa: 2,29 → 2,06 s.
+  - Memória estática: 80,7 → 85,4 MB (+4,7 MB de mobília e escadas). Memória de vídeo: 22–34 MB, igual.
+- Perfis Baixo/Médio/Alto ganharam "Detalhes do cenário": distância de detalhe, densidade da vegetação decorativa e partículas.
+- Mobília só a até 40 m e sem sombra.
+- IA escalonada (2,5–7 Hz, 1 Hz longe de humanos; orçamentos de raios e de A* por tick).
+- ⏳ **Limitação:**
+  - os FPS foram medidos com renderização por SOFTWARE (sem GPU no ambiente) e só servem para comparar versões; não houve teste em celular nem em PC modesto reais;
+  - o pior quadro oscila entre execuções no software;
+  - fica para o teste em hardware (`docs/TESTE_EM_HARDWARE.md`).
+  - Occlusion culling não foi usado: as peças são destrutíveis, e os oclusores teriam de acompanhar cada destruição.
+
+**Testes executados:** suíte completa (`tools/run_tests.sh`), com os testes novos `test_rampas`, `test_escadas`, `test_interiores` e `test_navegacao` (≥ 97%); as capturas citadas acima; `bench_mapa` na v1.1.0 e na v1.2.0.
 
 ## Riscos conhecidos
 

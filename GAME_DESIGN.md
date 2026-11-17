@@ -90,12 +90,105 @@ Eles ficam em arquivos de dados e serão ajustados com testes de jogo.
 
 ## 8. Bots
 
-- **Arquitetura:** IA por *utility scoring* sobre um conjunto pequeno de comportamentos (explorar, saquear, coletar materiais, ir para a zona, combater, curar, fugir). As decisões rodam a 5 Hz, e o movimento segue o tick.
-- **Percepção:** ouvem tiros e passos e veem jogadores por cone e raycast, ambos com orçamento de raycasts por tick.
-- **Navegação:** grade de 4 m alinhada à grade de construção com A*: paredes são arestas bloqueadas (portas abertas), atualizadas na hora quando há construção ou destruição; desvio local e pulo quando trava. (Decisão da Etapa 6: substitui a navmesh, que custaria segundos para assar e teria de ser refeita a cada construção.) Bots do nível Difícil levantam uma parede quando levam tiro; rampas e subir andares ficam para depois.
-- **Dificuldades** (`data/bots.json`): Fácil (reação 0,9 s, erro de mira 6°), Médio (0,55 s, 3,2°, coleta material) e Difícil (0,3 s, 1,6°, coleta e constrói), variando também alcance e campo de visão, distância de combate e limite para curar. As partidas são completadas com bots até 16 jogadores (1 Fácil : 2 Médios : 1 Difícil). Os bots recebem nomes sorteados a cada partida de uma lista de 1000 nomes de jogadores (`data/nomes_jogadores.txt`), sem repetir e sem mostrar a dificuldade.
-- **LOD de IA:** bots longe de qualquer humano tomam decisões com menos frequência.
-- **Testes:** partidas simuladas headless só com bots, verificando por exemplo que a partida termina, que os bots saem da Tormenta e que eles saqueiam e curam.
+- **Arquitetura:** híbrida e leve. A decisão é por *utility scoring* com inércia; a execução é feita por estados.
+  - **Estados:** explorar, saquear, abrir baú, coletar, ir para a zona, combater, cobertura, recuar, perseguir, investigar (olha em volta ao chegar) e curar.
+  - **Ritmo:** as decisões rodam a 2,5–7 Hz conforme a dificuldade, com atraso aleatório entre bots. Longe de humanos, a 1 Hz. O movimento segue o tick.
+- **Percepção, sem "saber magicamente":**
+  - vê por cone e raycast, com orçamento de raios por tick;
+  - lembra a última posição VISTA (tempo de memória por dificuldade);
+  - um tiro ouvido vira um ponto para investigar e não revela o atirador;
+  - levar dano revela só a direção do disparo.
+- **Navegação:** grafo na grade de 4 m da construção, com chão, andares e ligações por escadas e rampas, atualizado na hora quando peças surgem ou somem.
+  - As portas são pontos de passagem exatos.
+  - **Recuperação de travamento**, com um monitor de progresso que distingue esperar ou observar de estar preso:
+    1. com 1,5 s sem progresso: manobra (recua, pula, passo de lado);
+    2. com 3 s: evita a aresta onde travou e recalcula a rota;
+    3. depois de 3 recuperações no mesmo alvo: desiste dele.
+- **Combate:**
+  - a mira assenta com o tempo de visada (começa com 3× o erro);
+  - rajadas nas armas automáticas;
+  - distância preferida por arma (escopeta perto, rifle de precisão longe);
+  - passos laterais;
+  - cobertura (um ponto que o inimigo não vê), onde recarrega e cura;
+  - recuo em desvantagem; troca de arma pela distância.
+- **Loot e exploração:**
+  - escolhe itens pelo valor para o próprio inventário (arma nova, raridade melhor, cura que falta);
+  - explora cômodos de edifícios ainda não visitados, inclusive andares de cima;
+  - desiste de itens inalcançáveis e considera a Tormenta.
+- **Dificuldades** (`data/bots.json`) mudam a qualidade das decisões, não só a mira:
+
+| | Fácil | Médio | Difícil |
+|---|---|---|---|
+| Decisões por segundo | 2,5 | 5 | 7 |
+| Reação | 0,9 s | 0,55 s | 0,3 s |
+| Erro de mira (assentada) | 6° | 3,2° | 1,6° |
+| Tempo para assentar a mira | 1,4 s | 0,9 s | 0,55 s |
+| Memória da última posição | 3 s | 6 s | 10 s |
+| Investiga tiros ouvidos | 30% | 70% | sempre |
+| Usa cobertura | nunca | 50% | 90% |
+| Recua em desvantagem | não | abaixo de 45 | abaixo de 70 |
+| Atira andando | não | não | sim |
+| Explora edifícios | 40% | 70% | 85% |
+
+  As partidas são completadas com bots até 16 jogadores (1 Fácil : 2 Médios : 1 Difícil). Os nomes são sorteados de uma lista de 1000 nomes de jogadores (`data/nomes_jogadores.txt`), sem mostrar a dificuldade.
+- **Testes:**
+  - `test_bots` (partida completa) confere saque, combate, cura, cobertura, perseguir/investigar, Tormenta, andares de cima e menos de 1% do tempo preso;
+  - `test_navegacao` manda um bot até cada baú e ponto de loot do mapa.
+
+## 8.1 Edifícios e interiores
+
+- **Escadas reais** em todo edifício de vários andares:
+  - em U, num cômodo, com dois lances de 9 degraus (espelho de 20 cm, piso de 27 cm), patamar, parede central e corrimãos;
+  - madeira nas casas, concreto nas lojas e prédios, metal nos galpões;
+  - guarda-corpo em volta do vão no último andar.
+  - As torres externas da Pedreira e do Mirante continuam de rampas (estruturas de construção).
+- **Mobília por tipo de edifício:**
+  - casa: sala, cozinha, quarto;
+  - loja: gôndolas, balcão com caixa, expositor;
+  - prédio: escritório embaixo, apartamentos em cima;
+  - galpão de metal: máquina, bancada, armários, caixotes, tambores;
+  - celeiro: feno, barris, sacos, ferramentas;
+  - cabanas.
+- **Regras:**
+  - só junto às paredes externas;
+  - nada na parede da porta;
+  - peças altas nunca embaixo de janela ou vitrine;
+  - escada e passagens livres;
+  - o meio de cada cômodo fica livre.
+  - A ordem e a escolha variam por edifício.
+- **Loot coerente:** o baú fica encostado numa parede do cômodo do fundo; há pontos de loot em cima de mesas, balcões, bancadas e expositores. A decoração não é interativa.
+- **Rampas:** sobem na velocidade normal ao longo do piso (`floor_constant_speed`). O plano e a descida não mudaram.
+
+## 8.2 Mapa e minimapa
+
+- **Identidade de cor por região:**
+  - Vila Brisa: menta;
+  - Pedreira Cinza: pedra;
+  - Porto Ferrugem: ferrugem;
+  - Fazenda Girassol: amarelo;
+  - Mirante do Vento: céu;
+  - Acampamento Coral: coral.
+  - Preenchimento leve e contorno; o contorno é calculado das construções de cada região, sem entrar no mar.
+- **Mapa completo:** nome de cada região em etiqueta com a cor dela. A imagem tem as estradas e as construções vistas de cima, a zona e a Tormenta.
+- **Minimapa:** nomes menores e legíveis, sem cobrir a seta do jogador nem outro nome; a região atual tem prioridade.
+- **Região atual:** chip abaixo do minimapa e o nome em destaque ao chegar numa região.
+- **Fonte única:** `IlhaVentania.POIS` (id, nome, posição, raio, cor), com `region_bounds()` e `region_at()`.
+
+## 8.3 Fim de partida
+
+- A tela de resultado tem botões **Jogar de novo**, **Voltar ao lobby** e **Assistir** (só com a partida em andamento).
+- Mostra:
+  - VITÓRIA! com o personagem usado acenando e confete, ou a colocação e o vencedor;
+  - as estatísticas que o servidor registra: eliminações, tempo vivo, dano, baús, curas, materiais e construções.
+- No PC, o mouse fica livre, o teclado e o controle navegam pelo foco, e Esc é só um atalho. No celular, os botões são grandes.
+- O vencedor é decidido pelo servidor e é o mesmo para todos.
+
+## 8.4 Controles de toque
+
+- Botão **Mirar**: segurar mira (FOV, câmera e sensibilidade de mira, mesma lógica do botão direito do PC); arrastar o dedo nele também gira a câmera.
+- Só funciona com arma na mão; sem arma, fica apagado.
+- Some no modo construção.
+- O layout foi conferido sem sobreposição em 16:9, 19,5:9, 20:9 e 4:3.
 
 ## 9. Progressão e economia
 

@@ -267,7 +267,45 @@ O cliente guarda apenas um *cache* de leitura do perfil, para exibir o lobby rap
 - dano, coleta, velocidade de queda, planeio e hitbox não leem esses campos;
 - `test_picareta_cosmetica.gd` confere isso numa partida real.
 
+### 8.2 IA e navegação (revisão)
+
+- **`NavGrade`** (`gameplay/ai/nav_grade.gd`):
+  - nós do chão (150 × 150 células de 4 m) mais nós de andar, um por peça de piso a mais de 2,5 m do relevo;
+  - ligações entre níveis com pontos de passagem: escadas (`Mapa.stairs()`) e rampas (`Grade.RAMPA`, do mapa e construídas);
+  - `set_piece()` é chamado pelo `BuildServer` a cada peça que surge ou some;
+  - portas são pontos de passagem exatos;
+  - encostas acima de 40° (3,4 m em 4 m) são bloqueadas;
+  - obstáculos: círculos (rochas) e retângulos (contêineres);
+  - `path3(de, para, evitar)` devolve pontos 3D, a marca "preciso" e os nós.
+  - Por que não NavigationServer3D: assar uma navmesh de 600 m custa segundos no servidor e teria de ser refeita a cada construção.
+- **`BotCerebro`:**
+  - decide por utility scoring com inércia de estado e compromisso mínimo ao recuar;
+  - executa por estado;
+  - tem o monitor de progresso e a recuperação (manobra → evitar aresta → abandonar alvo);
+  - percepção com memória; cobertura por raycast do inimigo;
+  - parâmetros por dificuldade em `data/bots.json`.
+- **Custo** (`test_bots`, 23 bots, partida completa, física do jogo): cerca de 0,04 ms por bot por tick, tick médio de 4,8 ms de 33 ms.
+  - Orçamentos por tick: 24 raios de percepção e 2 A*.
+  - Decisões escalonadas e a 1 Hz longe de humanos.
+- **Testes de bots e navegação** rodam com `--fixed-fps 30`: simulação na velocidade máxima com o passo do jogo. `time_scale` distorcia a física (passo de 0,13 s).
+
+### 8.3 Interiores e mapa
+
+- Escadas e mobília são props do `KitInstancer`:
+  - colisão por formas convexas compartilhadas;
+  - visual em MultiMesh por região;
+  - distância de visibilidade e sombra vêm do próprio asset (mobília: 40 m, sem sombra).
+- A mobília é gerada por `IlhaVentania._mobiliar()` com gerador próprio, determinístico (igual no servidor e no cliente), e não entra na rede.
+- Regiões do mapa: `IlhaVentania.POIS` é a fonte única; `region_bounds()` deriva o contorno das áreas ocupadas por cada POI.
+
 ## 9. Desempenho e hardware
+
+**Revisão de qualidade (v1.2.0):**
+- Medido antes de otimizar (`tests/perf/perf_categorias.gd`): as construções eram 2/3 das chamadas de desenho, porque as paredes com janela/porta viravam até 9 ladrilhos mais molduras, cada um num MultiMesh.
+- Correção: uma malha por (tipo, material, máscara), em cache. Na vista da vila, as construções passaram de 219 para 86 chamadas.
+- Perfis Baixo/Médio/Alto ganharam "Detalhes do cenário": distância de detalhe, densidade da vegetação decorativa sem colisão e partículas.
+- Benchmark `tests/perf/bench_mapa.gd`, por fora e por dentro dos edifícios: números no ROADMAP (revisão de qualidade).
+
 
 **Renderizador: Compatibility** (OpenGL ES 3.0 / OpenGL 3.3). **[ADR-1]**
 

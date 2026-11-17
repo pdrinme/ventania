@@ -43,6 +43,7 @@
 | Skins da Etapa 13: 9 trajes, `picareta_ancora_01`, `planador_arraia_01`, `planador_folha_01`, peixes do aquário | Projeto Ventania (`tools/assets/kit/blender/gerar_skins.py`) | Original | Original. Conceitos próprios, sem personagens de outros jogos |
 | `game/assets/texturas_materiais/vidro_aquario.gdshader`, `agua_aquario.gdshader`, `M_vidro_ventania.tres`, `M_agua_ventania.tres` | Projeto Ventania | Original | Original |
 | `game/assets/ui/loja/*.png` (imagens dos cosméticos) e `game/ui/shared/fundo_cosmetico.gdshader` | Projeto Ventania (`game/tests/gerar_imagens_loja.gd`, renderizadas dos modelos originais) | Original | Original |
+| Interiores: 3 escadas em U (madeira, concreto, metal) + 3 guarda-corpos de vão e 24 móveis (sofá, mesa, cadeira, cama, guarda-roupa, geladeira, fogão, pia, TV, estante, luminária, tapete, balcão com caixa, gôndola, expositor, máquina, bancada, armário de metal, caixotes, tambores, barris, sacos, feno, ferramentas) | Projeto Ventania (`tools/assets/kit/blender/gerar_interiores.py`) | Original | Original |
 | `game/assets/ui/icone.png` | Projeto Ventania (`tools/assets/kit/gerar_icone.py`) | Original | Original |
 | `game/assets/texturas_materiais/paleta_ventania.png`, `toon_paleta.gdshader`, `M_paleta_ventania.tres` | Projeto Ventania | Original | Original |
 

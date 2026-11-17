@@ -462,7 +462,7 @@ func _jogar_br(tree: SceneTree) -> void:
 			break
 	_checar(not jogo.resultado.is_empty(), "tela de resultado recebida (#%d de %d)" % [jogo.resultado.get("colocacao", 0), jogo.resultado.get("total", 0)])
 	_checar(jogo._partida.get("estado", -1) == Protocol.MATCH_FIM, "partida terminou")
-	_checar(jogo.match_hud._res_titulo.text != "VITÓRIA!", "eliminado sozinho não é vitória")
+	_checar(jogo.match_hud.resultado._titulo.text != "VITÓRIA!", "eliminado sozinho não é vitória")
 
 
 func _ir(tree: SceneTree, cena: String) -> void:
