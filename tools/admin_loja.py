@@ -21,14 +21,17 @@ import sys
 import time
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(RAIZ, "backend"))
+# no repositório o meta-servidor fica em backend/; no pacote do servidor, em meta/
+BACKEND = next((os.path.join(RAIZ, d) for d in ("backend", "meta") if os.path.isdir(os.path.join(RAIZ, d, "meta_server"))),
+               os.path.join(RAIZ, "backend"))
+sys.path.insert(0, BACKEND)
 from meta_server import config, db  # noqa: E402
 from meta_server.contas import Contas  # noqa: E402
 from meta_server.loja import Loja, carregar_loja, validar_loja  # noqa: E402
 from meta_server.progressao import Progressao, carregar_config  # noqa: E402
 from meta_server.social import Eventos  # noqa: E402
 
-AGENDA = os.path.join(RAIZ, "backend", "config", "shop", "agenda.json")
+AGENDA = os.path.join(BACKEND, "config", "shop", "agenda.json")
 
 
 def _loja(con=None, agora=None):
@@ -102,7 +105,8 @@ def desagendar(a):
 
 
 def conceder(a):
-    caminho = a.db or config.load().db_abs()
+    pacote = os.path.join(RAIZ, "dados", "meta.sqlite3")          # pacote do servidor (iniciar.sh/.bat)
+    caminho = a.db or os.environ.get("VENTANIA_DB") or (pacote if os.path.exists(pacote) else config.load().db_abs())
     con = db.connect(caminho)
     db.migrate(con)
     p = Progressao(con, Contas(con, config.Config()), Eventos())

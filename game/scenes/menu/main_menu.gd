@@ -69,7 +69,7 @@ func _ready() -> void:
 		_atualizar()
 		_preencher_amigos())
 	Meta.invite_received.connect(_on_convite)
-	Meta.friend_request.connect(func(de): _aviso("%s quer ser seu amigo." % de.get("username", "?"), "Ver", _abrir_amigos))
+	Meta.friend_request.connect(func(de): _aviso("%s quer ser seu amigo." % de.get("username", "?"), "Ver", _abrir_amigos, 6.0, "", Callable(), "notificacao"))
 	Meta.match_found.connect(_on_partida)
 	Meta.profile_changed.connect(func(_p): _atualizar())
 	Meta.notice.connect(func(t): _aviso(t))
@@ -94,6 +94,8 @@ func _process(_dt: float) -> void:
 		_placas[i].position = p - Vector2(_placas[i].size.x / 2.0, _placas[i].size.y)
 		var pv := _cam.unproject_position(POS_GRUPO[i] + Vector3(0, 1.0, 0)) * escala
 		_vagas[i].position = pv - _vagas[i].size / 2.0
+	if _busca.visible:
+		_busca.modulate.a = 0.72 + 0.28 * sin(Time.get_ticks_msec() / 1000.0 * 4.0)    # pulsa enquanto procura
 	if _busca.visible and Meta.party.get("state", "") == "fila":
 		_busca_txt.text = "PROCURANDO PARTIDA  %s" % _relogio(Time.get_ticks_msec() / 1000.0 - _busca_ini)
 
@@ -425,7 +427,7 @@ func _on_jogar() -> void:
 
 
 func _on_partida(m: Dictionary) -> void:
-	_aviso("Partida encontrada! Entrando…")
+	_aviso("Partida encontrada! Entrando…", "", Callable(), 4.0, "", Callable(), "partida")
 	SceneManager.go("game", {"modo": "remoto", "host": m["host"], "porta": int(m["port"]),
 			"ticket": m["ticket"], "private_code": m.get("private_code", ""),
 			"dono_privada": m.get("private_code", "") != "" and Meta.is_leader()})
@@ -495,6 +497,17 @@ func _modal(titulo: String, largura := 560.0) -> VBoxContainer:
 	cartao.grow_vertical = Control.GROW_DIRECTION_BOTH
 	cartao.custom_minimum_size.x = minf(largura, size.x - 32)
 	escuro.add_child(cartao)
+	# entra com um "pop" curto (escala + transparência)
+	escuro.modulate.a = 0.0
+	cartao.scale = Vector2(0.94, 0.94)
+	(func():
+		await get_tree().process_frame
+		if not is_instance_valid(cartao):
+			return
+		cartao.pivot_offset = cartao.size / 2.0
+		var tw := cartao.create_tween().set_parallel()
+		tw.tween_property(escuro, "modulate:a", 1.0, 0.14)
+		tw.tween_property(cartao, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)).call()
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 14)
 	cartao.add_child(col)
@@ -580,8 +593,7 @@ func _abrir_modos() -> void:
 
 func _abrir_login(criar := false) -> void:
 	if Meta.state != "online":
-		_aviso("Servidor offline. Confira o endereço em Configurações → Servidor.")
-		Meta.refresh()
+		_servidor_offline()
 		return
 	var col := _modal("Criar conta" if criar else "Entrar", 480)
 	var sub := Label.new()
@@ -638,6 +650,35 @@ func _abrir_login(criar := false) -> void:
 	senha.text_submitted.connect(func(_t): enviar.call())
 	nome.text_submitted.connect(func(_t): senha.grab_focus())
 	nome.grab_focus.call_deferred()
+
+
+## Explica o que fazer quando o meta-servidor não responde (em vez de só um aviso).
+func _servidor_offline() -> void:
+	var col := _modal("Servidor offline", 540)
+	var t := Label.new()
+	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	t.text = "Não foi possível falar com o servidor do Ventania em:\n%s\n\n%s\n\nSem servidor, o Battle Royale solo, o campo de treino e o servidor por endereço continuam funcionando." % [
+			Meta.base_url, Meta.last_error if not Meta.last_error.is_empty() else "Confira se quem hospeda está com o servidor ligado e se o endereço está certo."]
+	col.add_child(t)
+	var linha := HBoxContainer.new()
+	col.add_child(linha)
+	var tentar := Button.new()
+	tentar.theme_type_variation = "BotaoPrimario"
+	tentar.add_theme_font_size_override("font_size", 20)
+	tentar.text = "TENTAR DE NOVO"
+	tentar.pressed.connect(func():
+		_fechar_modal()
+		await Meta.refresh()
+		if Meta.state == "online":
+			_abrir_login()
+		else:
+			_aviso("Ainda offline: %s" % Meta.last_error))
+	linha.add_child(tentar)
+	var cfg := Button.new()
+	cfg.text = "Mudar endereço"
+	cfg.pressed.connect(func(): SceneManager.go("settings"))
+	linha.add_child(cfg)
+	tentar.grab_focus.call_deferred()
 
 
 func _abrir_privada() -> void:
@@ -982,7 +1023,7 @@ func _previa_item(it: Dictionary) -> void:
 			if not is_instance_valid(comprar):
 				return
 			if r["ok"]:
-				Audio.play_ui("clique")
+				Audio.play_ui("compra")
 				comprar.disabled = false
 				comprar.text = "EQUIPAR AGORA"
 				it["tem"] = true
@@ -1210,8 +1251,7 @@ func _abrir_perfil() -> void:
 	var lista: Array = pf["unlocks"].duplicate()
 	lista.reverse()
 	for u: Dictionary in lista:
-		var origem := str(u["source"])
-		origem = "item inicial" if origem == "inicial" else origem.replace("nivel:", "nível ")
+		var origem := _origem(str(u["source"]))
 		_linha_texto(hist, "%s  ·  %s" % [u.get("nome", u["item"]), origem], Time.get_datetime_string_from_unix_time(int(u["at"])).replace("T", " ").left(16))
 	# Faíscas (ledger)
 	var faiscas := _rolagem(abas, "Faíscas")
@@ -1229,6 +1269,21 @@ func _abrir_perfil() -> void:
 		for m: Dictionary in hp["data"]["matches"]:
 			_linha_texto(partidas, "#%d de %d  ·  %d eliminações  ·  %d:%02d vivo" % [int(m["placement"]), int(m["total"]), int(m["kills"]),
 					int(m["time_alive_s"]) / 60, int(m["time_alive_s"]) % 60], "+%d XP" % int(m["xp"]))
+
+
+static func _origem(src: String) -> String:
+	if src == "inicial":
+		return "item inicial"
+	if src == "presente":
+		return "presente"
+	if src == "loja":
+		return "comprado na loja"
+	if src.begins_with("nivel:"):
+		return "nível %s da conta" % src.trim_prefix("nivel:")
+	if src.begins_with("passe:"):
+		var p := src.split(":")
+		return "passe (%s), nível %s" % [p[1].to_upper(), p[2] if p.size() > 2 else "?"]
+	return src
 
 
 func _rolagem(abas: TabContainer, titulo: String) -> VBoxContainer:
@@ -1412,10 +1467,10 @@ func _on_convite(c: Dictionary) -> void:
 	var de: String = c.get("from", {}).get("username", "?")
 	var cid: String = c.get("id", "")
 	_aviso("%s convidou você para o grupo." % de, "Aceitar", func(): Meta.invite_respond(cid, true), 12.0,
-			"Recusar", func(): Meta.invite_respond(cid, false))
+			"Recusar", func(): Meta.invite_respond(cid, false), "notificacao")
 
 
-func _aviso(texto: String, acao_txt := "", acao := Callable(), segundos := 4.0, acao2_txt := "", acao2 := Callable()) -> void:
+func _aviso(texto: String, acao_txt := "", acao := Callable(), segundos := 4.0, acao2_txt := "", acao2 := Callable(), som := "foco") -> void:
 	var p := PanelContainer.new()
 	p.theme_type_variation = "CartaoClaro"
 	var l := HBoxContainer.new()
@@ -1438,7 +1493,12 @@ func _aviso(texto: String, acao_txt := "", acao := Callable(), segundos := 4.0, 
 				p.queue_free())
 			l.add_child(b)
 	_avisos.add_child(p)
-	Audio.play_ui("foco")
+	Audio.play_ui(som)
+	# entra deslizando de cima
+	p.modulate.a = 0.0
+	var tw := p.create_tween().set_parallel()
+	tw.tween_property(p, "modulate:a", 1.0, 0.18)
+	tw.tween_property(p, "position:y", p.position.y, 0.22).from(p.position.y - 24).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	get_tree().create_timer(segundos).timeout.connect(func():
 		if is_instance_valid(p):
 			p.queue_free())

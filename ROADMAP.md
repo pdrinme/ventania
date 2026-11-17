@@ -9,6 +9,7 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 - **M2 — "Jogo completo"** (Etapas 8–11): lobby real, contas, grupos, progressão, passe e loja.
 - **M3 — "Distribuível"** (Etapa 12): builds para Windows, Linux e Android, além do guia para os amigos.
 - **M4 — "Com estilo"** (Etapa 13): os primeiros cosméticos originais, equipáveis e visíveis na partida.
+- ✅ **v1.0.0** (Etapa 12): M3 entregue: pacotes do jogo e do servidor completo, com os guias.
 
 ## Ajuste proposto à ordem original (aguarda aprovação)
 
@@ -589,8 +590,30 @@ Catálogo, categorias, preços, pré-visualização, compra atômica, temporizad
   - 8 novos no meta-servidor (43 no total): rotação determinística, agenda, compra sem saldo, compra repetida não cobra, preço errado, item fora da loja ou do passe, compras simultâneas não passam do saldo, configuração e ferramenta;
   - `test_lobby.gd` confere a loja pela API.
 
-### Etapa 12 — Polimento e distribuição ⬜
+### Etapa 12 — Polimento e distribuição ✅ (v1.0.0)
 UI final, áudio, animações, otimizações, tratamento de erros, testes multiplayer, exportações para Android, Windows e Linux, e o guia de instalação e de hospedagem para os amigos.
+
+- ✅ **Distribuição** (`tools/empacotar.sh` → `builds/release-<versão>/`):
+  - jogo para Windows, Linux e Android;
+  - **servidor completo** para Linux e Windows: servidor de partida + meta-servidor + `iniciar`/`parar` (`.sh` e `.bat`), que criam o segredo, ligam tudo e mostram o endereço e as portas;
+  - ferramentas de administração e guia no pacote;
+  - `SHA256SUMS.txt`.
+- ✅ **Guias:** `docs/GUIA_INSTALACAO.md` (jogadores: instalar, primeira vez, modos, controles, problemas comuns) e `docs/GUIA_HOSPEDAGEM.md`, que cobre:
+  - ligar o servidor e os amigos chegarem (mesma rede, VPN, roteador, VPS com systemd);
+  - firewall, administração, backup e atualização;
+  - segurança: HTTP só em rede privada ou VPN, ou atrás de HTTPS.
+- ✅ **Teste do pacote como um amigo usaria** (`tools/testar_pacote.sh`): extrai o zip numa pasta vazia, liga com `./iniciar.sh` e roda o teste multiplayer completo do lobby (28 verificações).
+  - Resultado: **PACOTE_OK**.
+  - Medido: cerca de 140 MB de memória para 2 salas e tick de 1 a 1,3 ms.
+- ✅ **Correção encontrada pelo teste do pacote:** a versão exportada não descarregava o log, que ficava preso quando gravado em arquivo. Agora usa `run/flush_stdout_on_print=true`.
+- ✅ **Áudio:** sons originais sintetizados para compra, subir de nível, recompensa, partida encontrada e notificação (convite/pedido).
+- ✅ **Animações:** janelas com "pop", avisos deslizando e a busca de partida pulsando.
+- ✅ **Erros:**
+  - tela "Servidor offline" com o endereço, "Tentar de novo" e "Mudar endereço";
+  - "O servidor não respondeu" lembra da porta UDP no firewall;
+  - origem legível no histórico de desbloqueios.
+- ✅ **Windows:** o servidor exporta também o `.console.exe` (o log funciona no `iniciar.bat`).
+- ⏳ **Falta (só com pessoas e aparelhos reais):** a partida de aceite com 2 PCs + celular (`docs/TESTE_EM_HARDWARE.md` §2.2 e §2.3).
 
 ### Etapa 13 — Primeiros cosméticos ⬜
 Criação dos primeiros cosméticos originais do jogo: trajes (variações do esqueleto padrão), ferramentas de coleta, mochilas, planadores, emotes e acessórios, com modelagem e texturas próprias no pipeline de assets (Blender por script). Também ícones e cartões de raridade, registro no catálogo (`backend/config/catalog/`) com licença em `ASSET_LICENSES.md`, e exibição no lobby (Armário) e dentro da partida. Os cosméticos não alteram hitbox nem visibilidade (ARCHITECTURE §8).

@@ -114,7 +114,7 @@ func poll() -> void:
 	elif status != MultiplayerPeer.CONNECTION_CONNECTED and not connected \
 			and Time.get_ticks_msec() / 1000.0 - _inicio > TEMPO_CONEXAO_S:
 		_encerrado = true
-		rejected.emit("O servidor não respondeu. Confira o endereço e se ele está ligado.")
+		rejected.emit("O servidor não respondeu. Confira o endereço, se ele está ligado e se a porta UDP %d está liberada no firewall de quem hospeda." % porta_atual)
 		return
 	var agora := Time.get_ticks_msec()
 	while peer and peer.get_available_packet_count() > 0:

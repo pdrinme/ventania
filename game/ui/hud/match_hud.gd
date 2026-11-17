@@ -246,6 +246,8 @@ func show_progress(p: Dictionary) -> void:
 		linhas.append("Desbloqueado: %s" % d.get("nome", "?"))
 	_res_xp.text = topo + "\n" + "\n".join(linhas)
 	_res_xp.visible = true
+	var subiu: bool = int(p.get("nivel", 0)) > int(p.get("nivel_antes", 0)) or (passe is Dictionary and int(passe.get("nivel", 0)) > int(passe.get("nivel_antes", 0)))
+	Audio.play_ui("nivel" if subiu else ("recompensa" if not p.get("desbloqueados", []).is_empty() else "confirmar"))
 
 
 func hide_result() -> void:

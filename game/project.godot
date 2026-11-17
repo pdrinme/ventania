@@ -9,6 +9,7 @@ config/name="Ventania"
 config/version="0.3.2"
 config/description="Battle Royale cartunesco original, leve, para jogar com amigos."
 run/main_scene="res://scenes/boot/boot.tscn"
+run/flush_stdout_on_print=true
 config/features=PackedStringArray("4.7")
 config/icon="res://assets/ui/icone.png"
 boot_splash/bg_color=Color(0.047, 0.24, 0.31, 1)

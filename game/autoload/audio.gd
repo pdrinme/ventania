@@ -3,7 +3,7 @@ extends Node
 ## configurações e sons de interface com um pequeno pool de players.
 
 const BUSES := {"master": "Master", "music": "Musica", "sfx": "Efeitos", "ui": "Interface"}
-const SONS_UI := ["clique", "foco", "voltar", "confirmar"]  # res://assets/audio/ui/<nome>.wav
+const SONS_UI := ["clique", "foco", "voltar", "confirmar", "compra", "nivel", "recompensa", "partida", "notificacao"]  # res://assets/audio/ui/<nome>.wav
 const POOL := 4
 const POOL_3D := 12
 const PASTA_JOGO := "res://assets/audio/jogo/%s.wav"

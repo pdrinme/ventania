@@ -16,12 +16,15 @@ import os
 import sys
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(RAIZ, "backend"))
+# no repositório o meta-servidor fica em backend/; no pacote do servidor, em meta/
+BACKEND = next((os.path.join(RAIZ, d) for d in ("backend", "meta") if os.path.isdir(os.path.join(RAIZ, d, "meta_server"))),
+               os.path.join(RAIZ, "backend"))
+sys.path.insert(0, BACKEND)
 from meta_server.progressao import COSMETICOS_JOGO, _ler, carregar_config, estimar_horas, validar_temporada  # noqa: E402
 
 
 def main() -> int:
-    arquivos = sys.argv[1:] or sorted(glob.glob(os.path.join(RAIZ, "backend", "config", "seasons", "*.json")))
+    arquivos = sys.argv[1:] or sorted(glob.glob(os.path.join(BACKEND, "config", "seasons", "*.json")))
     try:
         cfg = carregar_config()            # catálogo, missões e as temporadas publicadas
     except ValueError as e:

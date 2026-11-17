@@ -1,0 +1,23 @@
+VENTANIA — SERVIDOR COMPLETO
+============================
+
+Este pacote liga tudo o que o grupo precisa para jogar online:
+  - meta-servidor (pasta "meta"): contas, amigos, grupos, matchmaking,
+    progressão, passe de batalha e loja. Precisa do Python 3.11 ou mais novo.
+  - servidor de partida: as salas do Battle Royale, com bots completando.
+
+LIGAR
+  Linux:   ./iniciar.sh        (desligar: ./parar.sh)
+  Windows: iniciar.bat         (desligar: parar.bat)
+
+Na primeira vez é criado um segredo em dados/segredo.txt (não compartilhe).
+As contas e o progresso ficam em dados/meta.sqlite3 — faça cópia de vez em quando.
+
+NOS APARELHOS
+  Configurações → Servidor → http://IP-DO-PC-QUE-HOSPEDA:8080
+  Depois: Entrar → criar conta → JOGAR.
+
+FIREWALL
+  Libere TCP 8080 e UDP 24800-24801.
+
+Guia completo: GUIA_HOSPEDAGEM.md (neste pacote).

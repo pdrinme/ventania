@@ -13,8 +13,20 @@ para um pequeno grupo de amigos.
 
 ## Status
 
-**Etapa 4 (mapa e Battle Royale): implementada e testada com clientes simulados.** Partida Battle Royale na Ilha Ventania (~600 m, 6 pontos de interesse), com loot pelo inventário completo, picareta permanente, Tormenta em 7 fases, eliminações, espectador, vitória e partidas seguidas no servidor dedicado. O campo de treino (bonecos, reaparecer) continua disponível. **Etapa 5 (construção): implementada e testada com clientes simulados.** Parede, piso, rampa e teto numa grade de 4 m, edição (portas e janelas), vida, rachaduras, destruição, desabamento sem apoio, coleta de materiais com a picareta, e as casas do mapa destrutíveis no mesmo sistema. **Etapa 6 (bots): implementada e testada.** As partidas são completadas com bots em três dificuldades, que saltam do ônibus, saqueiam, combatem, curam, fogem da Tormenta e (no Difícil) constroem.
-Veja [ROADMAP.md](ROADMAP.md).
+**Versão 1.0.0: Etapas 0 a 12 concluídas.** A Etapa 13 (os primeiros cosméticos com modelos novos) vem depois.
+
+- **Jogo:**
+  - Battle Royale na Ilha Ventania, com Ônibus de Batalha e Tormenta em 7 fases;
+  - armas, construção e edição;
+  - bots em três dificuldades;
+  - campo de treino.
+- **Online:**
+  - servidor dedicado com várias salas e reconexão;
+  - lobby com contas, amigos, grupos de até 4, matchmaking (os bots completam se não houver gente) e sala privada.
+- **Progressão:** nível e XP, missões, Faíscas com extrato, passe de batalha gratuito (Temporada 1) e loja rotativa. Nada de dinheiro real.
+- **Distribuição:** pacotes para Windows, Linux e Android, e um pacote de servidor completo com scripts de um clique.
+
+Jogar: [docs/GUIA_INSTALACAO.md](docs/GUIA_INSTALACAO.md) · Hospedar: [docs/GUIA_HOSPEDAGEM.md](docs/GUIA_HOSPEDAGEM.md) · Etapas: [ROADMAP.md](ROADMAP.md)
 
 ## Documentos
 
@@ -27,6 +39,8 @@ Veja [ROADMAP.md](ROADMAP.md).
 | [docs/assets/PIPELINE.md](docs/assets/PIPELINE.md) | Pipeline Blender → GLB → Godot, formatos, convenções, catálogo |
 | [docs/assets/IMPORTACAO_GODOT_E_OTIMIZACAO.md](docs/assets/IMPORTACAO_GODOT_E_OTIMIZACAO.md) | Importação na Godot e otimização de geometria, texturas e materiais |
 | [docs/assets/REFERENCIAS.md](docs/assets/REFERENCIAS.md) | Uso de referências visuais e o fluxo referência → asset original |
+| [docs/GUIA_INSTALACAO.md](docs/GUIA_INSTALACAO.md) | Para quem joga: instalar, primeira vez, modos, controles, problemas comuns |
+| [docs/GUIA_HOSPEDAGEM.md](docs/GUIA_HOSPEDAGEM.md) | Para quem hospeda: servidor completo, rede, firewall, administração, backup, segurança |
 | [docs/TESTE_EM_HARDWARE.md](docs/TESTE_EM_HARDWARE.md) | Como instalar, rodar o teste de desempenho e reportar |
 | [docs/art/GUIA_DE_ESTILO.md](docs/art/GUIA_DE_ESTILO.md) | Direção visual, paleta, shader cartoon, proporções e kit inicial |
 
@@ -79,6 +93,16 @@ Exemplo completo com lobby:
 
 ```bash
 godot --headless --path game -- --servidor --salas=2 --bots=16 --meta=http://127.0.0.1:8080 --segredo=XXXX
+```
+
+Pacotes de distribuição e teste do pacote do servidor (como um amigo usaria):
+
+```bash
+GODOT=/caminho/godot tools/empacotar.sh
+```
+
+```bash
+GODOT=/caminho/godot tools/testar_pacote.sh
 ```
 
 Todos os testes (Python, Godot, fumaça, integração, servidor dedicado e desempenho):
