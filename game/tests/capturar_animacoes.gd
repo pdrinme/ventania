@@ -1,8 +1,8 @@
 extends SceneTree
 ## Tira de filme das animações: uma linha por animação, colunas = momentos do ciclo.
-## Uso: godot --path game --rendering-driver opengl3 -s res://tests/capturar_animacoes.gd -- saida.png [yaw]
+## Uso: godot --path game --rendering-driver opengl3 -s res://tests/capturar_animacoes.gd -- saida.png [yaw] [anim1,anim2,...] [modelo.glb]
 
-const ANIMS := ["idle", "andar", "correr", "agachado", "agachado_andar", "pular", "queda", "aterrissar", "acenar"]
+var ANIMS := ["idle", "andar", "correr", "agachado", "agachado_andar", "pular", "queda", "aterrissar", "acenar"]
 const COLUNAS := 6
 
 
@@ -10,6 +10,9 @@ func _init() -> void:
 	var args := OS.get_cmdline_user_args()
 	var saida := args[0]
 	var yaw := float(args[1]) if args.size() > 1 else 90.0
+	if args.size() > 2 and not args[2].is_empty():
+		ANIMS = Array(args[2].split(","))
+	var modelo: String = args[3] if args.size() > 3 else "res://assets/personagens/recruta_base_01.glb"
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color("8fd3ff")
@@ -22,7 +25,7 @@ func _init() -> void:
 	var sol := DirectionalLight3D.new()
 	sol.rotation_degrees = Vector3(-35, -40, 0)
 	root.add_child(sol)
-	var cena: PackedScene = load("res://assets/personagens/recruta_base_01.glb")
+	var cena: PackedScene = load(modelo)
 	var esp_x := 1.25
 	var esp_y := 2.3
 	for linha in ANIMS.size():

@@ -90,6 +90,10 @@ rodar_godot timeout 400 "$GODOT" --headless --path game -s res://tests/integrati
 grep -E "partida [0-9]+ (começou|terminou)" "$LOGSRV" | sed 's/^.*\] /   servidor: /'
 kill "$PID" 2>/dev/null; wait "$PID" 2>/dev/null; rm -f "$LOGSRV"
 
+passo "Entrada na partida: queda livre, mergulho, planador e pouso (física)"
+FILTRO="QUEDA|FALHOU"
+rodar_godot timeout 120 "$GODOT" --headless --path game -s res://tests/integration/test_queda.gd; checar $? "queda"
+
 passo "Etapa 5: 2 clientes construindo e editando sem divergência (+ 1 que entra depois)"
 FILTRO="CONSTRUCAO_REDE|FALHOU"
 rodar_godot timeout 300 "$GODOT" --headless --path game -s res://tests/integration/test_construcao_rede.gd; checar $? "construção em rede"

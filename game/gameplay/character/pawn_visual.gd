@@ -36,6 +36,14 @@ var _anim_estado := "idle"
 var com_arma := false
 var queda := 0                    # Pawn.QUEDA_LIVRE / PLANADOR / NO_ONIBUS
 var _planador: Node3D
+var planador_id := ""             # planador cosmético equipado (vazio = padrão)
+var preparando := false           # agachado na porta do ônibus (só o próprio jogador)
+var _w_entrada := 0.0             # 0 = locomoção normal, 1 = poses de entrada (ar/ônibus)
+var _w_mergulho := 0.0
+var _w_planador := 0.0
+var _w_preparar := 0.0
+var _inclinacao := Basis()        # orientação procedural do corpo no ar (deitado, mergulho, curvas)
+var _t_ar := 0.0
 var traje := ""                   # id do traje equipado (defina antes de entrar na árvore)
 
 
@@ -85,6 +93,40 @@ func _montar_arvore() -> void:
 	bt.add_node("aterrissar", aterr)
 	bt.add_node("acenar_anim", _anim("acenar"))
 	bt.add_node("acenar", acenar)
+	# entrada na partida (Ônibus de Batalha): ver set_fall e _entrada
+	var saltar := AnimationNodeOneShot.new()
+	saltar.fadein_time = 0.04
+	saltar.fadeout_time = 0.3
+	var abrir := AnimationNodeOneShot.new()
+	abrir.fadein_time = 0.06
+	abrir.fadeout_time = 0.2
+	var pesado := AnimationNodeOneShot.new()
+	pesado.fadein_time = 0.03
+	pesado.fadeout_time = 0.25
+	bt.add_node("queda_livre", _anim("queda_livre"))
+	bt.add_node("mergulho", _anim("mergulho"))
+	bt.add_node("ar", AnimationNodeBlend2.new())
+	bt.add_node("saltar_anim", _anim("saltar"))
+	bt.add_node("saltar", saltar)
+	bt.add_node("planador_anim", _anim("planador"))
+	bt.add_node("abrir_anim", _anim("planador_abrir"))
+	bt.add_node("abrir", abrir)
+	bt.add_node("plan", AnimationNodeBlend2.new())
+	bt.add_node("preparar_anim", _anim("preparar"))
+	bt.add_node("prep", AnimationNodeBlend2.new())
+	bt.add_node("entrada", AnimationNodeBlend2.new())
+	bt.add_node("pesado_anim", _anim("aterrissar_pesado"))
+	bt.add_node("pesado", pesado)
+	bt.connect_node("ar", 0, "queda_livre")
+	bt.connect_node("ar", 1, "mergulho")
+	bt.connect_node("saltar", 0, "ar")
+	bt.connect_node("saltar", 1, "saltar_anim")
+	bt.connect_node("abrir", 0, "planador_anim")
+	bt.connect_node("abrir", 1, "abrir_anim")
+	bt.connect_node("plan", 0, "saltar")
+	bt.connect_node("plan", 1, "abrir")
+	bt.connect_node("prep", 0, "plan")
+	bt.connect_node("prep", 1, "preparar_anim")
 	bt.connect_node("agachar", 0, "pe")
 	bt.connect_node("agachar", 1, "ag")
 	bt.connect_node("salto", 0, "queda")
@@ -95,7 +137,11 @@ func _montar_arvore() -> void:
 	bt.connect_node("aterrissar", 1, "aterrissar_anim")
 	bt.connect_node("acenar", 0, "aterrissar")
 	bt.connect_node("acenar", 1, "acenar_anim")
-	bt.connect_node("output", 0, "acenar")
+	bt.connect_node("pesado", 0, "acenar")
+	bt.connect_node("pesado", 1, "pesado_anim")
+	bt.connect_node("entrada", 0, "pesado")
+	bt.connect_node("entrada", 1, "prep")
+	bt.connect_node("output", 0, "entrada")
 	_tree = AnimationTree.new()
 	_modelo.add_child(_tree)
 	_tree.anim_player = _tree.get_path_to(_ap)
@@ -318,6 +364,58 @@ func _process(delta: float) -> void:
 		if _flash_t <= 0.0:
 			_flash.visible = false
 	_anim_estado = _estado(h)
+	_entrada(delta)
+
+
+## Pose de entrada a partir do que vem pela rede (estado de queda e velocidade).
+## Função pura: usada pelo visual e pelos testes.
+static func fall_pose(q: int, vel: Vector3) -> String:
+	match q:
+		Pawn.NO_ONIBUS:
+			return "onibus"
+		Pawn.QUEDA_LIVRE:
+			return "mergulho" if -vel.y > Movement.QUEDA_TERMINAL + 2.0 else "queda_livre"
+		Pawn.PLANADOR:
+			return "planador"
+	return "chao"
+
+
+## Orientação do corpo no ar (função pura, testável): deitado de bruços na queda
+## livre, de cabeça para baixo no mergulho, quase em pé no planador; inclina nas
+## curvas (roll) conforme a velocidade lateral. Retorna (deitar, rolar) em radianos.
+static func air_tilt(pose: String, vel_local: Vector3, mergulho: float) -> Vector2:
+	var lado := clampf(vel_local.x / Movement.QUEDA_HORIZONTAL, -1.0, 1.0)
+	var frente := clampf(-vel_local.z / Movement.QUEDA_HORIZONTAL, -1.0, 1.0)
+	if pose == "queda_livre" or pose == "mergulho":
+		return Vector2(lerpf(deg_to_rad(72.0 + 10.0 * frente), deg_to_rad(158.0), mergulho), -lado * deg_to_rad(28.0))
+	if pose == "planador":
+		return Vector2(deg_to_rad(6.0 + 8.0 * frente), -lado * deg_to_rad(20.0))
+	return Vector2.ZERO
+
+
+func _entrada(delta: float) -> void:
+	var pose := fall_pose(queda, _vel)
+	var no_ar := queda == Pawn.QUEDA_LIVRE or queda == Pawn.PLANADOR
+	_w_entrada = move_toward(_w_entrada, 1.0 if (no_ar or preparando) else 0.0, delta * (6.0 if no_ar or preparando else 3.0))
+	_w_mergulho = move_toward(_w_mergulho, 1.0 if pose == "mergulho" else 0.0, delta * 2.5)
+	_w_planador = move_toward(_w_planador, 1.0 if pose == "planador" else 0.0, delta * 5.0)
+	_w_preparar = move_toward(_w_preparar, 1.0 if preparando and not no_ar else 0.0, delta * 6.0)
+	_tree.set("parameters/entrada/blend_amount", _w_entrada)
+	_tree.set("parameters/ar/blend_amount", _w_mergulho)
+	_tree.set("parameters/plan/blend_amount", _w_planador)
+	_tree.set("parameters/prep/blend_amount", _w_preparar)
+	_t_ar += delta
+	var local := Basis(Vector3.UP, rotation.y).inverse() * _vel      # frente = -Z
+	var inc := air_tilt(pose, local, _w_mergulho)
+	var osc := 0.0
+	if pose != "chao" and pose != "onibus":
+		osc = sin(_t_ar * (2.3 if pose != "planador" else 1.7)) * deg_to_rad(3.0 if pose != "planador" else 2.0)
+	var alvo := Basis(Vector3(1, 0, 0), -inc.x) * Basis(Vector3(0, 0, 1), inc.y + osc)
+	_inclinacao = _inclinacao.slerp(alvo, clampf(delta * 5.0, 0.0, 1.0)).orthonormalized()
+	# gira em torno do centro do corpo (~1 m), não dos pés
+	var centro := Vector3(0, 1.0, 0)
+	var t := Transform3D(_inclinacao, centro - _inclinacao * centro)
+	_modelo.transform = t * Transform3D(Basis(Vector3.UP, PI), Vector3.ZERO)
 
 
 ## Entrada na partida: no ônibus (invisível), queda livre (sem item na mão) e
@@ -325,15 +423,30 @@ func _process(delta: float) -> void:
 func set_fall(q: int) -> void:
 	if q == queda or _sk == null:
 		return
+	var antes := queda
 	queda = q
 	rig.holder.visible = q == 0
+	# transições viram animações de uma vez (para os outros jogadores também: vêm do estado replicado)
+	if antes == Pawn.NO_ONIBUS and q == Pawn.QUEDA_LIVRE:
+		_tree.set("parameters/saltar/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+	if q == Pawn.PLANADOR:
+		_tree.set("parameters/abrir/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+	if q == 0 and (antes == Pawn.PLANADOR or antes == Pawn.QUEDA_LIVRE):
+		_tree.set("parameters/pesado/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+		_w_entrada = 0.0          # a aterrissagem aparece na hora (sem esperar a pose do ar sumir)
+		_inclinacao = Basis()
 	if q == Pawn.PLANADOR and _planador == null:
-		_planador = (load("res://assets/cenario/planador_01.glb") as PackedScene).instantiate() as Node3D
-		_planador.position = Vector3(0, 2.45, 0)
-		_planador.rotation.y = PI
-		add_child(_planador)
+		_planador = (load(Cosmeticos.glider_scene(planador_id)) as PackedScene).instantiate() as Node3D
+		_modelo.add_child(_planador)           # dentro do modelo: acompanha a inclinação do corpo
 	if _planador:
 		_planador.visible = q == Pawn.PLANADOR
+		if q == Pawn.PLANADOR:
+			# abre da mochila: sobe e cresce com um leve "estalo"
+			_planador.position = Vector3(0, 1.45, -0.25)
+			_planador.scale = Vector3.ONE * 0.08
+			var tw := _planador.create_tween().set_parallel()
+			tw.tween_property(_planador, "position", Vector3(0, 2.45, 0), 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			tw.tween_property(_planador, "scale", Vector3.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	if q == Pawn.PLANADOR:
 		# segura a barra do planador com as duas mãos
 		set_reach(global_position + Vector3(0, 1.45, 0), 1.0)

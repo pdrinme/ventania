@@ -112,3 +112,35 @@ func test_simulacao_deterministica() -> void:
 	for c in cmds:
 		Movement.step(pawn, c, DT)
 	assert_true(p1.distance_to(pawn.global_position) < 0.001, "%s vs %s" % [p1, pawn.global_position])
+
+
+func test_mergulho_cai_mais_rapido_so_olhando_para_baixo_e_indo_em_frente() -> void:
+	var cmd := Protocol.InputCmd.new()
+	cmd.move = Vector2(0, 1)
+	cmd.pitch = deg_to_rad(-70)
+	assert_true(Movement.diving(Pawn.QUEDA_LIVRE, cmd))
+	assert_false(Movement.diving(Pawn.PLANADOR, cmd), "no planador não mergulha")
+	cmd.pitch = deg_to_rad(-20)
+	assert_false(Movement.diving(Pawn.QUEDA_LIVRE, cmd), "olhando para a frente: queda normal")
+	cmd.pitch = deg_to_rad(-70)
+	cmd.move = Vector2.ZERO
+	assert_false(Movement.diving(Pawn.QUEDA_LIVRE, cmd), "sem ir para a frente: queda normal")
+
+
+func test_poses_de_entrada_vem_do_estado_replicado() -> void:
+	assert_eq(PawnVisual.fall_pose(Pawn.NO_ONIBUS, Vector3.ZERO), "onibus")
+	assert_eq(PawnVisual.fall_pose(Pawn.QUEDA_LIVRE, Vector3(0, -20, 0)), "queda_livre")
+	assert_eq(PawnVisual.fall_pose(Pawn.QUEDA_LIVRE, Vector3(0, -36, 0)), "mergulho")
+	assert_eq(PawnVisual.fall_pose(Pawn.PLANADOR, Vector3(0, -6, 0)), "planador")
+	assert_eq(PawnVisual.fall_pose(0, Vector3.ZERO), "chao")
+	# corpo: deitado na queda livre, de cabeça para baixo no mergulho, quase em pé no planador
+	var livre := PawnVisual.air_tilt("queda_livre", Vector3.ZERO, 0.0)
+	var merg := PawnVisual.air_tilt("mergulho", Vector3.ZERO, 1.0)
+	var plan := PawnVisual.air_tilt("planador", Vector3.ZERO, 0.0)
+	assert_true(rad_to_deg(livre.x) > 60 and rad_to_deg(livre.x) < 90, "queda livre deitada (%.0f°)" % rad_to_deg(livre.x))
+	assert_true(rad_to_deg(merg.x) > 140, "mergulho de cabeça para baixo (%.0f°)" % rad_to_deg(merg.x))
+	assert_true(rad_to_deg(plan.x) < 20, "planador quase em pé")
+	# curva para a direita inclina para um lado; para a esquerda, para o outro
+	var dir := PawnVisual.air_tilt("queda_livre", Vector3(8, 0, 0), 0.0)
+	var esq := PawnVisual.air_tilt("queda_livre", Vector3(-8, 0, 0), 0.0)
+	assert_true(dir.y < -0.2 and esq.y > 0.2, "inclina nas curvas (%.2f / %.2f)" % [dir.y, esq.y])

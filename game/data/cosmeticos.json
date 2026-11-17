@@ -20,5 +20,13 @@
   "trajes_dos_bots": [
     "traje_recruta",
     "traje_brisa"
-  ]
+  ],
+  "picareta_padrao": "picareta_padrao",
+  "picaretas": {
+    "picareta_padrao": "res://assets/armas/picareta_01.glb"
+  },
+  "planador_padrao": "planador_padrao",
+  "planadores": {
+    "planador_padrao": "res://assets/cenario/planador_01.glb"
+  }
 }

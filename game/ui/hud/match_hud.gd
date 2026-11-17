@@ -303,7 +303,7 @@ func _process(_delta: float) -> void:
 			_topo.text = "A partida começa em %d" % ceili(maxf(0.0, resta))
 			_sub.text = "Você vai aparecer num ponto do mapa, só com a picareta."
 		Protocol.MATCH_ONIBUS:
-			_topo.text = "Ônibus de Batalha · %d jogadores" % _estado["total"]
+			_topo.text = "Ônibus de Batalha · %d %s" % [_estado["total"], "jogador" if _estado["total"] == 1 else "jogadores"]
 			_sub.text = "Salte sobre a ilha · a Tormenta se forma quando o ônibus partir (%s)" % _tempo(resta)
 		Protocol.MATCH_JOGO:
 			_topo.text = "%d %s  ·  %d %s" % [_estado["vivos"], "vivo" if _estado["vivos"] == 1 else "vivos",

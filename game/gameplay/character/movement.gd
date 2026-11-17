@@ -20,6 +20,9 @@ const SPRINT_MIN_FORWARD := 0.5        # só corre andando para a frente
 # queda depois de saltar do ônibus
 const QUEDA_TERMINAL := 26.0           # m/s (queda livre)
 const QUEDA_HORIZONTAL := 10.0         # m/s de controle na queda livre
+const MERGULHO_TERMINAL := 38.0        # mergulho: olhando bem para baixo e indo para a frente
+const MERGULHO_HORIZONTAL := 6.0
+const MERGULHO_PITCH := -0.7854        # -45 graus
 const PLANADOR_DESCIDA := 6.5          # m/s descendo com o planador aberto
 const PLANADOR_HORIZONTAL := 12.0
 const PLANADOR_ALTURA := 38.0          # abre sozinho abaixo desta altura sobre o chão
@@ -80,6 +83,12 @@ static func step(pawn: Pawn, cmd: Protocol.InputCmd, dt: float) -> void:
 
 ## Queda livre (rápida, pouco controle) e planador (abre sozinho perto do chão:
 ## desce devagar e anda mais). Ao tocar o chão volta ao movimento normal.
+## Mergulho: em queda livre, olhando bem para baixo e indo para a frente. Cai mais
+## rápido e controla menos para os lados. A animação vem da velocidade (rede).
+static func diving(queda: int, cmd: Protocol.InputCmd) -> bool:
+	return queda == Pawn.QUEDA_LIVRE and cmd.pitch < MERGULHO_PITCH and cmd.move.y > 0.3
+
+
 static func _queda(pawn: Pawn, cmd: Protocol.InputCmd, dt: float) -> void:
 	if pawn.queda == Pawn.QUEDA_LIVRE:
 		var q := PhysicsRayQueryParameters3D.create(pawn.global_position, pawn.global_position + Vector3(0, -PLANADOR_ALTURA, 0), Pawn.LAYER_WORLD)
@@ -87,13 +96,17 @@ static func _queda(pawn: Pawn, cmd: Protocol.InputCmd, dt: float) -> void:
 			pawn.queda = Pawn.PLANADOR
 	var planando := pawn.queda == Pawn.PLANADOR
 	var mov := cmd.move.limit_length(1.0)
-	var alvo := Basis(Vector3.UP, cmd.yaw) * Vector3(mov.x, 0.0, -mov.y) * (PLANADOR_HORIZONTAL if planando else QUEDA_HORIZONTAL)
+	var mergulho := diving(pawn.queda, cmd)
+	var alvo := Basis(Vector3.UP, cmd.yaw) * Vector3(mov.x, 0.0, -mov.y) * (
+			PLANADOR_HORIZONTAL if planando else (MERGULHO_HORIZONTAL if mergulho else QUEDA_HORIZONTAL))
 	var horizontal := Vector3(pawn.velocity.x, 0.0, pawn.velocity.z).move_toward(alvo, QUEDA_ACCEL * dt)
 	var vy := pawn.velocity.y
 	if planando:
 		vy = move_toward(vy, -PLANADOR_DESCIDA, GRAVITY * dt)
 	else:
-		vy = maxf(vy - GRAVITY * dt, -QUEDA_TERMINAL)
+		var terminal := MERGULHO_TERMINAL if mergulho else QUEDA_TERMINAL
+		# saindo do mergulho, freia até a terminal normal (sem salto de velocidade)
+		vy = maxf(vy - GRAVITY * dt, -terminal) if vy >= -terminal else move_toward(vy, -terminal, GRAVITY * 1.5 * dt)
 	pawn.velocity = Vector3(horizontal.x, vy, horizontal.z)
 	pawn.move_and_slide()
 	if pawn.is_on_floor():

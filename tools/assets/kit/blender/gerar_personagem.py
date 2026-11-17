@@ -378,6 +378,134 @@ def _pose_aterrissar(t):
     return p
 
 
+# ---------------------------------------------------------------- entrada na partida
+# Poses no referencial do corpo EM PÉ. A orientação do corpo no ar (deitado na
+# queda livre, de cabeça para baixo no mergulho, inclinado nas curvas) é aplicada
+# na Godot pelo PawnVisual, a partir da velocidade que já vem pela rede.
+
+def _pose_preparar(t):
+    """2 s: agachado na porta do ônibus, mão direita no batente, olhando para fora."""
+    f = t * 2 * math.pi
+    resp = math.sin(f * 2)
+    p = {
+        "_quadril": (0.0, -0.2 - 0.01 * resp, 0.02),
+        "Hips": [(X, 6)], "Spine": [(X, 10 + resp)], "Chest": [(X, 8 - resp)],
+        "Neck": [(X, -6)], "Head": [(X, -10), (Z, 6 * math.sin(f))],
+        "LeftUpperLeg": [(X, -48)], "RightUpperLeg": [(X, -30)],
+        "LeftLowerLeg": [(X, 78)], "RightLowerLeg": [(X, 52)],
+        "LeftFoot": [(X, -26)], "RightFoot": [(X, -18)],
+    }
+    p.update(_bracos(30 + 3 * resp, 0, 40, 0))
+    p["RightUpperArm"] = [(Y, 45), (X, -25)]             # segura o batente, no alto
+    p["RightLowerArm"] = [(Z, 60)]
+    return p
+
+
+def _pose_saltar(t):
+    """0,6 s: impulso para fora (pernas estendem, braços sobem) e abre em X."""
+    e = t * t * (3 - 2 * t)
+    abre = max(0.0, (t - 0.45) / 0.55)
+    p = {
+        "_quadril": (0.0, -0.15 * (1 - e), 0.0),
+        "Spine": [(X, 8 - 20 * e)], "Chest": [(X, 6 - 12 * e)], "Head": [(X, -6 - 14 * e)],
+        "LeftUpperLeg": [(X, -40 * (1 - e) + 12 * e), (Y, -16 * abre)],
+        "RightUpperLeg": [(X, -20 * (1 - e) + 18 * e), (Y, 16 * abre)],
+        "LeftLowerLeg": [(X, 60 * (1 - e) + 40 * e)], "RightLowerLeg": [(X, 30 * (1 - e) + 50 * e)],
+        "LeftFoot": [(X, 10)], "RightFoot": [(X, 10)],
+    }
+    p.update(_bracos(-30 * e, -30 * e, 30, 30, abaixar=70 - 85 * e))
+    return p
+
+
+def _pose_queda_livre(t):
+    """1,6 s: braços e pernas abertos (X), arqueado, com oscilação e "bater" das pernas."""
+    f = t * 2 * math.pi
+    o = math.sin(f)
+    o2 = math.sin(f * 2 + 0.7)
+    p = {
+        "_quadril": (0.0, 0.0, 0.0),
+        "Hips": [(Z, 3 * o)], "Spine": [(X, -14 + 2 * o2), (Y, 2 * o)], "Chest": [(X, -10 - 2 * o2)],
+        "Neck": [(X, -14)], "Head": [(X, -22 + 3 * o2), (Z, 5 * o)],
+        "LeftUpperLeg": [(Y, -24 - 4 * o), (X, 18 + 6 * o2)], "RightUpperLeg": [(Y, 24 - 4 * o), (X, 18 - 6 * o2)],
+        "LeftLowerLeg": [(X, 62 + 10 * o2)], "RightLowerLeg": [(X, 62 - 10 * o2)],
+        "LeftFoot": [(X, 24)], "RightFoot": [(X, 24)],
+        "LeftShoulder": [(Y, -6)], "RightShoulder": [(Y, 6)],
+        "LeftUpperArm": [(Y, -6 + 6 * o), (X, -24)], "RightUpperArm": [(Y, 6 + 6 * o), (X, -24)],
+        "LeftLowerArm": [(Z, -40 - 8 * o2)], "RightLowerArm": [(Z, 40 + 8 * o2)],
+        "LeftHand": [(Z, -12)], "RightHand": [(Z, 12)],
+    }
+    return p
+
+
+def _pose_mergulho(t):
+    """1,2 s: braços colados para trás, pernas juntas e esticadas, cabeça olhando à frente."""
+    f = t * 2 * math.pi
+    o = math.sin(f * 2)
+    p = {
+        "Spine": [(X, -4)], "Chest": [(X, -6)], "Neck": [(X, -22)], "Head": [(X, -30 + 2 * o)],
+        "LeftUpperLeg": [(Y, -3), (X, 4 + 3 * o)], "RightUpperLeg": [(Y, 3), (X, 4 - 3 * o)],
+        "LeftLowerLeg": [(X, 10 + 4 * o)], "RightLowerLeg": [(X, 10 - 4 * o)],
+        "LeftFoot": [(X, 34)], "RightFoot": [(X, 34)],
+        "LeftUpperArm": [(Y, 78), (X, 30 + 2 * o)], "RightUpperArm": [(Y, -78), (X, 30 - 2 * o)],
+        "LeftLowerArm": [(Z, -6)], "RightLowerArm": [(Z, 6)],
+        "LeftHand": [(Z, -10)], "RightHand": [(Z, 10)],
+    }
+    return p
+
+
+def _pose_planador_abrir(t):
+    """0,45 s: da queda livre para as mãos na barra (os braços sobem)."""
+    e = t * t * (3 - 2 * t)
+    a = _pose_queda_livre(0.0)
+    b = _pose_planador(0.0)
+    return _mistura(a, b, e)
+
+
+def _pose_planador(t):
+    """2 s: pendurado na barra, pernas soltas balançando como pêndulo."""
+    f = t * 2 * math.pi
+    s = math.sin(f)
+    p = {
+        "Spine": [(X, 2)], "Chest": [(X, -4)], "Neck": [(X, -6)], "Head": [(X, -8), (Z, 6 * math.sin(f + 1.0))],
+        "LeftUpperLeg": [(X, -12 + 10 * s), (Y, -4)], "RightUpperLeg": [(X, -6 - 10 * s), (Y, 4)],
+        "LeftLowerLeg": [(X, 22 + 8 * max(0.0, s))], "RightLowerLeg": [(X, 18 + 8 * max(0.0, -s))],
+        "LeftFoot": [(X, 16)], "RightFoot": [(X, 16)],
+        "LeftUpperArm": [(Y, -62), (X, -10)], "RightUpperArm": [(Y, 62), (X, -10)],
+        "LeftLowerArm": [(Z, -34)], "RightLowerArm": [(Z, 34)],
+    }
+    return p
+
+
+def _pose_aterrissar_pesado(t):
+    """1,0 s: impacto (agacha fundo, mão esquerda no chão) e recuperação até ficar de pé."""
+    if t < 0.22:
+        d = math.sin(t / 0.22 * math.pi / 2)
+    else:
+        d = max(0.0, 1.0 - ((t - 0.22) / 0.78) ** 1.4)
+    p = {
+        "_quadril": (0, -0.5 * d, 0.06 * d),
+        "Hips": [(X, 14 * d)], "Spine": [(X, 18 * d)], "Chest": [(X, 12 * d)], "Head": [(X, -18 * d)],
+        "LeftUpperLeg": [(X, -86 * d)], "RightUpperLeg": [(X, -40 * d), (Y, 10 * d)],
+        "LeftLowerLeg": [(X, 6 + 120 * d)], "RightLowerLeg": [(X, 6 + 96 * d)],
+        "LeftFoot": [(X, -40 * d)], "RightFoot": [(X, -30 * d)],
+    }
+    p.update(_bracos(10 * d, 40 * d, 14 + 10 * d, 14 + 30 * d, abaixar=76 - 4 * d))
+    p["LeftUpperArm"] = [(Y, 76 - 6 * d), (X, -48 * d)]           # mão de apoio no chão
+    return p
+
+
+def _mistura(a, b, k):
+    """Interpola duas poses (lista de rotações por osso) de forma simples: soma ponderada dos ângulos."""
+    out = {}
+    for osso in set(a) | set(b):
+        if osso == "_quadril":
+            qa, qb = a.get(osso, (0, 0, 0)), b.get(osso, (0, 0, 0))
+            out[osso] = tuple(qa[i] * (1 - k) + qb[i] * k for i in range(3))
+            continue
+        out[osso] = [(e, g * (1 - k)) for e, g in a.get(osso, [])] + [(e, g * k) for e, g in b.get(osso, [])]
+    return out
+
+
 def _acao(arm, nome, quadros, pose_fn, passo=2, loop=True):
     """Cria uma ação amostrando a pose a cada `passo` quadros. Em loop, a última
     chave repete a primeira (sem salto na emenda)."""
@@ -401,6 +529,14 @@ def animar(arm):
         _acao(arm, "pular", 10, _pose_pulo, loop=False),
         _acao(arm, "queda-loop", 24, _pose_queda),
         _acao(arm, "aterrissar", 12, _pose_aterrissar, loop=False),
+        # entrada na partida (Ônibus de Batalha)
+        _acao(arm, "preparar-loop", 60, _pose_preparar, passo=4),
+        _acao(arm, "saltar", 18, _pose_saltar, loop=False),
+        _acao(arm, "queda_livre-loop", 48, _pose_queda_livre, passo=3),
+        _acao(arm, "mergulho-loop", 36, _pose_mergulho, passo=3),
+        _acao(arm, "planador_abrir", 14, _pose_planador_abrir, loop=False),
+        _acao(arm, "planador-loop", 60, _pose_planador, passo=4),
+        _acao(arm, "aterrissar_pesado", 30, _pose_aterrissar_pesado, loop=False),
     ]
 
     acenar = bpy.data.actions.new("acenar")

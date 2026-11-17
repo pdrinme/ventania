@@ -183,6 +183,12 @@ def onibus_01():
         p.append(k.toro(f"bocal{s}", 0.75, 0.12, (s * 2.25, -0.8, 2.3), "coral", rot=(90, 0, 0), seg=12, seg_menor=4))
         p.append(k.caixa(f"helice{s}", (1.3, 0.06, 0.18), (s * 2.25, -0.86, 2.3), "metal_escuro", rot=(0, 30, 0)))
         p.append(k.caixa(f"suporte{s}", (0.7, 0.4, 0.2), (s * 1.65, 0.3, 2.3), "metal_escuro"))
+    # porta traseira aberta (de onde se salta): vão escuro, batente amarelo e degrau
+    p.append(k.caixa("vao_porta", (1.3, 0.06, 2.0), (0, 4.52, 1.75), "preto"))
+    p.append(k.caixa("batente_e", (0.14, 0.14, 2.2), (0.72, 4.55, 1.8), "amarelo_sol"))
+    p.append(k.caixa("batente_d", (0.14, 0.14, 2.2), (-0.72, 4.55, 1.8), "amarelo_sol"))
+    p.append(k.caixa("batente_topo", (1.58, 0.14, 0.14), (0, 4.55, 2.86), "amarelo_sol"))
+    p.append(k.caixa("degrau", (1.4, 0.5, 0.12), (0, 4.75, 0.72), "metal_escuro"))
     # leme de cata-vento (identidade do Ventania)
     p.append(k.cilindro("mastro", 0.08, 1.4, (0, 2.8, 4.3), "metal_escuro", lados=6))
     for a in range(4):

@@ -1077,7 +1077,13 @@ func _atualizar_onibus(_delta: float) -> void:
 	var q := pawn.queda
 	visual.set_fall(q)
 	if q == Pawn.NO_ONIBUS and _onibus_vis and not _morto:
-		visual.visible = false
+		# portas abertas: o próprio personagem aparece agachado na porta traseira,
+		# segurando o batente (os outros continuam dentro do ônibus)
+		var portas: bool = ativo and onibus.doors_open(tick)
+		visual.visible = portas
+		visual.preparando = portas
+		if portas:
+			visual.global_transform = _onibus_vis.global_transform * Transform3D(Basis(), Vector3(0, 0.8, -4.62))   # frente do visual (-Z) = para fora
 		camera.alvo = _onibus_vis
 		camera.distancia_extra = 15.0
 		var falta := maxf(0.0, (onibus.abre - tick) / Protocol.TICK_RATE)
@@ -1088,12 +1094,15 @@ func _atualizar_onibus(_delta: float) -> void:
 		if _queda_antes == Pawn.NO_ONIBUS:
 			Audio.play_sfx("salto", -2.0)
 			visual.visible = true
+			visual.preparando = false
+			visual.transform = Transform3D.IDENTITY      # volta a seguir o personagem
 			camera.alvo = pawn
 		if q == Pawn.PLANADOR and _queda_antes != Pawn.PLANADOR:
 			Audio.play_sfx("planador", -3.0)
 		camera.distancia_extra = 3.0
 		match_hud.set_entry("Planador aberto — direcione com %s até o chão" % ("o joystick" if Settings.is_mobile else "WASD") if q == Pawn.PLANADOR \
-				else "Em queda livre — direcione com %s · o planador abre sozinho perto do chão" % ("o joystick" if Settings.is_mobile else "WASD"))
+				else ("Mergulhando! Olhe para a frente para frear" if pawn.velocity.y < -Movement.QUEDA_TERMINAL - 2.0
+				else "Em queda livre — direcione com %s · olhe para baixo e vá em frente para mergulhar" % ("o joystick" if Settings.is_mobile else "WASD")))
 	else:
 		if _queda_antes != 0 and _queda_antes != Pawn.NO_ONIBUS:
 			hud.flash("No chão! Pegue armas e fique de olho na Tormenta.", 2.5)

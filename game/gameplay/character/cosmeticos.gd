@@ -23,6 +23,18 @@ static func outfit_scene(id: String) -> String:
 	return t.get(id, t[default_outfit()])
 
 
+## Picareta (mesmos marcadores grip_r/grip_l/cabeca da picareta padrão) e
+## planador. Só aparência: o gameplay da ferramenta não muda.
+static func pickaxe_scene(id: String) -> String:
+	var t: Dictionary = config().get("picaretas", {})
+	return t.get(id, t.get(config().get("picareta_padrao", ""), "res://assets/armas/picareta_01.glb"))
+
+
+static func glider_scene(id: String) -> String:
+	var t: Dictionary = config().get("planadores", {})
+	return t.get(id, t.get(config().get("planador_padrao", ""), "res://assets/cenario/planador_01.glb"))
+
+
 static func valid_id(id: String) -> bool:
 	if id.is_empty() or id.length() > 32:
 		return false
