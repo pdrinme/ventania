@@ -164,7 +164,7 @@ func _criar_particulas() -> CPUParticles3D:
 	var p := CPUParticles3D.new()
 	p.one_shot = true
 	p.emitting = false
-	p.amount = 16
+	p.amount = maxi(4, roundi(16 * Settings.particle_factor()))
 	p.lifetime = 0.5
 	p.explosiveness = 1.0
 	p.spread = 70.0

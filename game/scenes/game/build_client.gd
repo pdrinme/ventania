@@ -73,15 +73,11 @@ func _visual(p: Construcoes.Peca) -> void:
 	var regiao := "%d|%d" % [floori(xf.origin.x / REGIAO), floori(xf.origin.z / REGIAO)]
 	var lugares := []
 	if p.edited():
-		# ladrilhos recortados da própria malha do kit + molduras nas aberturas
-		var malhas := Grade.tile_meshes(p.tipo, p.material)
-		var t := Grade.tiles_of(p.tipo)
-		for k in t.x * t.y:
-			if p.mask & (1 << k) != 0 and malhas[k] != null:
-				lugares.append(_instancia("%s|t%d|%s" % [caminho, k, regiao], malhas[k], xf, p.id))
-		for f in Grade.frame_boxes(p.tipo, p.mask):
-			var xf_f := xf * Transform3D(Basis.from_scale(f[1]), f[0])
-			lugares.append(_instancia("moldura|%d|%s" % [p.material, regiao], _moldura(p.material), xf_f, p.id))
+		# ladrilhos recortados da própria malha do kit + molduras nas aberturas, JUNTOS
+		# numa malha por (peça, material, máscara): uma chamada de desenho por região em
+		# vez de uma por ladrilho e por moldura (as janelas/portas das casas do mapa
+		# eram o maior custo de renderização da ilha)
+		lugares.append(_instancia("%s|m%d|%s" % [caminho, p.mask, regiao], _malha_editada(p.tipo, p.material, p.mask), xf, p.id))
 	else:
 		var malhas: Array = Grade.kit(caminho)["malhas"]
 		for i in malhas.size():
@@ -109,6 +105,34 @@ func _instancia(chave: String, malha: Mesh, xf: Transform3D, id: int) -> String:
 
 
 static var _molduras := {}
+static var _malhas_editadas := {}
+
+
+## Malha única de uma peça editada: ladrilhos presentes + molduras das aberturas.
+static func _malha_editada(tipo: int, material: int, mask: int) -> Mesh:
+	var chave := Vector3i(tipo, material, mask)
+	if _malhas_editadas.has(chave):
+		return _malhas_editadas[chave]
+	var malhas := Grade.tile_meshes(tipo, material)
+	var t := Grade.tiles_of(tipo)
+	var st := SurfaceTool.new()
+	var mat: Material = null
+	for k in t.x * t.y:
+		if mask & (1 << k) != 0 and malhas[k] != null:
+			var m: Mesh = malhas[k]
+			for sfc in m.get_surface_count():
+				st.append_from(m, sfc, Transform3D.IDENTITY)
+				if mat == null:
+					mat = m.surface_get_material(sfc)
+	var moldura := _moldura(material)
+	for f in Grade.frame_boxes(tipo, mask):
+		st.append_from(moldura, 0, Transform3D(Basis.from_scale(f[1]), f[0]))
+		if mat == null:
+			mat = moldura.surface_get_material(0)
+	st.set_material(mat)
+	var out := st.commit()
+	_malhas_editadas[chave] = out
+	return out
 
 
 ## Caixa unitária com o material do kit numa cor escura da paleta (moldura).

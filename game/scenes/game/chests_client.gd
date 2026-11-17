@@ -103,7 +103,7 @@ func _anim(i: int) -> AnimationPlayer:
 func _faiscas(pos: Vector3) -> void:
 	var p := CPUParticles3D.new()
 	p.one_shot = true
-	p.amount = 28
+	p.amount = maxi(6, roundi(28 * Settings.particle_factor()))
 	p.lifetime = 0.9
 	p.explosiveness = 0.9
 	p.direction = Vector3.UP

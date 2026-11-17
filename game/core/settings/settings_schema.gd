@@ -11,6 +11,9 @@ const SPEC := {
 		"msaa": {"type": "int_enum", "options": [0, 2, 4], "default": 0},
 		"shadows": {"type": "str_enum", "options": ["off", "low", "high"], "default": "low"},
 		"view_distance": {"type": "float", "min": 60.0, "max": 800.0, "step": 10.0, "default": 250.0},
+		# detalhes do cenário: distância de detalhe (mobília, props, vegetação), densidade
+		# da vegetação decorativa (arbustos, girassóis) e quantidade de partículas
+		"detail": {"type": "str_enum", "options": ["baixo", "medio", "alto"], "default": "medio"},
 		"fps_limit": {"type": "int_enum", "options": [30, 60, 90, 120, 0], "default": 60},
 		"vsync": {"type": "bool", "default": true},
 		"window_mode": {"type": "str_enum", "options": ["windowed", "fullscreen"], "default": "windowed", "pc_only": true},
@@ -43,7 +46,7 @@ const SPEC := {
 ## Rótulos em português para a interface.
 const LABELS := {
 	"profile": "Perfil gráfico", "render_scale": "Resolução 3D", "msaa": "Antisserrilhado (MSAA)",
-	"shadows": "Sombras", "view_distance": "Distância de visão", "fps_limit": "Limite de FPS",
+	"shadows": "Sombras", "view_distance": "Distância de visão", "detail": "Detalhes do cenário", "baixo": "Baixos", "medio": "Médios", "alto": "Altos", "fps_limit": "Limite de FPS",
 	"vsync": "Sincronização vertical", "window_mode": "Modo de janela", "show_fps": "Mostrar FPS",
 	"master": "Volume geral", "music": "Música", "sfx": "Efeitos", "ui": "Interface",
 	"mouse_sensitivity": "Sensibilidade do mouse", "gamepad_sensitivity": "Sensibilidade do controle",
@@ -51,7 +54,7 @@ const LABELS := {
 	"ui_scale": "Escala da interface",
 	"server_url": "Meta-servidor (contas)", "player_name": "Seu nome", "game_server": "Servidor de partida",
 	"touch_button_scale": "Tamanho dos botões de toque",
-	"performance": "Desempenho", "balanced": "Equilibrado", "quality": "Qualidade", "custom": "Personalizado",
+	"performance": "Baixo (desempenho)", "balanced": "Médio (equilibrado)", "quality": "Alto (qualidade)", "custom": "Personalizado",
 	"off": "Desligadas", "low": "Baixas", "high": "Altas", "windowed": "Janela", "fullscreen": "Tela cheia",
 }
 

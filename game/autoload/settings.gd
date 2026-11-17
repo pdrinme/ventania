@@ -86,7 +86,7 @@ func _apply_key(section: String, key: String) -> void:
 				var modo := DisplayServer.WINDOW_MODE_FULLSCREEN if v == "fullscreen" else DisplayServer.WINDOW_MODE_WINDOWED
 				if DisplayServer.window_get_mode() != modo:
 					DisplayServer.window_set_mode(modo)
-		["graphics", "shadows"], ["graphics", "view_distance"]:
+		["graphics", "shadows"], ["graphics", "view_distance"], ["graphics", "detail"]:
 			apply_to_world(vp)
 		["graphics", "show_fps"]:
 			var sm := get_node_or_null("/root/SceneManager")
@@ -105,6 +105,8 @@ func apply_to_world(raiz: Node) -> void:
 		_aplicar_camera(n)
 	for n in raiz.get_tree().get_nodes_in_group("ambiente"):
 		_aplicar_ambiente(n)
+	for n in raiz.get_tree().get_nodes_in_group("kit_visual"):
+		_aplicar_detalhe(n)
 
 
 func _on_node_added(n: Node) -> void:
@@ -115,6 +117,8 @@ func _on_node_added(n: Node) -> void:
 		_aplicar_camera.call_deferred(n)
 	elif n.is_in_group("ambiente"):
 		_aplicar_ambiente.call_deferred(n)
+	elif n.is_in_group("kit_visual"):
+		_aplicar_detalhe.call_deferred(n)
 
 
 func _aplicar_sol(n: Node) -> void:
@@ -131,6 +135,24 @@ func _aplicar_sol(n: Node) -> void:
 		sol.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 		sol.directional_shadow_max_distance = 80.0
 		RenderingServer.directional_shadow_atlas_set_size(2048, false)
+
+
+## Detalhes do cenário num grupo visual do KitInstancer (MultiMeshInstance3D):
+## distância de detalhe e, na vegetação decorativa, a densidade (instâncias visíveis).
+func _aplicar_detalhe(n: Node) -> void:
+	var mmi := n as MultiMeshInstance3D
+	if mmi == null or not is_instance_valid(mmi) or mmi.multimesh == null:
+		return
+	var f := GraphicsProfiles.detail_factors(store.get_value("graphics", "detail"))
+	if mmi.has_meta("vis_base"):
+		mmi.visibility_range_end = float(mmi.get_meta("vis_base")) * float(f[0])
+	if mmi.get_meta("vegetacao", false):
+		mmi.multimesh.visible_instance_count = maxi(1, ceili(mmi.multimesh.instance_count * float(f[1])))
+
+
+## Fator de partículas dos efeitos (Detalhes do cenário).
+func particle_factor() -> float:
+	return float(GraphicsProfiles.detail_factors(store.get_value("graphics", "detail"))[2])
 
 
 func _aplicar_camera(n: Node) -> void:

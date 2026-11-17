@@ -3,12 +3,12 @@ extends RefCounted
 ## Perfis gráficos. Cada perfil só preenche valores; o jogador pode mudar
 ## qualquer opção depois (o perfil passa a "custom").
 
-const KEYS := ["render_scale", "msaa", "shadows", "view_distance", "fps_limit"]
+const KEYS := ["render_scale", "msaa", "shadows", "view_distance", "fps_limit", "detail"]
 
 const PROFILES := {
-	"performance": {"render_scale": 0.7, "msaa": 0, "shadows": "off", "view_distance": 120.0, "fps_limit": 30},
-	"balanced": {"render_scale": 0.85, "msaa": 0, "shadows": "low", "view_distance": 250.0, "fps_limit": 60},
-	"quality": {"render_scale": 1.0, "msaa": 2, "shadows": "high", "view_distance": 500.0, "fps_limit": 60},
+	"performance": {"render_scale": 0.7, "msaa": 0, "shadows": "off", "view_distance": 120.0, "fps_limit": 30, "detail": "baixo"},
+	"balanced": {"render_scale": 0.85, "msaa": 0, "shadows": "low", "view_distance": 250.0, "fps_limit": 60, "detail": "medio"},
+	"quality": {"render_scale": 1.0, "msaa": 2, "shadows": "high", "view_distance": 500.0, "fps_limit": 60, "detail": "alto"},
 }
 
 
@@ -16,6 +16,15 @@ const PROFILES := {
 ## nele); no celular fica em 30 para poupar bateria e calor.
 const MOBILE_OVERRIDES := {"performance": {"fps_limit": 30}}
 const PC_OVERRIDES := {"performance": {"fps_limit": 60}}
+
+
+## Detalhes do cenário: [fator da distância de detalhe, densidade da vegetação
+## decorativa, fator de partículas]. Medidos em tests/perf/bench_mapa.gd.
+const DETALHE := {"baixo": [0.6, 0.45, 0.5], "medio": [1.0, 0.8, 1.0], "alto": [1.3, 1.0, 1.0]}
+
+
+static func detail_factors(nivel: String) -> Array:
+	return DETALHE.get(nivel, DETALHE["medio"])
 
 
 ## Valores de um perfil para a plataforma.

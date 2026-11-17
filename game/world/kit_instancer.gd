@@ -9,6 +9,10 @@ extends RefCounted
 ## O asset é carregado e "desmontado" uma única vez.
 
 const REGIAO := 100.0
+## Decoração sem colisão que o perfil gráfico pode rarear (densidade da vegetação):
+## esconder instâncias com colisão deixaria obstáculos invisíveis, então árvores e
+## pedras ficam sempre.
+const VEGETACAO_DECOR := ["arbusto_01", "girassol_01"]
 
 var com_visual := true
 var distancia_visivel := 320.0
@@ -70,7 +74,8 @@ func place(caminho: String, xform: Transform3D, material: int) -> void:
 	for i in d["malhas"].size():
 		var chave := "%s|%d|%d|%d" % [caminho, i, rx, rz]
 		if not _grupos.has(chave):
-			_grupos[chave] = {"mesh": d["malhas"][i][0], "xforms": [], "vis": float(d["malhas"][i][2]), "sombra": d["malhas"][i][3]}
+			_grupos[chave] = {"mesh": d["malhas"][i][0], "xforms": [], "vis": float(d["malhas"][i][2]), "sombra": d["malhas"][i][3],
+					"vegetacao": caminho.get_file().get_basename() in VEGETACAO_DECOR and d["formas"].is_empty()}
 		_grupos[chave]["xforms"].append(xform * d["malhas"][i][1])
 
 
@@ -81,13 +86,20 @@ func build() -> int:
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.mesh = g["mesh"]
-		mm.instance_count = g["xforms"].size()
-		for i in g["xforms"].size():
-			mm.set_instance_transform(i, g["xforms"][i])
+		var xforms: Array = g["xforms"]
+		if g.get("vegetacao", false):
+			# ordem embaralhada (determinística): rarear = esconder as últimas, espalhadas
+			xforms.sort_custom(func(a, b): return hash(a.origin) < hash(b.origin))
+		mm.instance_count = xforms.size()
+		for i in xforms.size():
+			mm.set_instance_transform(i, xforms[i])
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
 		var vis: float = g.get("vis", 0.0)
 		mmi.visibility_range_end = minf(distancia_visivel, vis) if vis > 0.0 else distancia_visivel
+		mmi.set_meta("vis_base", mmi.visibility_range_end)
+		mmi.set_meta("vegetacao", g.get("vegetacao", false))
+		mmi.add_to_group("kit_visual")
 		mmi.cast_shadow = g.get("sombra", GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
 		mmi.visibility_range_end_margin = 20.0
 		mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
