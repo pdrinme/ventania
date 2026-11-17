@@ -116,6 +116,30 @@
       "notas": "Traje feminino do personagem-base: mesmo esqueleto, animações e hitbox (Etapa 9)"
     },
     {
+      "id": "recruta_tormenta_01",
+      "nome": "Recruta Tormenta (traje)",
+      "categoria": "personagens",
+      "notas": "Variação de cor de traje (mesmo esqueleto, animações e hitbox); recompensa do passe da Temporada 1 (Etapa 10)"
+    },
+    {
+      "id": "brisa_aurora_01",
+      "nome": "Brisa Aurora (traje)",
+      "categoria": "personagens",
+      "notas": "Variação de cor de traje (mesmo esqueleto, animações e hitbox); recompensa do passe da Temporada 1 (Etapa 10)"
+    },
+    {
+      "id": "recruta_ourodesol_01",
+      "nome": "Recruta Ouro-de-Sol (traje)",
+      "categoria": "personagens",
+      "notas": "Variação de cor de traje (mesmo esqueleto, animações e hitbox); recompensa do passe da Temporada 1 (Etapa 10)"
+    },
+    {
+      "id": "brisa_meianoite_01",
+      "nome": "Brisa Meia-Noite (traje)",
+      "categoria": "personagens",
+      "notas": "Variação de cor de traje (mesmo esqueleto, animações e hitbox); recompensa do passe da Temporada 1 (Etapa 10)"
+    },
+    {
       "id": "rajada_01",
       "nome": "Rajada (fuzil)",
       "categoria": "armas",

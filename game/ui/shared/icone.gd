@@ -75,6 +75,15 @@ func _draw() -> void:
 				var y := -s * 0.14 + k * s * 0.26
 				draw_polyline(PackedVector2Array([c + Vector2(-s * 0.2, y), c + Vector2(-s * 0.12, y + s * 0.08), c + Vector2(-s * 0.02, y - s * 0.06)]), cor, e * 0.8, true)
 				draw_line(c + Vector2(s * 0.04, y), c + Vector2(s * 0.2, y), cor, e * 0.8, true)
+		"passe":
+			# fita/estandarte com estrela (passe de batalha)
+			draw_colored_polygon(PackedVector2Array([c + Vector2(-s * 0.3, -s * 0.42), c + Vector2(s * 0.3, -s * 0.42),
+					c + Vector2(s * 0.3, s * 0.42), c + Vector2(0, s * 0.22), c + Vector2(-s * 0.3, s * 0.42)]), cor)
+			var pts := PackedVector2Array()
+			for i in 10:
+				var a := TAU * i / 10.0 - PI / 2
+				pts.append(c + Vector2(0, -s * 0.08) + Vector2(cos(a), sin(a)) * s * (0.17 if i % 2 == 0 else 0.07))
+			draw_colored_polygon(pts, Color("15161c"))
 		"sair":
 			draw_rect(Rect2(c + Vector2(-s * 0.38, -s * 0.36), Vector2(s * 0.4, s * 0.72)), cor, false, e)
 			draw_line(c + Vector2(-s * 0.05, 0), c + Vector2(s * 0.4, 0), cor, e, true)

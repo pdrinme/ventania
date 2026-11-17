@@ -71,6 +71,7 @@ class App:
         # progressão (Etapa 9)
         r.add("GET", "/v1/profile", self._a(lambda c, d: self.progressao.perfil(c)))
         r.add("GET", "/v1/quests", self._a(lambda c, d: self.progressao.missoes(c)))
+        r.add("GET", "/v1/season", self._a(lambda c, d: self.progressao.passe(c)))
         r.add("GET", "/v1/ledger", self._a(lambda c, d: {"entries": self.progressao.ledger(c)}))
         r.add("GET", "/v1/history", self._a(lambda c, d: {"matches": self.progressao.historico(c)}))
         r.add("POST", "/v1/loadout", self._a(self._equipar))

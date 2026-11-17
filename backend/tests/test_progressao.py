@@ -74,7 +74,9 @@ class TestProgressao(Base):
         self.relatorio("m2", **{str(self.a): {"colocacao": 1, "venceu": True, "eliminacoes": 99999, "tempo_s": 10 ** 9, "baus": 10 ** 6}})
         pf = self.p.perfil(self.a)
         self.assertLessEqual(pf["kills"], 15)
-        self.assertLess(pf["xp_total"], 5000)
+        # partida (máx. ~1.600) + missões diárias e semanais que essa partida conclui; nada de desafio da temporada
+        self.assertLess(pf["xp_total"], 6000)
+        self.assertFalse(any(q["concluida"] for q in self.p.missoes(self.a).get("temporada", {}).get("quests", [])))
 
     def test_nivel_faiscas_ledger_e_recompensa(self):
         self.relatorio("m3", **{str(self.a): {"colocacao": 1, "venceu": True, "eliminacoes": 15, "tempo_s": 1200, "baus": 20,

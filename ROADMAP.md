@@ -518,8 +518,34 @@ Inventário persistente, nível, XP, missões, recompensas, Faíscas (com ledger
   - 10 novos no meta-servidor (26 no total): idempotência, limites, níveis, ledger, missões e troca de dia, equipar, segredo e configuração inválida;
   - `test_lobby.gd` agora vai até o fim da partida e confere o XP no evento, no perfil e no histórico (22 verificações).
 
-### Etapa 10 — Passe de batalha ⬜
+### Etapa 10 — Passe de batalha ✅
 Temporadas via JSON, níveis, interface de progressão, recompensas gratuitas, desafios e ferramenta de validação de temporadas.
+
+- ✅ **Temporada 1 "Primeiros Ventos"** (`backend/config/seasons/t1.json`): de 17/11/2026 a 05/01/2027, 50 níveis de 1.450 XP, **100% gratuita**.
+  - O XP de partidas, missões e desafios ganho durante a temporada sobe o passe.
+  - Cada nível entrega a recompensa na hora: o nível 1 assim que o jogador abre o passe, e Faíscas ou trajes nos demais, registrados no extrato e no histórico de desbloqueios.
+  - Os itens ficam para sempre.
+- ✅ **Recompensas:** 3.440 Faíscas (passe + desafios) e 4 trajes novos gerados no pipeline, todos no mesmo esqueleto e com a mesma hitbox:
+  - Recruta Tormenta (raro, nível 8);
+  - Brisa Aurora (raro, nível 18);
+  - Recruta Ouro-de-Sol (épico, nível 30);
+  - Brisa Meia-Noite (lendário, nível 50).
+- ✅ **Desafios da temporada:** 8, cumulativos ao longo dela (partidas, eliminações, baús, vitórias, top 10, construções, dano, coleta), com XP e Faíscas.
+- ✅ **Ferramenta de validação** (`tools/validar_temporada.py`), também usada ao subir o servidor; temporada inválida impede o início. Ela confere:
+  - datas e sobreposição entre temporadas;
+  - níveis 1..N com uma recompensa cada;
+  - itens no catálogo, sem repetir e sem dar o que já é de todo mundo;
+  - trajes com visual no jogo e desafios válidos.
+  - Também estima as horas até o nível máximo. Ela pegou o primeiro balanceamento (2,8 h); o atual dá **27,5 h**, dentro da meta de 25–30 h.
+- ✅ **Interface:**
+  - botão Passe no lobby: nível, barra de XP e tempo até o fim;
+  - trilha horizontal dos 50 níveis com a cor da raridade, OBTIDO/ATUAL e rolagem até o nível atual;
+  - lista dos desafios;
+  - a tela de resultado mostra "PASSE NÍVEL N" ao subir.
+- ✅ **Testes:**
+  - 7 novos no meta-servidor (35 no total): nível 1 na hora, traje no nível 8 com a origem `passe:t1:8`, Faíscas sem repetir, fora da temporada não sobe, desafio cumulativo, validação de erros e a ferramenta;
+  - os tetos por partida do relatório ficaram mais realistas;
+  - `test_lobby.gd` confere que o XP de uma partida real sobe o passe.
 
 ### Etapa 11 — Loja rotativa ⬜
 Catálogo, categorias, preços, pré-visualização, compra atômica, temporizador, rotação (agenda e sorteio determinístico) e uma ferramenta de administração do catálogo.

@@ -195,6 +195,9 @@ func _init() -> void:
 	_checar(int(pa.get("xp_total", 0)) >= 50 and int(pb.get("xp_total", 0)) >= 50, "XP aplicado pelo meta-servidor (Ana +%s, Bia +%s)" % [str(pa.get("xp_total")), str(pb.get("xp_total"))])
 	var perfil: Dictionary = (await a.chamar(HTTPClient.METHOD_GET, "/v1/profile"))["data"]
 	_checar(int(perfil.get("xp_total", 0)) == int(pa.get("xp_total", -1)) and int(perfil.get("matches", 0)) == 1, "perfil da Ana: %s XP, %s partida" % [str(perfil.get("xp_total")), str(perfil.get("matches"))])
+	var passe: Dictionary = (await a.chamar(HTTPClient.METHOD_GET, "/v1/season"))["data"]
+	_checar(pa.get("passe") is Dictionary and int(passe.get("xp", 0)) == int(pa.get("xp_total", -1)),
+			"o XP da partida também subiu o passe (%s XP no passe)" % str(passe.get("xp")))
 	var hist: Array = (await a.chamar(HTTPClient.METHOD_GET, "/v1/history"))["data"]["matches"]
 	_checar(hist.size() == 1 and int(hist[0]["placement"]) == int(pa.get("colocacao", -1)), "histórico da partida gravado (colocação %s)" % str(pa.get("colocacao")))
 	# o Caio pode ter recebido XP da partida da própria sala privada, nunca da partida da Ana

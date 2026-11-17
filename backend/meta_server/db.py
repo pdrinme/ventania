@@ -100,6 +100,15 @@ MIGRACOES = [
         );
         CREATE INDEX match_results_account ON match_results(account_id);
     """),
+    (4, "passe de batalha: progresso por temporada (Etapa 10)", """
+        CREATE TABLE season_progress (
+            account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            season_id TEXT NOT NULL,
+            xp INTEGER NOT NULL DEFAULT 0,
+            level INTEGER NOT NULL DEFAULT 1,
+            PRIMARY KEY (account_id, season_id)
+        );
+    """),
 ]
 
 

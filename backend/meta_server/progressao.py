@@ -29,15 +29,89 @@ def _ler(caminho: str) -> dict:
         return json.load(f)
 
 
+COSMETICOS_JOGO = os.path.join(os.path.dirname(BACKEND), "game", "data", "cosmeticos.json")
+
+
 def carregar_config(pasta: str | None = None) -> dict:
     pasta = pasta or os.path.join(BACKEND, "config")
     cfg = {"progressao": _ler(os.path.join(pasta, "progressao.json")),
-           "missoes": _ler(os.path.join(pasta, "missoes.json")), "catalogo": {}}
+           "missoes": _ler(os.path.join(pasta, "missoes.json")), "catalogo": {}, "temporadas": []}
     for arq in sorted(glob.glob(os.path.join(pasta, "catalog", "*.json"))):
         for item in _ler(arq).get("itens", []):
             cfg["catalogo"][item["id"]] = item
+    for arq in sorted(glob.glob(os.path.join(pasta, "seasons", "*.json"))):
+        cfg["temporadas"].append(_ler(arq))
     validar(cfg)
     return cfg
+
+
+def _data(texto: str) -> float:
+    return datetime.datetime.fromisoformat(texto.replace("Z", "+00:00")).timestamp()
+
+
+def validar_temporada(t: dict, cfg: dict, outras=(), visuais: dict | None = None) -> list:
+    """Erros de uma temporada (lista vazia = válida). Usado ao subir o servidor e por
+    tools/validar_temporada.py. `visuais`: tabela de cosméticos do jogo (trajes com visual)."""
+    erros = []
+    for campo in ("id", "nome", "inicio", "fim", "xp_por_nivel", "recompensas"):
+        if campo not in t:
+            erros.append(f"falta o campo '{campo}'")
+    if erros:
+        return erros
+    try:
+        ini, fim = _data(t["inicio"]), _data(t["fim"])
+        if fim <= ini:
+            erros.append("'fim' deve ser depois de 'inicio'")
+        for o in outras:
+            if o is not t and _data(o["inicio"]) < fim and ini < _data(o["fim"]):
+                erros.append(f"datas se sobrepõem à temporada {o['id']}")
+    except (ValueError, TypeError, KeyError):
+        erros.append("datas inválidas (use ISO 8601, ex.: 2026-11-17T00:00:00Z)")
+    if not isinstance(t["xp_por_nivel"], int) or t["xp_por_nivel"] <= 0:
+        erros.append("'xp_por_nivel' deve ser um inteiro positivo")
+    niveis = [r.get("nivel") for r in t["recompensas"]]
+    if niveis != list(range(1, len(niveis) + 1)):
+        erros.append("as recompensas devem cobrir os níveis 1..N, em ordem, sem buracos nem repetição")
+    vistos = set()
+    for r in t["recompensas"]:
+        tipos = [k for k in ("item", "faiscas") if k in r]
+        if len(tipos) != 1:
+            erros.append(f"nível {r.get('nivel')}: cada nível tem exatamente uma recompensa (item OU faiscas)")
+            continue
+        if "faiscas" in r and (not isinstance(r["faiscas"], int) or r["faiscas"] <= 0):
+            erros.append(f"nível {r['nivel']}: faíscas deve ser inteiro positivo")
+        if "item" in r:
+            item = cfg["catalogo"].get(r["item"])
+            if item is None:
+                erros.append(f"nível {r['nivel']}: item '{r['item']}' não está no catálogo")
+            elif r["item"] in vistos:
+                erros.append(f"nível {r['nivel']}: item '{r['item']}' repetido no passe")
+            elif r["item"] in cfg["progressao"]["itens_iniciais"] + cfg["progressao"].get("presentes", []):
+                erros.append(f"nível {r['nivel']}: '{r['item']}' já é de todo mundo (inicial/presente)")
+            elif visuais is not None and item["categoria"] == "traje" and r["item"] not in visuais.get("trajes", {}):
+                erros.append(f"nível {r['nivel']}: traje '{r['item']}' não tem visual no jogo (game/data/cosmeticos.json)")
+            vistos.add(r["item"])
+    ids = set()
+    for d in t.get("desafios", []):
+        if d.get("id") in ids or d.get("tipo") not in TIPOS_MISSAO or not d.get("meta", 0) > 0 or d.get("xp", 0) < 0:
+            erros.append(f"desafio inválido: {d.get('id')}")
+        ids.add(d.get("id"))
+    return erros
+
+
+def estimar_horas(t: dict, cfg: dict) -> dict:
+    """Horas de jogo até o nível máximo, pela estimativa da própria temporada."""
+    e = t.get("estimativa", {})
+    semanas = max(1.0, (_data(t["fim"]) - _data(t["inicio"])) / (7 * 86400))
+    m = cfg["missoes"]
+    media = lambda lista: sum(q["xp"] for q in lista) / max(1, len(lista))
+    xp_missoes = (e.get("diarias_concluidas_por_dia", 2) * e.get("dias_jogados_por_semana", 4) * media(m["diarias"])
+                  + e.get("semanais_concluidas_por_semana", 4) * media(m["semanais"])) * semanas
+    xp_desafios = sum(d["xp"] for d in t.get("desafios", []))
+    total = t["xp_por_nivel"] * (len(t["recompensas"]) - 1)
+    resto = max(0.0, total - xp_missoes - xp_desafios)
+    return {"xp_total": total, "xp_missoes": int(xp_missoes), "xp_desafios": xp_desafios, "semanas": round(semanas, 1),
+            "horas": round(resto / max(1, e.get("xp_por_hora_jogando", 1000)), 1)}
 
 
 def validar(cfg: dict) -> None:
@@ -63,6 +137,15 @@ def validar(cfg: dict) -> None:
             ids.add(q["id"])
     if len(m["diarias"]) < m["diarias_por_dia"] or len(m["semanais"]) < m["semanais_por_semana"]:
         raise ValueError("poucas missões no pool")
+    visuais = _ler(COSMETICOS_JOGO) if os.path.exists(COSMETICOS_JOGO) else None
+    for t in cfg.get("temporadas", []):
+        erros = validar_temporada(t, cfg, cfg["temporadas"], visuais)
+        if erros:
+            raise ValueError(f"temporada {t.get('id')}: " + "; ".join(erros))
+        for d in t.get("desafios", []):
+            if d["id"] in ids:
+                raise ValueError(f"desafio com id repetido: {d['id']}")
+            ids.add(d["id"])
 
 
 class Progressao:
@@ -182,11 +265,80 @@ class Progressao:
                 "semanal": (f"s{ano}-W{semana:02d}", int((prox_seg - agora).total_seconds()))}
 
     def ativas(self) -> dict:
-        """As mesmas para todos: sorteio com semente pelo período."""
+        """As mesmas para todos: sorteio com semente pelo período. Com temporada ativa,
+        os desafios dela entram como um grupo cujo período é a própria temporada."""
         m = self.cfg["missoes"]
         per = self.periodos()
-        return {"diaria": (per["diaria"], random.Random(per["diaria"][0]).sample(m["diarias"], m["diarias_por_dia"])),
-                "semanal": (per["semanal"], random.Random(per["semanal"][0]).sample(m["semanais"], m["semanais_por_semana"]))}
+        out = {"diaria": (per["diaria"], random.Random(per["diaria"][0]).sample(m["diarias"], m["diarias_por_dia"])),
+               "semanal": (per["semanal"], random.Random(per["semanal"][0]).sample(m["semanais"], m["semanais_por_semana"]))}
+        t = self.temporada()
+        if t and t.get("desafios"):
+            out["temporada"] = ((t["id"], int(_data(t["fim"]) - self.agora())), t["desafios"])
+        return out
+
+    # ---------- passe de batalha (Etapa 10) ----------
+    def temporada(self) -> dict | None:
+        agora = self.agora()
+        for t in self.cfg.get("temporadas", []):
+            if _data(t["inicio"]) <= agora < _data(t["fim"]):
+                return t
+        return None
+
+    def nivel_passe(self, t: dict, xp: int) -> int:
+        return min(len(t["recompensas"]), 1 + xp // t["xp_por_nivel"])
+
+    def _recompensa_passe(self, conta: int, t: dict, n: int) -> dict | None:
+        """Entrega a recompensa do nível n (deve rodar dentro de _tx). Idempotente."""
+        r = t["recompensas"][n - 1]
+        if "faiscas" in r:
+            if self._creditar(conta, r["faiscas"], f"Passe {t['nome']}: nível {n}", f"passe:{t['id']}:{n}:{conta}"):
+                return {"nivel": n, "faiscas": r["faiscas"]}
+        elif "item" in r and self._desbloquear(conta, r["item"], f"passe:{t['id']}:{n}"):
+            return {"nivel": n, **self.cfg["catalogo"][r["item"]]}
+        return None
+
+    def passe(self, conta: int) -> dict:
+        self.garantir(conta)
+        t = self.temporada()
+        if t is None:
+            return {"ativa": False}
+        r = self.con.execute("SELECT xp FROM season_progress WHERE account_id = ? AND season_id = ?", (conta, t["id"])).fetchone()
+        xp = r["xp"] if r else 0
+        if r is None:
+            # nível 1 vem na hora (o passe começa entregando algo)
+            with self._tx():
+                self.con.execute("INSERT OR IGNORE INTO season_progress VALUES (?, ?, 0, 1)", (conta, t["id"]))
+                self._recompensa_passe(conta, t, 1)
+        nivel = self.nivel_passe(t, xp)
+        maximo = len(t["recompensas"])
+        tem = {u["item_id"] for u in self.con.execute("SELECT item_id FROM unlocks WHERE account_id = ?", (conta,))}
+        niveis = []
+        for rec in t["recompensas"]:
+            item = self.cfg["catalogo"].get(rec.get("item", ""), {})
+            niveis.append({"nivel": rec["nivel"], "faiscas": rec.get("faiscas", 0), "item": rec.get("item", ""),
+                           "nome": item.get("nome", ""), "raridade": item.get("raridade", ""), "categoria": item.get("categoria", ""),
+                           "obtido": rec["nivel"] <= nivel and (not rec.get("item") or rec["item"] in tem)})
+        return {"ativa": True, "id": t["id"], "nome": t["nome"], "termina_em_s": int(_data(t["fim"]) - self.agora()),
+                "nivel": nivel, "maximo": maximo, "xp": xp, "xp_por_nivel": t["xp_por_nivel"],
+                "xp_no_nivel": xp - (nivel - 1) * t["xp_por_nivel"] if nivel < maximo else t["xp_por_nivel"],
+                "niveis": niveis, "desafios": self.missoes(conta).get("temporada", {}).get("quests", [])}
+
+    def _subir_passe(self, conta: int, xp: int) -> dict | None:
+        """Soma XP ao passe da temporada ativa e entrega as recompensas (dentro de _tx)."""
+        t = self.temporada()
+        if t is None or xp <= 0:
+            return None
+        r = self.con.execute("SELECT xp FROM season_progress WHERE account_id = ? AND season_id = ?", (conta, t["id"])).fetchone()
+        antes = r["xp"] if r else 0
+        if r is None:
+            self.con.execute("INSERT INTO season_progress VALUES (?, ?, 0, 1)", (conta, t["id"]))
+            self._recompensa_passe(conta, t, 1)
+        n_antes, n_depois = self.nivel_passe(t, antes), self.nivel_passe(t, antes + xp)
+        self.con.execute("UPDATE season_progress SET xp = ?, level = ? WHERE account_id = ? AND season_id = ?",
+                         (antes + xp, n_depois, conta, t["id"]))
+        entregues = [x for x in (self._recompensa_passe(conta, t, n) for n in range(n_antes + 1, n_depois + 1)) if x]
+        return {"temporada": t["id"], "nome": t["nome"], "nivel_antes": n_antes, "nivel": n_depois, "xp": xp,
+                "recompensas": entregues}
 
     def missoes(self, conta: int) -> dict:
         out = {}
@@ -237,7 +389,8 @@ class Progressao:
                    "eliminacoes": max(0, min(total - 1, int(j.get("eliminacoes", 0)))),
                    "tempo_s": max(0, min(3600, int(j.get("tempo_s", 0)))),
                    "venceu": bool(j.get("venceu", False)) and int(j.get("colocacao", 0)) == 1}
-            for k, teto in (("baus", 200), ("coleta", 20000), ("construcoes", 3000), ("dano", 50000), ("curas", 200)):
+            # tetos por partida (a Ilha Ventania tem 37 baús; 16 jogadores com 100 de vida + 100 de escudo)
+            for k, teto in (("baus", 40), ("coleta", 6000), ("construcoes", 800), ("dano", 4000), ("curas", 60)):
                 out[k] = max(0, min(teto, int(j.get(k, 0))))
             return out if acc > 0 else None
         except (KeyError, TypeError, ValueError):
@@ -287,7 +440,7 @@ class Progressao:
                                          (conta, q["id"], periodo, prog, agora if feito else None))
                         if feito:
                             concluidas.append({"id": q["id"], "titulo": q["titulo"], "xp": q["xp"], "faiscas": q["faiscas"]})
-                            itens.append((f"Missão: {q['titulo']}", q["xp"]))
+                            itens.append((f"{'Desafio' if grupo == 'temporada' else 'Missão'}: {q['titulo']}", q["xp"]))
                             if self._creditar(conta, q["faiscas"], f"Missão: {q['titulo']}", f"missao:{q['id']}:{periodo}:{conta}"):
                                 faiscas += q["faiscas"]
                 xp = sum(v for _, v in itens)
@@ -309,11 +462,16 @@ class Progressao:
                 self.con.execute("INSERT INTO match_results VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                                  (match_id, conta, j["colocacao"], j["eliminacoes"], j["tempo_s"], xp, faiscas,
                                   json.dumps({"xp": itens}, ensure_ascii=False)))
+                passe = self._subir_passe(conta, xp)
+                for rec in (passe or {}).get("recompensas", []):
+                    faiscas += rec.get("faiscas", 0)
+                    if rec.get("id"):
+                        desbloqueados.append({**rec})
                 novo = self.nivel_de(antes["xp_total"] + xp)
                 resumos[conta] = {"match_id": match_id, "xp": [{"motivo": m, "xp": v} for m, v in itens], "xp_total": xp,
                                   "nivel_antes": nivel_antes, "nivel": novo[0], "xp_in_level": novo[1], "xp_next": novo[2],
                                   "faiscas": faiscas, "missoes": concluidas, "desbloqueados": desbloqueados,
-                                  "colocacao": j["colocacao"], "total": total}
+                                  "colocacao": j["colocacao"], "total": total, "passe": passe}
         for conta, r in resumos.items():                   # avisos só depois do COMMIT
             self.ev.emitir(conta, "progress", r)
         return {"status": "aplicado", "jogadores": len(resumos)}

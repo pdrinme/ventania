@@ -42,6 +42,9 @@ var _prog_nivel: Label
 var _prog_barra: ProgressBar
 var _prog_faiscas: Label
 var _missoes_btn: Button
+var _passe_btn: Button
+const CORES_RARIDADE := {"comum": Color("9aa3b5"), "incomum": Color("5ee08a"), "raro": Color("4fa8ff"),
+		"epico": Color("b56bff"), "lendario": Color("ffb43c"), "mitico": Color("ff7ad9")}
 
 
 func _ready() -> void:
@@ -117,6 +120,9 @@ func _montar_topo() -> void:
 	vazio.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	topo.add_child(vazio)
 	_montar_progresso(topo)
+	_passe_btn = _botao_icone("passe", "Passe", "BotaoFantasma")
+	_passe_btn.pressed.connect(_abrir_passe)
+	topo.add_child(_passe_btn)
 	_missoes_btn = _botao_icone("missoes", "Missões", "BotaoFantasma")
 	_missoes_btn.pressed.connect(_abrir_missoes)
 	topo.add_child(_missoes_btn)
@@ -307,6 +313,7 @@ func _atualizar() -> void:
 	var pf := Meta.profile
 	_prog_chip.visible = _online() and not pf.is_empty()
 	_missoes_btn.visible = _online()
+	_passe_btn.visible = _online()
 	if not pf.is_empty():
 		_prog_nivel.text = "NV %d" % int(pf["level"])
 		_prog_barra.max_value = maxf(1.0, float(pf["xp_next"]))
@@ -769,6 +776,155 @@ func _linha_missao(q: Dictionary) -> Control:
 	rec.add_theme_color_override("font_color", VentaniaTheme.AMARELO)
 	rec.text = "+%d XP  ·  +%d Faíscas" % [q["xp"], q["faiscas"]]
 	h.add_child(rec)
+	return p
+
+
+# ---------------------------------------------------------------- passe (Etapa 10)
+
+func _abrir_passe() -> void:
+	var col := _modal("Passe de batalha", 1100)
+	var carregando := Label.new()
+	carregando.theme_type_variation = "Pequeno"
+	carregando.text = "Carregando…"
+	col.add_child(carregando)
+	var r := await Meta.get_season()
+	if not is_instance_valid(carregando):
+		return
+	carregando.queue_free()
+	if not r["ok"]:
+		_aviso(r["error"])
+		return
+	var pa: Dictionary = r["data"]
+	if not pa.get("ativa", false):
+		var nada := Label.new()
+		nada.text = "Nenhuma temporada ativa agora. Os itens que você ganhou continuam seus."
+		col.add_child(nada)
+		return
+	# cabeçalho: temporada, nível atual e barra
+	var cab := HBoxContainer.new()
+	cab.add_theme_constant_override("separation", 18)
+	col.add_child(cab)
+	var nivel := Label.new()
+	nivel.text = str(int(pa["nivel"]))
+	nivel.theme_type_variation = "Destaque"
+	nivel.add_theme_font_size_override("font_size", 54)
+	nivel.add_theme_color_override("font_color", VentaniaTheme.AMARELO)
+	cab.add_child(nivel)
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 4)
+	cab.add_child(info)
+	var nome := Label.new()
+	nome.theme_type_variation = "Subtitulo"
+	nome.text = str(pa["nome"])
+	info.add_child(nome)
+	var barra := ProgressBar.new()
+	barra.show_percentage = false
+	barra.custom_minimum_size = Vector2(0, 16)
+	barra.max_value = float(pa["xp_por_nivel"])
+	barra.value = float(pa["xp_no_nivel"])
+	info.add_child(barra)
+	var sub := Label.new()
+	sub.theme_type_variation = "Pequeno"
+	var dias := int(pa["termina_em_s"]) / 86400
+	sub.text = ("NÍVEL MÁXIMO!" if int(pa["nivel"]) >= int(pa["maximo"]) else "%s / %s XP para o nível %d" % [
+			_milhar(int(pa["xp_no_nivel"])), _milhar(int(pa["xp_por_nivel"])), int(pa["nivel"]) + 1]) + \
+			"  ·  100%% gratuito  ·  termina em %s" % ("%d dias" % dias if dias >= 1 else "menos de 1 dia")
+	info.add_child(sub)
+	# trilha de níveis (rolagem horizontal), começando perto do nível atual
+	var rol := ScrollContainer.new()
+	rol.custom_minimum_size = Vector2(0, 200)
+	rol.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	col.add_child(rol)
+	var trilha := HBoxContainer.new()
+	trilha.add_theme_constant_override("separation", 10)
+	rol.add_child(trilha)
+	var atual: Control = null
+	for n: Dictionary in pa["niveis"]:
+		var cartao := _cartao_nivel(n, int(pa["nivel"]))
+		trilha.add_child(cartao)
+		if int(n["nivel"]) == int(pa["nivel"]):
+			atual = cartao
+	if atual:
+		var alvo := atual
+		(func():
+			await get_tree().process_frame
+			if is_instance_valid(rol) and is_instance_valid(alvo):
+				rol.scroll_horizontal = maxi(0, int(alvo.position.x - 260))).call()
+	# desafios da temporada
+	var rot := Label.new()
+	rot.theme_type_variation = "Rotulo"
+	rot.text = "DESAFIOS DA TEMPORADA"
+	col.add_child(rot)
+	var lista := ScrollContainer.new()
+	lista.custom_minimum_size = Vector2(0, 210)
+	lista.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	col.add_child(lista)
+	var grade := VBoxContainer.new()
+	grade.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grade.add_theme_constant_override("separation", 8)
+	lista.add_child(grade)
+	for q: Dictionary in pa["desafios"]:
+		var l := _linha_missao(q)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		grade.add_child(l)
+
+
+## Cartão de um nível do passe: número, recompensa (Faíscas ou item com a cor da raridade) e estado.
+func _cartao_nivel(n: Dictionary, nivel_atual: int) -> Control:
+	var obtido: bool = n["obtido"]
+	var e_atual: bool = int(n["nivel"]) == nivel_atual
+	var cor: Color = CORES_RARIDADE.get(n.get("raridade", ""), VentaniaTheme.AMARELO) if n["item"] != "" else VentaniaTheme.NOITE_CLARA
+	var p := PanelContainer.new()
+	p.custom_minimum_size = Vector2(128, 186)
+	var sb := VentaniaTheme._caixa(cor.darkened(0.45) if n["item"] != "" else Color(VentaniaTheme.NOITE_CLARA, 0.9), 16,
+			VentaniaTheme.AMARELO if e_atual else VentaniaTheme.TINTA, 4 if e_atual else 3, 4)
+	sb.content_margin_left = 8
+	sb.content_margin_right = 8
+	p.add_theme_stylebox_override("panel", sb)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 4)
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	p.add_child(v)
+	var num := Label.new()
+	num.text = "NÍVEL %d" % int(n["nivel"])
+	num.theme_type_variation = "Rotulo"
+	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(num)
+	if n["item"] != "":
+		var icone := IconeUI.criar("pessoa", 54, cor.lightened(0.2))
+		icone.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		v.add_child(icone)
+		var nome := Label.new()
+		nome.text = str(n["nome"])
+		nome.add_theme_font_override("font", VentaniaTheme.FONTE_FORTE)
+		nome.add_theme_font_size_override("font_size", 15)
+		nome.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		nome.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(nome)
+		var rar := Label.new()
+		rar.text = "TRAJE · %s" % str(n["raridade"]).to_upper().replace("EPICO", "ÉPICO").replace("LENDARIO", "LENDÁRIO")
+		rar.add_theme_font_size_override("font_size", 12)
+		rar.add_theme_color_override("font_color", cor.lightened(0.3))
+		rar.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(rar)
+	else:
+		var icone := IconeUI.criar("faisca", 46, VentaniaTheme.AMARELO)
+		icone.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		v.add_child(icone)
+		var q := Label.new()
+		q.text = "%d Faíscas" % int(n["faiscas"])
+		q.add_theme_font_override("font", VentaniaTheme.FONTE_FORTE)
+		q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(q)
+	var estado := Label.new()
+	estado.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	estado.add_theme_font_size_override("font_size", 13)
+	estado.text = "OBTIDO" if obtido else ("ATUAL" if e_atual else "")
+	estado.add_theme_color_override("font_color", VentaniaTheme.VERDE if obtido else VentaniaTheme.AMARELO)
+	v.add_child(estado)
+	if not obtido:
+		p.modulate = Color(1, 1, 1, 0.75)
 	return p
 
 

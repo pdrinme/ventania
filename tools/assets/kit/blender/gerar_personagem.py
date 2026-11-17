@@ -70,7 +70,31 @@ TRAJES = {
         "pele": "pele_1", "camisa": "roxo", "faixa": "amarelo_sol", "calca": "verde_militar", "luva": "cinza_tecido",
         "bota": "couro", "cabelo": "cabelo_castanho", "cachecol": "teal", "feminino": True,
     },
+    # Variações de cor (Etapa 10, recompensas do passe da Temporada 1)
+    "recruta_tormenta_01": {
+        "pele": "pele_3", "camisa": "azul_tormenta", "faixa": "roxo", "calca": "preto", "luva": "metal_escuro",
+        "bota": "preto", "cabelo": "cabelo_preto", "cachecol": "roxo", "feminino": False,
+    },
+    "brisa_aurora_01": {
+        "pele": "pele_2", "camisa": "rosa", "faixa": "branco", "calca": "jeans", "luva": "branco",
+        "bota": "couro", "cabelo": "cabelo_castanho", "cachecol": "teal", "feminino": True,
+    },
+    "recruta_ourodesol_01": {
+        "pele": "pele_1", "camisa": "amarelo_sol", "faixa": "laranja", "calca": "madeira_escura", "luva": "dourado",
+        "bota": "madeira_escura", "cabelo": "cabelo_castanho", "cachecol": "laranja", "feminino": False,
+    },
+    "brisa_meianoite_01": {
+        "pele": "pele_4", "camisa": "preto", "faixa": "roxo", "calca": "preto", "luva": "roxo",
+        "bota": "preto", "cabelo": "cabelo_preto", "cachecol": "azul_tormenta", "feminino": True,
+    },
 }
+
+
+def _tom_nariz(pele, fem):
+    """O nariz acompanha o tom da pele: um tom mais escuro no Recruta e o mesmo tom na Brisa."""
+    if fem:
+        return pele
+    return {"pele_1": "pele_2", "pele_2": "pele_3", "pele_3": "pele_4", "pele_4": "pele_4"}[pele]
 
 
 def corpo(asset_id=ASSET_ID):
@@ -124,7 +148,7 @@ def corpo(asset_id=ASSET_ID):
         else:
             add(k.caixa("sobrancelha", (0.06, 0.02, 0.018), (s * 0.075, -0.186, 1.715), CABELO, rot=(0, s * -8, 0)), "Head")
     add(k.toro("faixa_oculos", 0.207 if not fem else 0.212, 0.018, (0, 0.0, 1.78), "preto", seg=14, seg_menor=4), "Head")
-    add(k.esfera("nariz", 0.026 if fem else 0.03, (0, -0.2, 1.625), "pele_2" if fem else "pele_3", segmentos=8, aneis=6), "Head")
+    add(k.esfera("nariz", 0.026 if fem else 0.03, (0, -0.2, 1.625), _tom_nariz(PELE, fem), segmentos=8, aneis=6), "Head")
     if fem:
         add(k.caixa("boca", (0.055, 0.014, 0.018), (0, -0.188, 1.572), "coral", bevel=0.005), "Head")
     else:

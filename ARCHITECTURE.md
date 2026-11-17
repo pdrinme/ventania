@@ -210,7 +210,12 @@ O item comanda as mãos, nunca o contrário. Os marcadores ficam nos modelos (`g
 - O servidor de partida (`PartidaBR._relatorio`) guarda a conta e as estatísticas de cada participante, inclusive de quem saiu depois de eliminado, e emite `GameServer.match_report`. Quem envia é o `MetaLink`.
 - O cliente só lê (`/v1/profile`, `/v1/quests`, `/v1/ledger`, `/v1/history`) e só pede para equipar (`/v1/loadout`).
 
-## 6. Identidade, sessões e segurança
+### 5.3 Passe de batalha (Etapa 10)
+- Temporadas em `backend/config/seasons/*.json`, carregadas e validadas por `progressao.carregar_config` (inclui a checagem de visual dos trajes em `game/data/cosmeticos.json`).
+- Progresso em `season_progress` (conta, temporada, XP, nível).
+- `_subir_passe` roda na mesma transação do relatório. As recompensas usam as chaves `passe:<temporada>:<nível>:<conta>` (Faíscas) e a origem `passe:<temporada>:<nível>` (itens), então nada é entregue duas vezes.
+- Os desafios da temporada reaproveitam `quest_progress`, com período = id da temporada.
+- `/v1/season` devolve o passe pronto para a interface.
 
 - **Conta:** nome de usuário e senha (PBKDF2-SHA256 com salt e 200k iterações). O token de sessão é aleatório e fica guardado no cliente. Não há e-mail nem dados pessoais.
 - **Ticket de partida:** quando o matchmaking fecha uma partida, o meta-servidor emite tickets assinados com HMAC (contendo jogador, partida, expiração e cosméticos equipados). O servidor de partida valida o ticket sem confiar no cliente.

@@ -3,7 +3,14 @@
   "traje_padrao": "traje_recruta",
   "trajes": {
     "traje_recruta": "res://assets/personagens/recruta_base_01.glb",
-    "traje_brisa": "res://assets/personagens/recruta_brisa_01.glb"
+    "traje_brisa": "res://assets/personagens/recruta_brisa_01.glb",
+    "traje_tormenta": "res://assets/personagens/recruta_tormenta_01.glb",
+    "traje_aurora": "res://assets/personagens/brisa_aurora_01.glb",
+    "traje_ourodesol": "res://assets/personagens/recruta_ourodesol_01.glb",
+    "traje_meianoite": "res://assets/personagens/brisa_meianoite_01.glb"
   },
-  "trajes_dos_bots": ["traje_recruta", "traje_brisa"]
+  "trajes_dos_bots": [
+    "traje_recruta",
+    "traje_brisa"
+  ]
 }

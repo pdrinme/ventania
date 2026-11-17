@@ -12,6 +12,9 @@ passo "Ferramentas de assets (Python)"
 python3 -m unittest discover -s tools/assets/tests 2>&1 | tail -2; checar "${PIPESTATUS[0]}" "assets"
 python3 tools/assets/catalog.py validar; checar $? "catálogo"
 
+passo "Temporadas do passe (validação)"
+python3 tools/validar_temporada.py | tail -3; checar "${PIPESTATUS[0]}" "temporadas"
+
 passo "Meta-servidor (Python)"
 (cd backend && python3 -m unittest discover -s tests 2>&1 | tail -2; exit "${PIPESTATUS[0]}"); checar $? "backend"
 

@@ -201,6 +201,10 @@ func get_quests() -> Dictionary:
 	return await request_json(HTTPClient.METHOD_GET, "/v1/quests")
 
 
+func get_season() -> Dictionary:
+	return await request_json(HTTPClient.METHOD_GET, "/v1/season")
+
+
 func get_ledger() -> Dictionary:
 	return await request_json(HTTPClient.METHOD_GET, "/v1/ledger")
 

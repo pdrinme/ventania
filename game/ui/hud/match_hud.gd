@@ -239,6 +239,9 @@ func show_progress(p: Dictionary) -> void:
 		topo += "  ·  NÍVEL %d!" % int(p["nivel"])
 	if int(p.get("faiscas", 0)) > 0:
 		topo += "  ·  +%d Faíscas" % int(p["faiscas"])
+	var passe: Variant = p.get("passe")
+	if passe is Dictionary and int(passe.get("nivel", 0)) > int(passe.get("nivel_antes", 0)):
+		topo += "  ·  PASSE NÍVEL %d" % int(passe["nivel"])
 	for d: Dictionary in p.get("desbloqueados", []):
 		linhas.append("Desbloqueado: %s" % d.get("nome", "?"))
 	_res_xp.text = topo + "\n" + "\n".join(linhas)

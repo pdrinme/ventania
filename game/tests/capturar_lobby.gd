@@ -43,6 +43,10 @@ func _init() -> void:
 	menu._abrir_perfil()
 	await _esperar(40)
 	_foto(pasta, "perfil")
+	menu._fechar_modal()
+	menu._abrir_passe()
+	await _esperar(50)
+	_foto(pasta, "passe")
 	quit()
 
 

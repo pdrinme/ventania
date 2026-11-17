@@ -1,0 +1,283 @@
+{
+  "_doc": "Temporada 1 do passe de batalha (Etapa 10). 100% gratuito. O XP de partidas, missões e desafios ganho entre 'inicio' e 'fim' (UTC) sobe o passe; cada nível entrega a recompensa na hora. Validar com: python3 tools/validar_temporada.py",
+  "id": "t1",
+  "nome": "Temporada 1: Primeiros Ventos",
+  "inicio": "2026-11-17T00:00:00Z",
+  "fim": "2027-01-05T00:00:00Z",
+  "xp_por_nivel": 1450,
+  "recompensas": [
+    {
+      "nivel": 1,
+      "faiscas": 50
+    },
+    {
+      "nivel": 2,
+      "faiscas": 60
+    },
+    {
+      "nivel": 3,
+      "faiscas": 30
+    },
+    {
+      "nivel": 4,
+      "faiscas": 60
+    },
+    {
+      "nivel": 5,
+      "faiscas": 30
+    },
+    {
+      "nivel": 6,
+      "faiscas": 60
+    },
+    {
+      "nivel": 7,
+      "faiscas": 30
+    },
+    {
+      "nivel": 8,
+      "item": "traje_tormenta"
+    },
+    {
+      "nivel": 9,
+      "faiscas": 30
+    },
+    {
+      "nivel": 10,
+      "faiscas": 150
+    },
+    {
+      "nivel": 11,
+      "faiscas": 30
+    },
+    {
+      "nivel": 12,
+      "faiscas": 60
+    },
+    {
+      "nivel": 13,
+      "faiscas": 30
+    },
+    {
+      "nivel": 14,
+      "faiscas": 60
+    },
+    {
+      "nivel": 15,
+      "faiscas": 30
+    },
+    {
+      "nivel": 16,
+      "faiscas": 60
+    },
+    {
+      "nivel": 17,
+      "faiscas": 30
+    },
+    {
+      "nivel": 18,
+      "item": "traje_aurora"
+    },
+    {
+      "nivel": 19,
+      "faiscas": 30
+    },
+    {
+      "nivel": 20,
+      "faiscas": 150
+    },
+    {
+      "nivel": 21,
+      "faiscas": 30
+    },
+    {
+      "nivel": 22,
+      "faiscas": 60
+    },
+    {
+      "nivel": 23,
+      "faiscas": 30
+    },
+    {
+      "nivel": 24,
+      "faiscas": 60
+    },
+    {
+      "nivel": 25,
+      "faiscas": 150
+    },
+    {
+      "nivel": 26,
+      "faiscas": 60
+    },
+    {
+      "nivel": 27,
+      "faiscas": 30
+    },
+    {
+      "nivel": 28,
+      "faiscas": 60
+    },
+    {
+      "nivel": 29,
+      "faiscas": 30
+    },
+    {
+      "nivel": 30,
+      "item": "traje_ourodesol"
+    },
+    {
+      "nivel": 31,
+      "faiscas": 30
+    },
+    {
+      "nivel": 32,
+      "faiscas": 60
+    },
+    {
+      "nivel": 33,
+      "faiscas": 30
+    },
+    {
+      "nivel": 34,
+      "faiscas": 60
+    },
+    {
+      "nivel": 35,
+      "faiscas": 30
+    },
+    {
+      "nivel": 36,
+      "faiscas": 60
+    },
+    {
+      "nivel": 37,
+      "faiscas": 30
+    },
+    {
+      "nivel": 38,
+      "faiscas": 60
+    },
+    {
+      "nivel": 39,
+      "faiscas": 30
+    },
+    {
+      "nivel": 40,
+      "faiscas": 150
+    },
+    {
+      "nivel": 41,
+      "faiscas": 30
+    },
+    {
+      "nivel": 42,
+      "faiscas": 60
+    },
+    {
+      "nivel": 43,
+      "faiscas": 30
+    },
+    {
+      "nivel": 44,
+      "faiscas": 60
+    },
+    {
+      "nivel": 45,
+      "faiscas": 150
+    },
+    {
+      "nivel": 46,
+      "faiscas": 60
+    },
+    {
+      "nivel": 47,
+      "faiscas": 30
+    },
+    {
+      "nivel": 48,
+      "faiscas": 60
+    },
+    {
+      "nivel": 49,
+      "faiscas": 30
+    },
+    {
+      "nivel": 50,
+      "item": "traje_meianoite"
+    }
+  ],
+  "desafios": [
+    {
+      "id": "t1_partidas_50",
+      "titulo": "Jogue 50 partidas",
+      "tipo": "partidas",
+      "meta": 50,
+      "xp": 1500,
+      "faiscas": 100
+    },
+    {
+      "id": "t1_elim_100",
+      "titulo": "Elimine 100 adversários",
+      "tipo": "eliminacoes",
+      "meta": 100,
+      "xp": 2000,
+      "faiscas": 100
+    },
+    {
+      "id": "t1_baus_150",
+      "titulo": "Abra 150 baús",
+      "tipo": "baus",
+      "meta": 150,
+      "xp": 1500,
+      "faiscas": 100
+    },
+    {
+      "id": "t1_vitorias_5",
+      "titulo": "Vença 5 partidas",
+      "tipo": "vitorias",
+      "meta": 5,
+      "xp": 2500,
+      "faiscas": 200
+    },
+    {
+      "id": "t1_top10_25",
+      "titulo": "Fique entre os 10 melhores 25 vezes",
+      "tipo": "top10",
+      "meta": 25,
+      "xp": 1500,
+      "faiscas": 100
+    },
+    {
+      "id": "t1_constr_1000",
+      "titulo": "Construa 1.000 peças",
+      "tipo": "construcoes",
+      "meta": 1000,
+      "xp": 1000,
+      "faiscas": 100
+    },
+    {
+      "id": "t1_dano_10000",
+      "titulo": "Cause 10.000 de dano",
+      "tipo": "dano",
+      "meta": 10000,
+      "xp": 1500,
+      "faiscas": 100
+    },
+    {
+      "id": "t1_coleta_10000",
+      "titulo": "Colete 10.000 materiais",
+      "tipo": "coleta",
+      "meta": 10000,
+      "xp": 1000,
+      "faiscas": 100
+    }
+  ],
+  "estimativa": {
+    "_doc": "Usado só pela ferramenta de validação para estimar as horas até o nível máximo (meta do GAME_DESIGN: 25–30 h).",
+    "xp_por_hora_jogando": 1125,
+    "dias_jogados_por_semana": 4,
+    "diarias_concluidas_por_dia": 2,
+    "semanais_concluidas_por_semana": 4
+  }
+}
