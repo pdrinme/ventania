@@ -38,9 +38,52 @@ var _nome := ""
 var _hello_enviado := false
 var _inicio := 0.0
 var _encerrado := false
+# Etapa 7: reconexão, medição de banda e simulador de rede ruim
+var token := 0                 # ficha de sessão do servidor (WELCOME)
+var host_atual := ""
+var porta_atual := 0
+var bytes_env := 0             # carga útil (sem cabeçalhos do ENet/UDP)
+var bytes_rec := 0
+var lag_ms := 0                # simulador: atraso de ida (e de volta)
+var jitter_ms := 0
+var perda := 0.0               # 0..1, só pacotes não confiáveis (os confiáveis o ENet reenvia)
+var _fila_env: Array = []      # [hora_ms, dados, confiavel, canal]
+var _fila_rec: Array = []      # [hora_ms, dados]
+var _rng := RandomNumberGenerator.new()
+
+
+## Lê --lag=MS, --jitter=MS e --perda=PCT da linha de comando (testes de rede ruim).
+func simulate_from_args(args: PackedStringArray) -> void:
+	for a in args:
+		if a.begins_with("--lag="):
+			lag_ms = maxi(0, a.trim_prefix("--lag=").to_int())
+		elif a.begins_with("--jitter="):
+			jitter_ms = maxi(0, a.trim_prefix("--jitter=").to_int())
+		elif a.begins_with("--perda="):
+			perda = clampf(a.trim_prefix("--perda=").to_float() / 100.0, 0.0, 0.9)
+
+
+func simulating() -> bool:
+	return lag_ms > 0 or jitter_ms > 0 or perda > 0.0
+
+
+## Reconecta ao mesmo servidor apresentando a ficha: volta o mesmo personagem.
+func reconnect() -> Error:
+	if host_atual.is_empty():
+		return ERR_UNCONFIGURED
+	if peer:
+		peer.close()
+	_fila_env.clear()
+	_fila_rec.clear()
+	return connect_to(host_atual, porta_atual, _nome)
 
 
 func connect_to(host: String, porta: int, nome: String) -> Error:
+	host_atual = host
+	porta_atual = porta
+	connected = false
+	_encerrado = false
+	_hello_enviado = false
 	peer = ENetMultiplayerPeer.new()
 	var e := peer.create_client(host, porta, 3, 0, 0)
 	if e != OK:
@@ -48,8 +91,9 @@ func connect_to(host: String, porta: int, nome: String) -> Error:
 	peer.host.bandwidth_limit(0, 0)   # ver GameServer.start: evita descarte de pacotes pelo ENet
 	_nome = nome
 	_inicio = Time.get_ticks_msec() / 1000.0
+	var este := peer
 	peer.peer_disconnected.connect(func(_id):
-		if not _encerrado:
+		if not _encerrado and este == peer:
 			_encerrado = true
 			connected = false
 			disconnected.emit())
@@ -64,14 +108,41 @@ func poll() -> void:
 	if status == MultiplayerPeer.CONNECTION_CONNECTED and not _hello_enviado:
 		_hello_enviado = true
 		Protocol.configure_peer(peer.get_peer(1))
-		_enviar(Protocol.pack_hello(_nome), true, Protocol.CH_RELIABLE)
+		_enviar(Protocol.pack_hello(_nome, token), true, Protocol.CH_RELIABLE)
 	elif status != MultiplayerPeer.CONNECTION_CONNECTED and not connected \
 			and Time.get_ticks_msec() / 1000.0 - _inicio > TEMPO_CONEXAO_S:
 		_encerrado = true
 		rejected.emit("O servidor não respondeu. Confira o endereço e se ele está ligado.")
 		return
+	var agora := Time.get_ticks_msec()
 	while peer and peer.get_available_packet_count() > 0:
-		_receber(peer.get_packet())
+		var confiavel := peer.get_packet_mode() == MultiplayerPeer.TRANSFER_MODE_RELIABLE
+		var d := peer.get_packet()
+		bytes_rec += d.size()
+		if simulating():
+			if not confiavel and _rng.randf() < perda:
+				continue
+			var t := agora + _atraso()
+			if not _fila_rec.is_empty():
+				t = maxi(t, _fila_rec[-1][0])
+			_fila_rec.append([t, d])
+		else:
+			_receber(d)
+	if simulating():
+		_escoar(agora)
+
+
+func _atraso() -> int:
+	return lag_ms + (_rng.randi_range(0, jitter_ms) if jitter_ms > 0 else 0)
+
+
+## Entrega/envia o que já "chegou" (a ordem é mantida: o atraso nunca ultrapassa o anterior).
+func _escoar(agora: int) -> void:
+	while not _fila_env.is_empty() and _fila_env[0][0] <= agora and peer:
+		var e: Array = _fila_env.pop_front()
+		_enviar_ja(e[1], e[2], e[3])
+	while not _fila_rec.is_empty() and _fila_rec[0][0] <= agora and not _encerrado:
+		_receber(_fila_rec.pop_front()[1])
 
 
 func _receber(dados: PackedByteArray) -> void:
@@ -80,6 +151,7 @@ func _receber(dados: PackedByteArray) -> void:
 			var w := Protocol.unpack_welcome(dados)
 			if not w.is_empty():
 				my_id = w["id"]
+				token = w.get("token", 0)
 				connected = true
 				welcomed.emit(w)
 		Protocol.S_REJECT:
@@ -197,13 +269,62 @@ func rtt_ms() -> int:
 	return int(p.get_statistic(ENetPacketPeer.PEER_ROUND_TRIP_TIME)) if p else -1
 
 
-func close() -> void:
+## Fecha a conexão. `despedida`: avisa o servidor que é uma saída de propósito
+## (sem isso, o servidor guarda o lugar por 60 s esperando reconexão). A
+## despedida tem que chegar antes da desconexão (o ENet descarta o que chega
+## depois), então a conexão passa para um nó auxiliar que a mantém até o
+## servidor confirmar (no máximo 1 s), mesmo que este GameClient seja liberado.
+func close(despedida := true) -> void:
+	var estava := connected
 	_encerrado = true
-	if peer:
-		peer.close()
+	connected = false
+	_fila_env.clear()
+	_fila_rec.clear()
+	if peer == null:
+		return
+	var tree := Engine.get_main_loop() as SceneTree
+	if despedida and estava and peer.get_peer(1) and tree:
+		_enviar_ja(PackedByteArray([Protocol.C_BYE]), true, Protocol.CH_RELIABLE)
+		for con in peer.peer_disconnected.get_connections():
+			peer.peer_disconnected.disconnect(con["callable"])
+		peer.get_peer(1).peer_disconnect_later()
+		var d := _Despedida.new()
+		d.peer = peer
+		tree.root.add_child.call_deferred(d)
+		peer = null
+		return
+	peer.close()
+	peer = null
+
+
+class _Despedida:
+	extends Node
+	var peer: ENetMultiplayerPeer
+	var t := 0.0
+
+	func _process(dt: float) -> void:
+		t += dt
+		peer.poll()
+		if t > 1.0 or peer.get_connection_status() == MultiplayerPeer.CONNECTION_DISCONNECTED:
+			peer.close()
+			queue_free()
 
 
 func _enviar(dados: PackedByteArray, confiavel: bool, canal: int) -> void:
+	if simulating():
+		if not confiavel and _rng.randf() < perda:
+			bytes_env += dados.size()
+			return
+		var t := Time.get_ticks_msec() + _atraso()
+		if not _fila_env.is_empty():
+			t = maxi(t, _fila_env[-1][0])
+		_fila_env.append([t, dados, confiavel, canal])
+		return
+	_enviar_ja(dados, confiavel, canal)
+
+
+func _enviar_ja(dados: PackedByteArray, confiavel: bool, canal: int) -> void:
+	bytes_env += dados.size()
 	peer.set_target_peer(1)
 	peer.set_transfer_channel(canal)
 	peer.transfer_mode = MultiplayerPeer.TRANSFER_MODE_RELIABLE if confiavel else MultiplayerPeer.TRANSFER_MODE_UNRELIABLE_ORDERED

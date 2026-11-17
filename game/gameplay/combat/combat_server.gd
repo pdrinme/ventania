@@ -169,14 +169,14 @@ func _golpe(c: GameServer.Cliente, cmd: Protocol.InputCmd) -> void:
 	if not melhor.is_empty():
 		var ponto: Vector3 = origem + d * float(melhor["t"])
 		c.melee_hits += 1
-		server.broadcast(Protocol.pack_melee({"swinger": c.id, "pos": ponto, "normal": -d, "material": ImpactMaterial.JOGADOR,
-				"flags": Protocol.MELEE_PLAYER, "target": melhor["alvo"]["id"]}), true)
+		server.broadcast_near(origem, Protocol.pack_melee({"swinger": c.id, "pos": ponto, "normal": -d, "material": ImpactMaterial.JOGADOR,
+				"flags": Protocol.MELEE_PLAYER, "target": melhor["alvo"]["id"]}), true, -1, 160.0)
 		_aplicar_dano(c, melhor["alvo"], int(ItemDB.tool_def(Inventory.PICKAXE_ID)["dano_jogador"]), false, ponto, Inventory.PICKAXE_ID)
 		return
 	if mundo.is_empty():
 		return
 	c.melee_hits += 1
-	server.broadcast(Protocol.pack_melee({"swinger": c.id, "pos": mundo["pos"], "normal": mundo["normal"], "material": mundo["material"]}), true)
+	server.broadcast_near(origem, Protocol.pack_melee({"swinger": c.id, "pos": mundo["pos"], "normal": mundo["normal"], "material": mundo["material"]}), true, -1, 160.0)
 	# Etapa 5: dano nas construções e coleta de materiais
 	server.build.on_pickaxe(c, mundo["collider"], mundo["material"])
 	server.melee_hit.emit(c.id, mundo["collider"], mundo["material"], mundo["pos"])
@@ -374,7 +374,7 @@ func _disparar(c: GameServer.Cliente, cmd: Protocol.InputCmd, s: Inventory.Slot,
 		reg["dano"] += Combat.pellet_damage(s.item, s.rarity, melhor["head"])
 		reg["cabeca"] = reg["cabeca"] or melhor["head"]
 		danos[aid] = reg
-	server.broadcast_except(c.peer_id, Protocol.pack_shot(c.id, raio["origin"], fins), false)
+	server.broadcast_near(raio["origin"], Protocol.pack_shot(c.id, raio["origin"], fins), false, c.peer_id)
 	server.bots_hear(c)
 	for reg in danos.values():
 		_aplicar_dano(c, reg["alvo"], reg["dano"], reg["cabeca"], reg["pos"], s.item)

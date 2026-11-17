@@ -16,6 +16,14 @@ const ESPERA_MAX := 6        # ticks esperando entrada antes de simular sem ela 
 const DUMMY_ID_BASE := 60001
 const MAX_OPS_INV_S := 12    # operações de inventário por segundo (evita spam)
 const MAX_BUILD_S := 15      # peças/edições por segundo (construção rápida, sem spam)
+# Etapa 7: robustez da rede
+const JANELA_RECONEXAO_S := 60     # quem cai fica no jogo (parado) este tempo esperando reconectar
+const MAX_PACOTES_S := 240         # acima disso, pacotes do segundo são ignorados
+const EXPULSAR_PACOTES_S := 900    # inundação: expulsa
+const MAX_INVALIDOS := 40          # pacotes malformados até expulsar
+const RELEVANCIA_M := 250.0        # snapshots: só entidades até esta distância
+const RELEVANCIA_PERTO_M := 120.0  # entre PERTO e RELEVANCIA: metade da frequência
+const TIRO_AUDIVEL_M := 320.0      # traçantes/golpes só para quem está perto
 
 class Cliente:
 	var peer_id := 0
@@ -45,6 +53,16 @@ class Cliente:
 	var interact_chest := -1
 	var aiming := false
 	var bot: BotCerebro = null      # bot do servidor (sem conexão); null = humano
+	var token := 0                  # ficha de sessão (reconexão)
+	var desconectado_tick := -1     # >= 0: caiu e está esperando reconectar
+	var bytes_env := 0              # banda (só a carga útil dos pacotes, sem o cabeçalho do ENet)
+	var bytes_rec := 0
+	var pacotes_janela := 0
+	var pacotes_na_janela := 0
+	var invalidos := 0
+	var expulso := false
+	var bytes_env_rel := 0          # posição no último relatório
+	var bytes_rec_rel := 0
 	var stats := {}                 # métricas da partida (saques, curas, dano, Tormenta…)
 	# picareta (relógio = simulados)
 	var swing_start := -1.0
@@ -81,6 +99,10 @@ var tempo_tick_us := 0       # custo acumulado do tick inteiro (diagnóstico)
 var ticks_medidos := 0
 var _proximo_bot := 0
 var _rng_nomes := RandomNumberGenerator.new()   # semente aleatória: nomes novos a cada partida
+var max_jogadores := 16      # humanos por sala (sala cheia = recusa com mensagem)
+var outras_salas := ""       # dica na recusa de sala cheia (ex.: "porta 24801")
+var expulsos := 0            # diagnóstico/testes
+var reconexoes := 0
 var kit_inicial := true      # treino: reaparece com uma pistola e munição
 var _proximo_id := 1
 var _spawns := 0
@@ -117,7 +139,7 @@ func _ready() -> void:
 func start(porta: int, bind_ip := "*") -> Error:
 	peer = ENetMultiplayerPeer.new()
 	peer.set_bind_ip(bind_ip)
-	var e := peer.create_server(porta, Protocol.MAX_PLAYERS, 3, 0, 0)
+	var e := peer.create_server(porta, Protocol.MAX_PLAYERS + 4, 3, 0, 0)   # folga: recusar "sala cheia" com mensagem e reconexões
 	if e != OK:
 		return e
 	# Banda "ilimitada" explícita: sem isso o ajuste de banda do ENet (a cada 1 s)
@@ -139,9 +161,27 @@ func _physics_process(dt: float) -> void:
 	if peer == null:
 		return
 	peer.poll()
-	while peer.get_available_packet_count() > 0:
+	while peer and peer.get_available_packet_count() > 0:
 		var de := peer.get_packet_peer()
-		_receber(de, peer.get_packet())
+		var dados := peer.get_packet()
+		var c: Cliente = clientes.get(de)
+		if c:
+			if c.expulso:
+				continue
+			c.bytes_rec += dados.size()
+			if tick - c.pacotes_janela >= Protocol.TICK_RATE:
+				c.pacotes_janela = tick
+				c.pacotes_na_janela = 0
+			c.pacotes_na_janela += 1
+			if c.pacotes_na_janela > EXPULSAR_PACOTES_S:
+				_expulsar(de, "Pacotes demais (inundação).")
+				continue
+			if c.pacotes_na_janela > MAX_PACOTES_S:
+				continue
+		if not _receber(de, dados) and c:
+			c.invalidos += 1
+			if c.invalidos > MAX_INVALIDOS:
+				_expulsar(de, "Pacotes inválidos.")
 	tick += 1
 	var t0 := Time.get_ticks_usec()
 	var cfg_bots := BotCerebro.config()
@@ -157,6 +197,7 @@ func _physics_process(dt: float) -> void:
 			_simular(c, dt)
 			if c.dead and tick >= c.respawn_tick and partida == null:
 				_reviver(c)
+	_expirar_desconectados()
 	combat.update_dummies()
 	loot.update(tick)
 	build.update()
@@ -204,22 +245,35 @@ func _simular(c: Cliente, dt: float) -> void:
 		combat.eliminate(c, c.id, "")
 
 
-func _receber(de: int, dados: PackedByteArray) -> void:
+## Trata um pacote. Retorna false se ele for malformado/indevido (conta para expulsão).
+func _receber(de: int, dados: PackedByteArray) -> bool:
 	var c: Cliente = clientes.get(de)
 	match Protocol.msg_type(dados):
 		Protocol.C_HELLO:
 			if c and c.pawn:
-				return
+				return false
 			var h := Protocol.unpack_hello(dados)
 			if h.is_empty() or h["protocol"] != Protocol.GAME_PROTOCOL:
 				send_to(de, Protocol.pack_reject("Versão do jogo diferente da do servidor. Atualize o jogo."), true)
-				peer.disconnect_peer(de, false)
-				return
+				_desligar(de)
+				return true
+			if h["token"] != 0 and _reconectar(de, h["token"]):
+				return true
+			if humanos() >= max_jogadores:
+				var dica := (" Tente outra sala: %s." % outras_salas) if not outras_salas.is_empty() else ""
+				send_to(de, Protocol.pack_reject("Sala cheia (%d jogadores).%s" % [max_jogadores, dica]), true)
+				_desligar(de)
+				return true
 			_entrar(de, _limpar_nome(h["name"]))
 		Protocol.C_INPUT:
 			if c == null or c.pawn == null:
-				return
-			for cmd: Protocol.InputCmd in Protocol.unpack_inputs(dados):
+				return false
+			var lista := Protocol.unpack_inputs(dados)
+			if lista.is_empty():
+				return false
+			for cmd: Protocol.InputCmd in lista:
+				if c.ultimo_seq < 0:
+					c.ultimo_seq = cmd.seq - 1          # reconectou: continua da sequência do cliente
 				if cmd.seq <= c.ultimo_seq or cmd.seq > c.ultimo_seq + 1000:
 					continue
 				if c.fila.any(func(x): return x.seq == cmd.seq):
@@ -232,7 +286,7 @@ func _receber(de: int, dados: PackedByteArray) -> void:
 				c.descartados += 1
 		Protocol.C_BUILD, Protocol.C_EDIT:
 			if c == null or c.pawn == null:
-				return
+				return false
 			if tick - c.build_janela >= Protocol.TICK_RATE:
 				c.build_janela = tick
 				c.build_na_janela = 0
@@ -240,26 +294,35 @@ func _receber(de: int, dados: PackedByteArray) -> void:
 			var lim := c.build_na_janela > MAX_BUILD_S
 			if Protocol.msg_type(dados) == Protocol.C_BUILD:
 				var b := Protocol.unpack_build(dados)
-				if not b.is_empty():
-					var r := Inventory.Err.BUSY if lim else build.try_build(c, b)
-					send_to(de, Protocol.pack_inv_result(b["req"], Protocol.OP_BUILD, r), true)
+				if b.is_empty():
+					return false
+				var r := Inventory.Err.BUSY if lim else build.try_build(c, b)
+				send_to(de, Protocol.pack_inv_result(b["req"], Protocol.OP_BUILD, r), true)
 			else:
 				var ed := Protocol.unpack_edit(dados)
-				if not ed.is_empty():
-					var r := Inventory.Err.BUSY if lim else build.try_edit(c, ed["id"], ed["mask"])
-					send_to(de, Protocol.pack_inv_result(ed["req"], Protocol.OP_EDIT, r), true)
+				if ed.is_empty():
+					return false
+				var r := Inventory.Err.BUSY if lim else build.try_edit(c, ed["id"], ed["mask"])
+				send_to(de, Protocol.pack_inv_result(ed["req"], Protocol.OP_EDIT, r), true)
 		Protocol.C_INV:
 			if c == null or c.pawn == null:
-				return
+				return false
 			var op := Protocol.unpack_inv(dados)
 			if op.is_empty():
-				return
+				return false
 			if tick - c.ops_janela >= Protocol.TICK_RATE:
 				c.ops_janela = tick
 				c.ops_na_janela = 0
 			c.ops_na_janela += 1
 			var r := Inventory.Err.BUSY if c.ops_na_janela > MAX_OPS_INV_S else combat.inventory_op(c, op)
 			send_to(de, Protocol.pack_inv_result(op["req"], op["op"], r), true)
+		Protocol.C_BYE:
+			if c:
+				c.token = 0               # saiu de propósito: a desconexão a seguir é saída
+
+		_:
+			return false
+	return true
 
 
 func _entrar(de: int, nome: String) -> void:
@@ -268,6 +331,8 @@ func _entrar(de: int, nome: String) -> void:
 	c.id = _proximo_id
 	_proximo_id = (_proximo_id % 60000) + 1
 	c.nome = nome
+	c.token = (_rng_nomes.randi() << 31) ^ _rng_nomes.randi() ^ (Time.get_ticks_usec() << 8)
+	c.token = absi(c.token) | 1
 	c.pawn = Pawn.new()
 	c.pawn.entity_id = c.id
 	c.pawn.name = "pawn_%d" % c.id
@@ -277,7 +342,14 @@ func _entrar(de: int, nome: String) -> void:
 	_dar_kit(c)
 	if partida:
 		partida.on_join(c)
-	send_to(de, Protocol.pack_welcome(c.id, tick, world.map_name()), true)
+	send_to(de, Protocol.pack_welcome(c.id, tick, world.map_name(), c.token), true)
+	_estado_completo(de, c)
+	_log("entrou: %s (id %d)" % [nome, c.id])
+	player_joined.emit(c.id, nome)
+
+
+## Tudo que um cliente precisa ao entrar (ou ao reconectar): nomes, loot, construções.
+func _estado_completo(de: int, c: Cliente) -> void:
 	for outro: Cliente in clientes.values():
 		send_to(de, Protocol.pack_player_info(outro.id, outro.nome), true)
 		if outro.peer_id != de:
@@ -288,8 +360,74 @@ func _entrar(de: int, nome: String) -> void:
 		send_to(de, m, true)
 	for m in build.full_state():
 		send_to(de, m, true)
-	_log("entrou: %s (id %d)" % [nome, c.id])
-	player_joined.emit(c.id, nome)
+
+
+## Reconexão: a ficha devolve o mesmo personagem (id, inventário, posição, partida).
+func _reconectar(de: int, token: int) -> bool:
+	var c: Cliente = null
+	for o: Cliente in clientes.values():
+		if o.token == token and o.pawn and o.bot == null and o.peer_id != de:
+			c = o
+	if c == null:
+		return false
+	if c.desconectado_tick < 0 and c.peer_id > 0:
+		# a conexão antiga ainda não expirou no ENet (queda de rede): a nova assume
+		var antigo := c.peer_id
+		clientes.erase(antigo)
+		peer.disconnect_peer(antigo, true)
+	clientes.erase(c.peer_id)
+	clientes.erase(de)                  # o registro provisório criado em _on_conectou
+	c.peer_id = de
+	c.desconectado_tick = -1
+	c.fila.clear()
+	c.ultimo_seq = -1
+	c.esperando = 0
+	c.invalidos = 0
+	clientes[de] = c
+	reconexoes += 1
+	send_to(de, Protocol.pack_welcome(c.id, tick, world.map_name(), c.token, true), true)
+	_estado_completo(de, c)
+	if partida:
+		send_to(de, Protocol.pack_match(partida.match_dict()), true)
+		if partida.tormenta:
+			send_to(de, Protocol.pack_storm(partida.tormenta.to_dict()), true)
+		if partida.onibus and partida.estado == Protocol.MATCH_ONIBUS:
+			send_to(de, Protocol.pack_bus(partida.onibus.to_dict()), true)
+	c.dirty = true
+	_log("reconectou: %s (id %d)" % [c.nome, c.id])
+	return true
+
+
+func _expulsar(de: int, motivo: String) -> void:
+	var c: Cliente = clientes.get(de)
+	if c and c.expulso:
+		return
+	expulsos += 1
+	_log("expulso (peer %d): %s" % [de, motivo])
+	send_to(de, Protocol.pack_reject(motivo), true)
+	if c:
+		c.expulso = true                # nada mais é enviado nem recebido dele
+		c.token = 0                     # sem reconexão
+	_desligar(de)
+
+
+## Desconecta depois de entregar o que está na fila (a mensagem de recusa chega).
+func _desligar(de: int) -> void:
+	var p := peer.get_peer(de)
+	if p:
+		p.peer_disconnect_later()
+
+
+## Quem caiu e não voltou na janela de reconexão sai de vez.
+func _expirar_desconectados() -> void:
+	for c: Cliente in clientes.values().duplicate():
+		if c.desconectado_tick >= 0 and tick - c.desconectado_tick > JANELA_RECONEXAO_S * Protocol.TICK_RATE:
+			clientes.erase(c.peer_id)
+			_sair(c)
+
+
+func humanos() -> int:
+	return clientes.values().filter(func(c): return c.pawn != null and c.bot == null).size()
 
 
 func _dar_kit(c: Cliente) -> void:
@@ -329,15 +467,28 @@ func _on_conectou(id: int) -> void:
 func _on_desconectou(id: int) -> void:
 	var c: Cliente = clientes.get(id)
 	clientes.erase(id)
+	var em_jogo := partida == null or partida.estado == Protocol.MATCH_ONIBUS or partida.estado == Protocol.MATCH_JOGO
+	if c and c.pawn and c.token != 0 and not c.dead and em_jogo:
+		# fica no jogo esperando reconectar (parado; o servidor simula sem entradas)
+		c.desconectado_tick = tick
+		c.peer_id = -(200000 + c.id)
+		c.fila.clear()
+		clientes[c.peer_id] = c
+		_log("caiu: %s (id %d) — aguardando reconexão por %d s" % [c.nome, c.id, JANELA_RECONEXAO_S])
+		return
 	if c and c.pawn:
-		if partida:
-			partida.on_leave(c)
-		if not c.dead:
-			loot.drop_inventory(c.inv, c.pawn.global_position)
-		c.pawn.queue_free()
-		broadcast(Protocol.pack_player_left(c.id), true)
-		_log("saiu: %s (id %d)" % [c.nome, c.id])
-		player_left.emit(c.id)
+		_sair(c)
+
+
+func _sair(c: Cliente) -> void:
+	if partida:
+		partida.on_leave(c)
+	if not c.dead:
+		loot.drop_inventory(c.inv, c.pawn.global_position)
+	c.pawn.queue_free()
+	broadcast(Protocol.pack_player_left(c.id), true)
+	_log("saiu: %s (id %d)" % [c.nome, c.id])
+	player_left.emit(c.id)
 
 
 func _status(c: Cliente) -> Dictionary:
@@ -383,14 +534,48 @@ func _enviar_snapshots() -> void:
 		var e: Protocol.EntityState = (b["pawn"] as Pawn).to_state()
 		e.flags |= Protocol.F_DUMMY | Protocol.F_ON_FLOOR
 		estados.append(e)
+	var meia := tick % (Protocol.SNAPSHOT_EVERY * 2) == 0
 	for c: Cliente in clientes.values():
-		if c.pawn:
-			send_to(c.peer_id, Protocol.pack_snapshot(tick, c.ultimo_seq, estados), false, Protocol.CH_SNAPSHOT)
+		if c.pawn and c.peer_id > 0:
+			var lista := estados if c.dead else _relevantes(c, estados, meia)
+			send_to(c.peer_id, Protocol.pack_snapshot(tick, maxi(0, c.ultimo_seq), lista), false, Protocol.CH_SNAPSHOT)
+
+
+## Relevância (interest management): o próprio jogador sempre; outros até
+## RELEVANCIA_M; os de longe (> PERTO) só em metade dos snapshots. Quem está
+## eliminado assiste e recebe todos.
+static func relevant(distancia: float, eu: bool, meia: bool) -> bool:
+	if eu:
+		return true
+	if distancia > RELEVANCIA_M:
+		return false
+	return distancia <= RELEVANCIA_PERTO_M or meia
+
+
+func _relevantes(c: Cliente, estados: Array, meia: bool) -> Array:
+	var p := c.pawn.global_position
+	var out := []
+	for e: Protocol.EntityState in estados:
+		if relevant(Vector2(e.position.x - p.x, e.position.z - p.z).length(), e.id == c.id, meia):
+			out.append(e)
+	return out
+
+
+## Para quem está perto de `pos` (tiros, golpes): os de longe não precisam.
+func broadcast_near(pos: Vector3, dados: PackedByteArray, confiavel: bool, exceto := -1, raio := TIRO_AUDIVEL_M) -> void:
+	for c: Cliente in clientes.values():
+		if c.pawn and c.peer_id > 0 and c.peer_id != exceto and (c.dead or c.pawn.global_position.distance_to(pos) <= raio):
+			send_to(c.peer_id, dados, confiavel, Protocol.CH_RELIABLE if confiavel else Protocol.CH_SNAPSHOT)
 
 
 func send_to(para: int, dados: PackedByteArray, confiavel: bool, canal := Protocol.CH_RELIABLE) -> void:
 	if peer == null or para <= 0:
-		return                       # bots não têm conexão
+		return                       # bots e quem caiu não têm conexão
+	var c: Cliente = clientes.get(para)
+	if c:
+		if c.expulso:
+			return
+		c.bytes_env += dados.size()
 	peer.set_target_peer(para)
 	peer.set_transfer_channel(canal)
 	peer.transfer_mode = MultiplayerPeer.TRANSFER_MODE_RELIABLE if confiavel else MultiplayerPeer.TRANSFER_MODE_UNRELIABLE_ORDERED
@@ -501,6 +686,37 @@ func respawn_lobby(c: Cliente) -> void:
 
 func log_msg(msg: String) -> void:
 	_log(msg)
+
+
+## Banda por cliente humano conectado desde o último relatório (kbit/s de carga
+## útil; o ENet acrescenta ~28-40 bytes de cabeçalho UDP/ENet por pacote).
+func bandwidth(segundos: float, zerar := true) -> Dictionary:
+	var por := {}
+	for c: Cliente in clientes.values():
+		if c.pawn == null or c.bot != null or c.peer_id <= 0:
+			continue
+		por[c.id] = {"nome": c.nome,
+				"desce_kbps": (c.bytes_env - c.bytes_env_rel) * 8.0 / 1000.0 / maxf(segundos, 0.001),
+				"sobe_kbps": (c.bytes_rec - c.bytes_rec_rel) * 8.0 / 1000.0 / maxf(segundos, 0.001)}
+		if zerar:
+			c.bytes_env_rel = c.bytes_env
+			c.bytes_rec_rel = c.bytes_rec
+	return por
+
+
+func report(segundos: float) -> String:
+	var b := bandwidth(segundos)
+	var desce := b.values().map(func(x): return x["desce_kbps"])
+	var media := 0.0
+	for v in desce:
+		media += v
+	media /= maxf(1.0, desce.size())
+	var tick_ms := tempo_tick_us / 1000.0 / maxf(1.0, ticks_medidos)
+	tempo_tick_us = 0
+	ticks_medidos = 0
+	return "%d humano(s), %d bot(s), %s; banda/cliente média %.1f kbit/s (máx %.1f); tick %.2f ms; reconexões %d; expulsos %d" % [
+			humanos(), bots().size(), partida.estado_nome() if partida else "treino", media,
+			desce.max() if not desce.is_empty() else 0.0, tick_ms, reconexoes, expulsos]
 
 
 func player_count() -> int:

@@ -46,6 +46,9 @@ var _nomes := {}
 var _ultimo_tick := 0
 var _ultimo_tick_t := 0.0
 var _info_t := 0.0
+var _banda_t := 0.0
+var _banda_rec := 0
+var _banda_env := 0
 var _correcoes := 0                 # reconciliações com erro > 5 cm (diagnóstico)
 var _saindo := false
 var local_port := 0                 # porta do servidor local (treino)
@@ -138,8 +141,9 @@ func _ready() -> void:
 	client = GameClient.new()
 	add_child(client)
 	client.welcomed.connect(_on_welcome)
-	client.rejected.connect(func(r): _falhar(r))
-	client.disconnected.connect(func(): _falhar("Conexão com o servidor perdida."))
+	client.simulate_from_args(OS.get_cmdline_user_args())
+	client.rejected.connect(_on_recusa)
+	client.disconnected.connect(_on_queda)
 	client.snapshot_received.connect(_on_snapshot)
 	client.player_info.connect(func(id, nome):
 		_nomes[id] = nome
@@ -209,7 +213,58 @@ func _subir_servidor_local() -> int:
 	return 0
 
 
+const RECONEXAO_JANELA_S := 55.0     # servidor guarda o lugar por 60 s
+const RECONEXAO_INTERVALO_S := 2.5
+var _reconectando := false
+var _reconexao_ini := 0.0
+
+
+## Caiu a conexão: em partida de rede tenta voltar com a ficha (mesmo personagem).
+func _on_queda() -> void:
+	if _saindo:
+		return
+	if server != null or client.token == 0 or pawn == null:
+		_falhar("Conexão com o servidor perdida.")
+		return
+	if not _reconectando:
+		_reconectando = true
+		_reconexao_ini = Time.get_ticks_msec() / 1000.0
+		Log.warn("partida", "conexão perdida; tentando reconectar")
+	_tentar_reconectar()
+
+
+func _tentar_reconectar() -> void:
+	if _saindo or not _reconectando:
+		return
+	var passou := Time.get_ticks_msec() / 1000.0 - _reconexao_ini
+	if passou > RECONEXAO_JANELA_S:
+		_falhar("Conexão com o servidor perdida (não foi possível reconectar).")
+		return
+	hud.flash("Conexão perdida — reconectando… (%d s)" % int(RECONEXAO_JANELA_S - passou), RECONEXAO_INTERVALO_S + 1.0)
+	if client.reconnect() != OK:
+		get_tree().create_timer(RECONEXAO_INTERVALO_S).timeout.connect(_tentar_reconectar)
+
+
+func _on_recusa(motivo: String) -> void:
+	if _reconectando and motivo.begins_with("O servidor não respondeu"):
+		get_tree().create_timer(0.5).timeout.connect(_tentar_reconectar)
+		return
+	_falhar(motivo)
+
+
 func _on_welcome(info: Dictionary) -> void:
+	if info.get("reconectou", false) and mundo != null:
+		# mesmo personagem: o mundo continua; o servidor manda tudo de novo
+		_reconectando = false
+		_pendentes.clear()
+		_historico.clear()
+		for id in _loot.keys():
+			_on_loot_gone(id, false)
+		if build:
+			build.on_reset()
+		hud.flash("Reconectado!", 2.0)
+		Log.info("partida", "reconectado (id %d)" % info["id"])
+		return
 	mundo = Mapa.create(info["map"])
 	add_child(mundo)
 	move_child(mundo, 0)
@@ -263,8 +318,11 @@ func _on_snapshot(s: Dictionary) -> void:
 			_set_morto(e.flags & Protocol.F_DEAD != 0)
 		else:
 			_amostra_remoto(e, s["tick"])
+	# relevância (Etapa 7): quem está longe vem em metade dos snapshots ou some
+	# deles; só remove quem ficou ~1 s sem aparecer
 	for id in _remotos.keys():
-		if not vistos.has(id):
+		var am: Array = _remotos[id]["amostras"]
+		if not vistos.has(id) and (am.is_empty() or s["tick"] - int(am[-1]["tick"]) > Protocol.TICK_RATE):
 			_remover_remoto(id)
 
 
@@ -329,7 +387,16 @@ func _process(delta: float) -> void:
 	_info_t += delta
 	if _info_t > 0.5:
 		_info_t = 0.0
-		hud.set_info(client.rtt_ms(), 1 + remote_player_count())
+		# banda medida (carga útil): ↓ recebido, ↑ enviado, em kbit/s
+		var agora := Time.get_ticks_msec() / 1000.0
+		var dt := maxf(0.001, agora - _banda_t)
+		var desce := (client.bytes_rec - _banda_rec) * 8.0 / 1000.0 / dt
+		var sobe := (client.bytes_env - _banda_env) * 8.0 / 1000.0 / dt
+		_banda_t = agora
+		_banda_rec = client.bytes_rec
+		_banda_env = client.bytes_env
+		var sim := " · sim %d ms/%d%%" % [client.lag_ms, int(client.perda * 100)] if client.simulating() else ""
+		hud.set_info(client.rtt_ms(), 1 + remote_player_count(), " · ↓%.0f ↑%.0f kbit/s%s" % [desce, sobe, sim])
 
 
 func _interpolar_remotos() -> void:

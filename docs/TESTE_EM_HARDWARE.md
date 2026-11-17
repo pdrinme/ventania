@@ -7,9 +7,11 @@ para calibrar perfis gráficos e orçamentos antes do gameplay (Etapa 2).
 
 | Plataforma | Arquivo | Como abrir |
 |---|---|---|
-| Windows 10/11 (64 bits) | `Ventania-0.3.0-windows.zip` | Extraia e abra `Ventania.exe`. O Windows pode avisar "aplicativo não reconhecido": clique em **Mais informações → Executar assim mesmo** (o executável não tem assinatura digital). |
-| Linux (64 bits) | `Ventania-0.3.0-linux.zip` | Extraia, rode `chmod +x ventania.x86_64` e depois `./ventania.x86_64`. |
-| Android | `ventania-0.3.0.apk` | Permita "instalar apps de fontes desconhecidas" e abra o arquivo. É uma versão de depuração, para teste. |
+| Windows 10/11 (64 bits) | `Ventania-0.7.0-windows.zip` | Extraia e abra `Ventania.exe`. O Windows pode avisar "aplicativo não reconhecido": clique em **Mais informações → Executar assim mesmo** (o executável não tem assinatura digital). |
+| Linux (64 bits) | `Ventania-0.7.0-linux.zip` | Extraia, rode `chmod +x ventania.x86_64` e depois `./ventania.x86_64`. |
+| Android | `ventania-0.7.0.apk` | Permita "instalar apps de fontes desconhecidas" e abra o arquivo. É uma versão de depuração, para teste. |
+| Servidor dedicado (Linux) | `VentaniaServidor-0.7.0-linux.zip` | Extraia e rode `./ventania_servidor.x86_64 --headless -- --servidor` (ver a seção 2.1). |
+| Servidor dedicado (Windows) | `VentaniaServidor-0.7.0-windows.zip` | Extraia e rode `VentaniaServidor.console.exe --headless -- --servidor` num terminal. |
 
 Requisito gráfico: OpenGL 3.3 (PC) ou OpenGL ES 3.0 (celular). Quase qualquer
 GPU integrada a partir de 2012 atende.
@@ -63,6 +65,47 @@ assiste aos outros (Atirar troca de jogador, Esc volta ao menu).
    Isso roda partidas Battle Royale. Para o campo de treino, acrescente `--modo=treino`.
 2. Libere a porta **24800 UDP** no firewall desse PC.
 3. Cada jogador vai em **Configurações → Rede**, preenche **Seu nome** e **Servidor de partida** (`IP-DO-PC:24800`) e toca em **Entrar em servidor**. Quem roda o servidor também pode jogar no mesmo PC usando `127.0.0.1:24800`.
+
+### 2.1 Servidor dedicado e salas (Etapa 7)
+
+O servidor dedicado é um executável separado, sem gráficos (bem mais leve que o
+jogo). Opções úteis:
+
+| Opção | O que faz |
+|---|---|
+| `--porta=24800` | primeira porta UDP |
+| `--salas=2` | duas partidas independentes no mesmo processo (portas 24800 e 24801) |
+| `--max-jogadores=16` | humanos por sala; acima disso o jogo mostra "Sala cheia" e indica a outra sala |
+| `--bots=16` | completa a partida com bots até esse total (`--bots=0` desliga) |
+| `--min-jogadores=2` | humanos para começar a contagem |
+| `--relatorio=30` | a cada 30 s, escreve no terminal a banda por cliente, o tempo de tick, reconexões e expulsões |
+
+Exemplo, duas salas com bots: `./ventania_servidor.x86_64 --headless -- --servidor --salas=2 --bots=16`.
+Libere no firewall as portas UDP de todas as salas (24800–24801 no exemplo).
+
+**Se a conexão cair** no meio da partida (Wi-Fi, troca para 4G, celular bloqueado),
+o personagem fica parado no mesmo lugar por até 60 s. O jogo mostra
+"Conexão perdida — reconectando…" e volta sozinho com o mesmo personagem,
+inventário e posição. Depois de 60 s sem voltar, o jogador sai da partida e
+deixa os itens no chão.
+
+**Rede ruim de propósito (teste):** o jogo aceita `--lag=120 --jitter=30 --perda=2`
+(atraso em ms, variação em ms e % de pacotes perdidos), por exemplo
+`./ventania.x86_64 -- --lag=120 --perda=2`. O canto da tela mostra "sim 120 ms/2%".
+
+### 2.2 Aceite da Etapa 7: 2 PCs + 1 Android na mesma partida
+
+1. **PC 1:** rode o servidor dedicado com `--bots=16 --relatorio=30` e anote o IP do PC (`ipconfig` / `ip addr`).
+2. **PC 1 (mesmo PC), PC 2 e o celular:** **Configurações → Rede**, um nome diferente em cada um, servidor `IP-DO-PC-1:24800`, **Entrar em servidor**.
+3. Com os 3 conectados, a contagem começa e os bots completam até 16. Joguem a partida.
+4. **Reconexão:** no meio da partida, desligue o Wi-Fi do celular por uns 10 s e ligue de novo. O jogo deve dizer "Reconectado!" e o personagem continua onde estava, com os mesmos itens. Repita num PC tirando o cabo ou desligando o Wi-Fi.
+5. **Banda:** o canto superior da tela mostra `↓ X ↑ Y kbit/s` de cada aparelho. O terminal do servidor mostra a média e o máximo por cliente a cada 30 s. Copie essas linhas e cole na conversa.
+6. Mande também: o ping de cada aparelho, se alguém "teleportou" ou travou, e o FPS do celular durante a partida.
+
+Referência medida aqui (3 clientes simulados + 13 bots, localhost): **44–56 kbit/s
+de descida e ~4 kbit/s de subida por cliente**, só a carga útil. O ENet acrescenta
+cerca de 30–40 bytes de cabeçalho por pacote, o que dá cerca de 15–20 kbit/s a mais.
+Mesmo somando, fica muito abaixo de qualquer 3G/4G ou Wi-Fi doméstico.
 
 Ligue **Configurações → Gráficos → Mostrar FPS** para ver o FPS durante a partida e me mande o número (parado, correndo e olhando para as construções).
 

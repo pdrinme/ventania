@@ -168,6 +168,16 @@ O item comanda as mãos, nunca o contrário. Os marcadores ficam nos modelos (`g
 - `NavGrade`: 150 × 150 células de 4 m com arestas bloqueadas por paredes (térreo, exceto portas), relevo e obstáculos grandes do mapa (`Mapa.nav_obstacles`). O `BuildServer` a atualiza em cada criação, edição e destruição. O A* tem limite de 6000 expansões e 2 caminhos por tick no total.
 - Métricas por jogador em `Cliente.stats` (saques, curas, dano causado, dano da Tormenta, construções), gravadas no histórico da partida. O custo de CPU fica em `GameServer.tempo_bots_us` e `tempo_tick_us`.
 
+### 4.7 Servidores, reconexão e relevância (Etapa 7, protocolo v8)
+- **Ficha de sessão:** um u64 aleatório no WELCOME.
+  - Na queda (ônibus/jogo), o `Cliente` muda para um `peer_id` negativo e fica parado; o servidor simula sem entradas.
+  - O HELLO com a ficha reassocia o `Cliente` ao novo peer e reenvia o estado (`_estado_completo` + partida/Tormenta/ônibus).
+  - Depois de `JANELA_RECONEXAO_S`, o `_sair` faz o normal: larga o inventário e avisa a partida.
+  - `C_BYE` antes de fechar marca a saída voluntária. O ENet descarta pacotes que chegam depois da desconexão, por isso o `GameClient.close` entrega a conexão a um nó auxiliar que a desliga com `peer_disconnect_later`.
+- **Limites por conexão:** pacotes por segundo (ignora acima de 240, expulsa acima de 900) e pacotes malformados (`_receber` retorna `false`; 40 expulsam). A expulsão manda o motivo e desconecta depois de entregar.
+- **Relevância:** `GameServer.relevant(dist, eu, meia)` filtra cada snapshot por cliente; `broadcast_near` limita traçantes e golpes. No cliente, um remoto só some depois de ~1 s sem aparecer.
+- **Salas:** `server_main.gd` cria N `GameServer` em `SubViewport`s com `own_world_3d`. A física e a navegação de cada sala são separadas.
+
 ## 5. Meta-servidor **[ADR-3]**
 
 - Python 3.11+ e **somente a biblioteca padrão**: `asyncio` (servidor HTTP próprio e enxuto), `sqlite3`, `hashlib` (PBKDF2), `hmac`, `secrets`, `json`, `unittest`.
@@ -291,4 +301,4 @@ de simplicidade:
 2. **Redirecionamento de portas** no roteador de quem hospeda (porta TCP do meta-servidor e faixa UDP das partidas). Exige TLS para o HTTP.
 3. **VPS barata** (1–2 vCPU, 1–2 GB de RAM).
 
-A decisão fica para a Etapa 7/12. O código não depende dela.
+A decisão fica para a Etapa 12. O código não depende dela. Desde a Etapa 7, um único processo do servidor dedicado (`--salas=N`) hospeda várias partidas; para o grupo de amigos, 1 sala com bots basta.

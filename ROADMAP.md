@@ -410,9 +410,43 @@ Os bots saem da Tormenta (quase nenhum dano dela com os tempos reais), saqueiam,
 - Não fazem predição de alvo (miram onde o alvo está).
 - A grade considera só paredes do térreo.
 
-### Etapa 7 — Multiplayer e servidores ⬜
+### Etapa 7 — Multiplayer e servidores ✅ (parte automática) · ⏳ teste físico com 2 PCs + Android
 Servidor dedicado (export headless), salas, reconexão, validação e antimanipulação, relevância (interest management) e testes de banda e latência simulada.
 **Aceite:** 2 PCs e 1 Android na mesma partida com bots, a reconexão funciona, e o uso de banda por cliente fica medido.
+
+- ✅ **Servidor dedicado exportável:** presets "Servidor Linux" e "Servidor Windows" (`dedicated_server=true`, sem gráficos).
+- ✅ **Salas:** `--salas=N` roda N partidas independentes num processo (portas consecutivas, cada uma com mundo físico próprio). Também: `--max-jogadores`, `--bots` e `--relatorio=S` (banda e tick no log).
+- ✅ **"Sala cheia"** recusa com mensagem e indica as outras salas.
+- ✅ **Reconexão (protocolo v8):**
+  - o servidor entrega uma ficha de sessão no WELCOME;
+  - quem cai no ônibus ou em jogo fica parado no lugar por 60 s;
+  - o HELLO com a ficha devolve o mesmo personagem (id, inventário, posição, partida) e reenvia o estado completo;
+  - o cliente tenta sozinho, com a mensagem "Conexão perdida — reconectando…";
+  - sair pelo menu manda uma despedida (`C_BYE`), e quem saiu de propósito sai na hora.
+- ✅ **Antimanipulação de rede:**
+  - acima de 240 pacotes/s o excesso é ignorado; acima de 900/s o cliente é expulso;
+  - 40 pacotes malformados também expulsam;
+  - os desempacotadores foram testados com 3000 pacotes aleatórios.
+- ✅ **Relevância:**
+  - o snapshot leva o próprio jogador sempre, os outros até 250 m, e os que estão a mais de 120 m em metade dos snapshots;
+  - eliminados (espectadores) recebem tudo;
+  - tiros só vão para quem está a até 320 m, golpes até 160 m.
+- ✅ **Banda medida:**
+  - por cliente no servidor (relatório) e no cliente (canto da tela: `↓ ↑ kbit/s`);
+  - simulador de rede ruim no cliente: `--lag`, `--jitter` e `--perda`.
+
+| Medição (3 clientes + 13 bots, localhost, 20 s de jogo) | Valor |
+|---|---|
+| Descida por cliente (carga útil) | 44–56 kbit/s |
+| Subida por cliente | ~4,3 kbit/s |
+| Entidades por snapshot (de 16) | 9,4–12,5 |
+| Cliente com 120 ms ± 30 e 2% de perda | sincronizado (4–6 ticks atrás) |
+
+- ✅ Testes:
+  - `test_rede.gd`: 2 salas, sala cheia, queda e reconexão, banda, relevância, rede ruim, lixo e inundação, e expiração da janela de reconexão;
+  - unitários: protocolo v8, relevância e fuzz;
+  - suíte: servidor dedicado com `--salas=2`.
+- ⏳ **Falta (só com hardware real):** a partida com 2 PCs + 1 Android, conforme o roteiro em `docs/TESTE_EM_HARDWARE.md` §2.2.
 
 ### Etapa 8 — Lobby e social ⬜
 Login, identidade, lobby com o personagem em destaque, grupos, amigos, convites, seleção de modo, matchmaking com bots, sala privada e entrada na partida.

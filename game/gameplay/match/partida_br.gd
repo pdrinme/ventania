@@ -19,6 +19,11 @@ const ARQUIVO := "res://data/partida.json"
 var server: GameServer
 var config: Dictionary
 var estado := Protocol.MATCH_ESPERA
+
+
+func estado_nome() -> String:
+	return {Protocol.MATCH_ESPERA: "esperando", Protocol.MATCH_CONTAGEM: "contagem", Protocol.MATCH_ONIBUS: "ônibus",
+			Protocol.MATCH_JOGO: "em jogo", Protocol.MATCH_FIM: "fim"}.get(estado, "?")
 var t := 0                          # ticks no estado atual
 var tormenta: Tormenta
 var onibus: OnibusBatalha

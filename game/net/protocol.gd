@@ -4,7 +4,7 @@ extends RefCounted
 ## Cliente envia ENTRADAS (não posições); servidor envia SNAPSHOTS do estado.
 ## Ver ARCHITECTURE §4.
 
-const GAME_PROTOCOL := 7
+const GAME_PROTOCOL := 8
 const DEFAULT_PORT := 24800
 const TICK_RATE := 30            # simulação (Hz)
 const SNAPSHOT_EVERY := 2        # snapshot a cada N ticks (15 Hz)
@@ -22,6 +22,7 @@ const C_INPUT := 2
 const C_INV := 3             # operação de inventário (trocar, dividir, largar, pegar); o servidor valida
 const C_BUILD := 4           # construir uma peça num slot da grade
 const C_EDIT := 5            # editar (ladrilhos) uma peça própria
+const C_BYE := 6             # saída voluntária (menu): sem janela de reconexão
 # servidor -> cliente
 const S_WELCOME := 10
 const S_REJECT := 11
@@ -163,11 +164,14 @@ static func _u16_yaw(v: int) -> float:
 
 # ---------- cliente -> servidor ----------
 
-static func pack_hello(name: String) -> PackedByteArray:
+## token: ficha de sessão recebida no S_WELCOME (0 = jogador novo). Com uma ficha
+## válida, o servidor devolve o mesmo personagem (reconexão).
+static func pack_hello(name: String, token := 0) -> PackedByteArray:
 	var b := _buf()
 	b.put_u8(C_HELLO)
 	b.put_u16(GAME_PROTOCOL)
 	b.put_utf8_string(name.substr(0, MAX_NAME))
+	b.put_u64(token)
 	return b.data_array
 
 
@@ -182,7 +186,10 @@ static func unpack_hello(data: PackedByteArray) -> Dictionary:
 	if tam > 64 or b.get_position() + tam > data.size():
 		return {}
 	b.seek(3)
-	return {"protocol": proto, "name": b.get_utf8_string()}
+	var r := {"protocol": proto, "name": b.get_utf8_string(), "token": 0}
+	if b.get_position() + 8 <= data.size():
+		r["token"] = b.get_u64()
+	return r
 
 
 static func pack_inputs(cmds: Array) -> PackedByteArray:
@@ -232,13 +239,15 @@ static func unpack_inputs(data: PackedByteArray) -> Array:
 
 # ---------- servidor -> cliente ----------
 
-static func pack_welcome(my_id: int, server_tick: int, map_name: String) -> PackedByteArray:
+static func pack_welcome(my_id: int, server_tick: int, map_name: String, token := 0, reconectou := false) -> PackedByteArray:
 	var b := _buf()
 	b.put_u8(S_WELCOME)
 	b.put_u16(my_id)
 	b.put_u16(TICK_RATE)
 	b.put_u32(server_tick)
 	b.put_utf8_string(map_name)
+	b.put_u64(token)
+	b.put_u8(1 if reconectou else 0)
 	return b.data_array
 
 
@@ -247,7 +256,11 @@ static func unpack_welcome(data: PackedByteArray) -> Dictionary:
 		return {}
 	var b := _reader(data)
 	b.seek(1)
-	return {"id": b.get_u16(), "tick_rate": b.get_u16(), "tick": b.get_u32(), "map": b.get_utf8_string()}
+	var r := {"id": b.get_u16(), "tick_rate": b.get_u16(), "tick": b.get_u32(), "map": b.get_utf8_string(), "token": 0, "reconectou": false}
+	if b.get_position() + 9 <= data.size():
+		r["token"] = b.get_u64()
+		r["reconectou"] = b.get_u8() == 1
+	return r
 
 
 static func pack_reject(reason: String) -> PackedByteArray:

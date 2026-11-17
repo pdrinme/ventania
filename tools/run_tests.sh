@@ -62,6 +62,16 @@ for i in $(seq 1 100); do grep -q "servidor dedicado pronto" "$LOGSRV" 2>/dev/nu
 timeout 60 "$GODOT" --headless --path game -s res://tests/integration/test_dedicated_server.gd -- 127.0.0.1 "$PORTA" 2>&1 | grep -E "DEDICADO|FALHA"; checar "${PIPESTATUS[0]}" "servidor dedicado"
 kill "$PID" 2>/dev/null; wait "$PID" 2>/dev/null; rm -f "$LOGSRV"
 
+passo "Etapa 7: servidor dedicado com 2 salas (--salas=2): cliente na segunda sala"
+PORTA=$(python3 -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()")
+LOGSRV=$(mktemp)
+"$GODOT" --headless --path game -- --servidor --modo=treino --salas=2 --porta="$PORTA" >"$LOGSRV" 2>&1 &
+PID=$!
+for i in $(seq 1 150); do grep -q "servidor dedicado pronto" "$LOGSRV" 2>/dev/null && break; sleep 0.1; done
+grep -E "sala\(s\)" "$LOGSRV" | sed 's/^.*\] /   servidor: /'
+timeout 60 "$GODOT" --headless --path game -s res://tests/integration/test_dedicated_server.gd -- 127.0.0.1 "$((PORTA+1))" 2>&1 | grep -E "DEDICADO|FALHA"; checar "${PIPESTATUS[0]}" "servidor com 2 salas"
+kill "$PID" 2>/dev/null; wait "$PID" 2>/dev/null; rm -f "$LOGSRV"
+
 passo "Etapa 4: partida Battle Royale completa (clientes simulados, servidor no processo)"
 FILTRO="PARTIDA_BR|FALHOU|partida:"
 rodar_godot timeout 600 "$GODOT" --headless --path game -s res://tests/integration/test_partida_br.gd -- 6; checar $? "partida BR"
@@ -83,6 +93,10 @@ rodar_godot timeout 300 "$GODOT" --headless --path game -s res://tests/integrati
 passo "Etapa 6: partida só com 23 bots (simulação headless, métricas e CPU)"
 FILTRO="BOTS|FALHOU|partida [0-9]|CPU|facil|medio|dificil"
 rodar_godot timeout 900 "$GODOT" --headless --path game -s res://tests/integration/test_bots.gd -- 23 1; checar $? "bots"
+
+passo "Etapa 7: rede — 2 salas, sala cheia, reconexão, banda, relevância, rede ruim simulada, lixo e inundação"
+FILTRO="REDE|FALHOU|kbit|entidades"
+rodar_godot timeout 400 "$GODOT" --headless --path game -s res://tests/integration/test_rede.gd; checar $? "rede"
 
 passo "Etapa 5: custo das construções (limite de peças)"
 "$GODOT" --headless --path game -s res://tests/perf/perf_construcao.gd -- 1200 2>&1 | grep PERF_CONSTRUCAO
