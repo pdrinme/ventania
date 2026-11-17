@@ -44,6 +44,7 @@ class ServidorDeTeste:
         self.loop.call_soon_threadsafe(self.srv.close)
         self.loop.call_soon_threadsafe(self.loop.stop)
         self.thread.join(5)
+        self.loop.close()
         self.con.close()
 
     def get(self, caminho, metodo="GET", corpo=None, cabecalhos=None):

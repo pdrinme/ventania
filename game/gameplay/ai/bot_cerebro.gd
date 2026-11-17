@@ -597,5 +597,4 @@ func _construir_parede(de: Vector3) -> void:
 	var d := de - c.pawn.global_position
 	var alvo_g := Grade.target(0, c.pawn.global_position, atan2(-d.x, -d.z), 0.0)
 	if server.build.try_build(c, {"escolha": 0, "material": mat, "cell": alvo_g["cell"], "rot": alvo_g["rot"]}) == Inventory.Err.OK:
-		_construiu_tick = server.tick
-		c.stats["construcoes"] = int(c.stats.get("construcoes", 0)) + 1
+		_construiu_tick = server.tick           # a estatística "construcoes" conta no BuildServer

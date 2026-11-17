@@ -204,6 +204,12 @@ O item comanda as mãos, nunca o contrário. Os marcadores ficam nos modelos (`g
 - **Cliente:** o autoload `Meta` guarda a sessão em `user://session.cfg`, mantém o laço de long-polling e repassa sinais (grupo, amigos, convite, partida encontrada).
   - Se a sala se anunciou como `127.0.0.1` (mesmo PC do meta), o cliente usa o endereço do meta-servidor.
 
+### 5.2 Progressão (Etapa 9)
+- `progressao.py`: perfil (XP, nível, Faíscas, contadores), `ledger` (delta, saldo depois, motivo, `idem_key` única), `unlocks` (item, origem, data), `loadout` (espaço → item), `quest_progress` (conta, missão, período) e `match_reports`/`match_results`.
+- Tudo de um relatório roda numa única transação `BEGIN IMMEDIATE`. Os eventos `progress` só saem depois do COMMIT.
+- O servidor de partida (`PartidaBR._relatorio`) guarda a conta e as estatísticas de cada participante, inclusive de quem saiu depois de eliminado, e emite `GameServer.match_report`. Quem envia é o `MetaLink`.
+- O cliente só lê (`/v1/profile`, `/v1/quests`, `/v1/ledger`, `/v1/history`) e só pede para equipar (`/v1/loadout`).
+
 ## 6. Identidade, sessões e segurança
 
 - **Conta:** nome de usuário e senha (PBKDF2-SHA256 com salt e 200k iterações). O token de sessão é aleatório e fica guardado no cliente. Não há e-mail nem dados pessoais.

@@ -106,6 +106,7 @@ var expulsos := 0            # diagnóstico/testes
 var segredo_tickets := ""    # Etapa 8: se definido, confere tickets do meta-servidor
 var ticket_obrigatorio := true   # false: aceita também quem entra direto pelo endereço (sem conta)
 var porta := 0
+signal match_report(d: Dictionary)   # fim de partida (Etapa 9): o MetaLink envia ao meta-servidor
 var privada := false         # sala privada (meta-servidor): só começa quando o dono mandar
 var forcar_inicio := false   # sala privada: o dono mandou começar
 var reconexoes := 0

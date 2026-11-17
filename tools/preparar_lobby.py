@@ -33,3 +33,16 @@ chamar("/v1/party/respond", {"invite": conv, "accept": True}, bia["token"])
 chamar("/v1/party/promote", {"id": bia["account"]["id"]}, ana["token"])
 chamar("/v1/party/promote", {"id": ana["account"]["id"]}, bia["token"])
 print("pronto")
+
+# Etapa 9: duas partidas para a Ana (como se o servidor de partida tivesse relatado)
+import os  # noqa: E402
+segredo = os.environ.get("VENTANIA_SEGREDO")
+if segredo:
+    for i, dados in enumerate([{"colocacao": 3, "eliminacoes": 4, "tempo_s": 720, "baus": 6, "coleta": 400, "construcoes": 30},
+                               {"colocacao": 1, "venceu": True, "eliminacoes": 7, "tempo_s": 900, "baus": 5, "coleta": 250}]):
+        req = urllib.request.Request(URL + "/v1/servers/report", method="POST", headers={
+            "Content-Type": "application/json", "X-Ventania-Server": segredo},
+            data=json.dumps({"match_id": f"captura-{i}", "mode": "br", "total": 16, "port": 24800,
+                             "players": [{"acc": ana["account"]["id"], **dados}]}).encode())
+        with urllib.request.urlopen(req, timeout=5) as r:
+            print("relatório", json.loads(r.read())["status"])

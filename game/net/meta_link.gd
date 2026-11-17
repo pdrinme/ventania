@@ -16,6 +16,33 @@ var _t := 0.0
 var _ocupado := {}              # sala -> pedido em andamento
 
 
+func _ready() -> void:
+	for s in salas:
+		s.match_report.connect(_enviar_relatorio)
+
+
+## Relatório de fim de partida. Se o meta-servidor estiver fora, tenta de novo
+## algumas vezes (o meta-servidor ignora relatórios repetidos pelo match_id).
+func _enviar_relatorio(d: Dictionary, tentativa := 0) -> void:
+	if not anunciar.is_empty():
+		d["host"] = anunciar
+	var req := HTTPRequest.new()
+	req.timeout = 8.0
+	add_child(req)
+	req.request(url.trim_suffix("/") + "/v1/servers/report",
+			PackedStringArray(["Content-Type: application/json", "X-Ventania-Server: " + segredo]),
+			HTTPClient.METHOD_POST, JSON.stringify(d))
+	var r: Array = await req.request_completed
+	req.queue_free()
+	if r[0] == HTTPRequest.RESULT_SUCCESS and r[1] == 200:
+		Log.info("servidor", "relatório da partida %s enviado (%d jogador[es] com conta)" % [d["match_id"], d["players"].size()])
+	elif tentativa < 5:
+		await get_tree().create_timer(5.0 * (tentativa + 1)).timeout
+		_enviar_relatorio(d, tentativa + 1)
+	else:
+		Log.warn("servidor", "relatório da partida %s não foi entregue ao meta-servidor" % d["match_id"])
+
+
 func _process(delta: float) -> void:
 	_t += delta
 	if _t < INTERVALO_S:

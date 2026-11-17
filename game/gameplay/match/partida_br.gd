@@ -154,7 +154,8 @@ func _iniciar() -> void:
 		c.pawn.queda = Pawn.NO_ONIBUS
 		c.pawn.velocity = Vector3.ZERO
 		c.pawn.global_position = _no_onibus(k)
-		participantes[c.id] = {"nome": c.nome, "eliminacoes": 0, "colocacao": 0, "inicio": server.tick, "fim": 0, "assento": k}
+		participantes[c.id] = {"nome": c.nome, "eliminacoes": 0, "colocacao": 0, "inicio": server.tick, "fim": 0, "assento": k,
+				"conta": c.conta, "stats": {}}
 		vivos.append(c.id)
 		c.dirty = true
 		k += 1
@@ -285,6 +286,9 @@ func _eliminar_registro(id: int, _quem: int) -> void:
 	if not p.is_empty():
 		p["colocacao"] = vivos.size()
 		p["fim"] = server.tick
+		var c := server.client_by_id(id)
+		if c:
+			p["stats"] = c.stats.duplicate()     # quem sai depois de eliminado não perde o que fez
 	vivos.erase(id)
 	_enviar_resultado(id)
 	_enviar_estado()
@@ -351,3 +355,26 @@ func _checar_vitoria() -> void:
 	_mudar(Protocol.MATCH_FIM)
 	for id in participantes:
 		_enviar_resultado(id)
+	_relatorio()
+
+
+## Etapa 9: relatório para o meta-servidor (só jogadores com conta). Quem concede
+## XP e Faíscas é o meta-servidor; aqui só se conta o que aconteceu.
+func _relatorio() -> void:
+	var jogadores := []
+	for id in participantes:
+		var p: Dictionary = participantes[id]
+		if int(p.get("conta", 0)) <= 0:
+			continue
+		var c := server.client_by_id(id)
+		var st: Dictionary = c.stats if c and vivos.has(id) else p.get("stats", {})
+		jogadores.append({"acc": p["conta"], "colocacao": p["colocacao"], "eliminacoes": p["eliminacoes"],
+				"tempo_s": roundi((int(p["fim"]) - int(p["inicio"])) / float(Protocol.TICK_RATE)), "venceu": id == vencedor,
+				"baus": int(st.get("baus", 0)), "coleta": int(st.get("coleta", 0)), "construcoes": int(st.get("construcoes", 0)),
+				"dano": int(st.get("dano", 0)), "curas": int(st.get("curas", 0))})
+	if jogadores.is_empty():
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	server.match_report.emit({"match_id": "%d-%d-%d-%08x" % [server.porta, partidas, int(Time.get_unix_time_from_system()), rng.randi()],
+			"mode": "br", "total": total_inicial, "port": server.porta, "players": jogadores})

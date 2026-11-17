@@ -36,6 +36,11 @@ var _sobreposicao: Control      # modal aberto (login, modos, sala privada)
 var _gaveta: PanelContainer     # amigos
 var _gaveta_lista: VBoxContainer
 var _avisos: VBoxContainer
+var _prog_chip: Button          # nível, XP e Faíscas (abre o perfil)
+var _prog_nivel: Label
+var _prog_barra: ProgressBar
+var _prog_faiscas: Label
+var _missoes_btn: Button
 
 
 func _ready() -> void:
@@ -61,6 +66,7 @@ func _ready() -> void:
 	Meta.invite_received.connect(_on_convite)
 	Meta.friend_request.connect(func(de): _aviso("%s quer ser seu amigo." % de.get("username", "?"), "Ver", _abrir_amigos))
 	Meta.match_found.connect(_on_partida)
+	Meta.profile_changed.connect(func(_p): _atualizar())
 	Meta.notice.connect(func(t): _aviso(t))
 	if _modo_id.is_empty():
 		_modo_id = "br_online" if Meta.logged_in() else "br_local"
@@ -109,6 +115,10 @@ func _montar_topo() -> void:
 	var vazio := Control.new()
 	vazio.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	topo.add_child(vazio)
+	_montar_progresso(topo)
+	_missoes_btn = _botao_icone("missoes", "Missões", "BotaoFantasma")
+	_missoes_btn.pressed.connect(_abrir_missoes)
+	topo.add_child(_missoes_btn)
 	_conta_btn = _botao_icone("pessoa", "Entrar", "BotaoFantasma")
 	_conta_btn.pressed.connect(_on_conta)
 	topo.add_child(_conta_btn)
@@ -293,6 +303,15 @@ func _atualizar() -> void:
 	_status_txt.text += "   v%s" % Version.GAME
 	_status_bola.get_parent().get_node("Tentar").visible = Meta.state in ["offline", "incompatible"]
 	_conta_btn.text = "      " + (Meta.account["username"] if Meta.logged_in() else "Entrar")
+	var pf := Meta.profile
+	_prog_chip.visible = _online() and not pf.is_empty()
+	_missoes_btn.visible = _online()
+	if not pf.is_empty():
+		_prog_nivel.text = "NV %d" % int(pf["level"])
+		_prog_barra.max_value = maxf(1.0, float(pf["xp_next"]))
+		_prog_barra.value = float(pf["xp_in_level"])
+		_prog_faiscas.text = _milhar(int(pf["sparks"]))
+		_prog_chip.tooltip_text = "%d / %d XP para o nível %d" % [pf["xp_in_level"], pf["xp_next"], int(pf["level"]) + 1]
 	_amigos_btn.disabled = not _online()
 	var pedidos: int = Meta.friends.get("incoming", []).size()
 	_amigos_badge.text = str(pedidos)
@@ -333,6 +352,15 @@ func _atualizar() -> void:
 		if m["online"] and not Meta.is_leader() and membros.size() > 1:
 			_jogar.text = "O LÍDER COMEÇA"
 			_jogar.disabled = true
+
+
+static func _milhar(n: int) -> String:
+	var t := str(absi(n))
+	var out := ""
+	while t.length() > 3:
+		out = "." + t.right(3) + out
+		t = t.left(t.length() - 3)
+	return ("-" if n < 0 else "") + t + out
 
 
 static func _relogio(s: float) -> String:
@@ -634,6 +662,213 @@ func _abrir_privada() -> void:
 		aviso.text = "Só o líder do grupo cria ou entra em salas."
 		col.add_child(aviso)
 	(criar if not criar.disabled else codigo).grab_focus.call_deferred()
+
+
+# ---------------------------------------------------------------- progressão (Etapa 9)
+
+func _montar_progresso(topo: HBoxContainer) -> void:
+	_prog_chip = Button.new()
+	_prog_chip.theme_type_variation = "BotaoFantasma"
+	_prog_chip.custom_minimum_size = Vector2(300, _alvo)
+	_prog_chip.pressed.connect(_abrir_perfil)
+	_prog_chip.focus_entered.connect(func(): Audio.play_ui("foco"))
+	var h := HBoxContainer.new()
+	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	h.offset_left = 12
+	h.offset_right = -14
+	h.add_theme_constant_override("separation", 10)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_prog_chip.add_child(h)
+	_prog_nivel = Label.new()
+	_prog_nivel.add_theme_font_override("font", VentaniaTheme.FONTE_FORTE)
+	_prog_nivel.add_theme_color_override("font_color", VentaniaTheme.TINTA)
+	var sb := VentaniaTheme._caixa(VentaniaTheme.AMARELO, 10, VentaniaTheme.TINTA, 2, 0)
+	sb.content_margin_left = 8
+	sb.content_margin_right = 8
+	sb.content_margin_top = 0
+	sb.content_margin_bottom = 0
+	_prog_nivel.add_theme_stylebox_override("normal", sb)
+	_prog_nivel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(_prog_nivel)
+	_prog_barra = ProgressBar.new()
+	_prog_barra.show_percentage = false
+	_prog_barra.custom_minimum_size = Vector2(110, 12)
+	_prog_barra.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_prog_barra.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_prog_barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(_prog_barra)
+	var fa := IconeUI.criar("faisca", 22, VentaniaTheme.AMARELO)
+	fa.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(fa)
+	_prog_faiscas = Label.new()
+	_prog_faiscas.add_theme_font_override("font", VentaniaTheme.FONTE_FORTE)
+	h.add_child(_prog_faiscas)
+	topo.add_child(_prog_chip)
+
+
+func _abrir_missoes() -> void:
+	var col := _modal("Missões", 720)
+	var carregando := Label.new()
+	carregando.theme_type_variation = "Pequeno"
+	carregando.text = "Carregando…"
+	col.add_child(carregando)
+	var r := await Meta.get_quests()
+	if not is_instance_valid(carregando):
+		return
+	carregando.queue_free()
+	if not r["ok"]:
+		_aviso(r["error"])
+		return
+	for grupo in [["diaria", "DIÁRIAS"], ["semanal", "SEMANAIS"]]:
+		var g: Dictionary = r["data"][grupo[0]]
+		var cab := Label.new()
+		cab.theme_type_variation = "Rotulo"
+		var h := int(g["ends_in_s"]) / 3600
+		cab.text = "%s  ·  TROCAM EM %s" % [grupo[1], ("%d h" % h) if h < 48 else ("%d dias" % (h / 24))]
+		col.add_child(cab)
+		for q: Dictionary in g["quests"]:
+			col.add_child(_linha_missao(q))
+
+
+func _linha_missao(q: Dictionary) -> Control:
+	var p := PanelContainer.new()
+	p.theme_type_variation = "Chip"
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 14)
+	p.add_child(h)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 2)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(v)
+	var t := Label.new()
+	t.text = q["titulo"]
+	t.add_theme_font_override("font", VentaniaTheme.FONTE_FORTE)
+	if q["concluida"]:
+		t.add_theme_color_override("font_color", VentaniaTheme.VERDE)
+	v.add_child(t)
+	var barra := ProgressBar.new()
+	barra.show_percentage = false
+	barra.max_value = float(q["meta"])
+	barra.value = float(q["progresso"])
+	barra.custom_minimum_size = Vector2(0, 10)
+	v.add_child(barra)
+	var n := Label.new()
+	n.theme_type_variation = "Pequeno"
+	n.text = "Concluída!" if q["concluida"] else "%s / %s" % [_milhar(int(q["progresso"])), _milhar(int(q["meta"]))]
+	h.add_child(n)
+	var rec := Label.new()
+	rec.add_theme_font_override("font", VentaniaTheme.FONTE_FORTE)
+	rec.add_theme_color_override("font_color", VentaniaTheme.AMARELO)
+	rec.text = "+%d XP  ·  +%d Faíscas" % [q["xp"], q["faiscas"]]
+	h.add_child(rec)
+	return p
+
+
+func _abrir_perfil() -> void:
+	var pf := Meta.profile
+	if pf.is_empty():
+		return
+	var col := _modal("%s  ·  Nível %d" % [Meta.account.get("username", ""), int(pf["level"])], 760)
+	var resumo := Label.new()
+	resumo.theme_type_variation = "Pequeno"
+	var plural := func(n: int, um: String, varios: String) -> String: return "%d %s" % [n, um if n == 1 else varios]
+	resumo.text = "%s / %s XP para o nível %d  ·  %s  ·  %s  ·  %s  ·  %s Faíscas" % [
+			_milhar(int(pf["xp_in_level"])), _milhar(int(pf["xp_next"])), int(pf["level"]) + 1,
+			plural.call(int(pf["matches"]), "partida", "partidas"), plural.call(int(pf["wins"]), "vitória", "vitórias"),
+			plural.call(int(pf["kills"]), "eliminação", "eliminações"), _milhar(int(pf["sparks"]))]
+	resumo.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(resumo)
+	var abas := TabContainer.new()
+	abas.custom_minimum_size = Vector2(0, 380)
+	col.add_child(abas)
+	# coleção (inventário persistente) + equipar
+	var colecao := _rolagem(abas, "Coleção")
+	var por_cat := {}
+	for u: Dictionary in pf["unlocks"]:
+		por_cat.get_or_add(u.get("categoria", "outros"), []).append(u)
+	var nomes_cat := {"traje": "TRAJES", "picareta": "FERRAMENTAS DE COLETA", "planador": "PLANADORES", "emote": "EMOTES", "mochila": "MOCHILAS", "acessorio": "ACESSÓRIOS"}
+	for cat in nomes_cat:
+		if not por_cat.has(cat):
+			continue
+		var rot := Label.new()
+		rot.theme_type_variation = "Rotulo"
+		rot.text = nomes_cat[cat]
+		colecao.add_child(rot)
+		for u: Dictionary in por_cat[cat]:
+			var l := HBoxContainer.new()
+			var info := Label.new()
+			info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			info.text = "%s  ·  %s" % [u.get("nome", u["item"]), str(u.get("raridade", "")).capitalize()]
+			l.add_child(info)
+			var equipado: bool = pf["equipped"].get(cat, "") == u["item"]
+			var b := Button.new()
+			b.add_theme_font_size_override("font_size", 15)
+			b.text = "Equipado" if equipado else "Equipar"
+			b.disabled = equipado
+			var slot: String = cat
+			var item: String = u["item"]
+			b.pressed.connect(func():
+				await Meta.equip(slot, item)
+				_fechar_modal()
+				_abrir_perfil())
+			l.add_child(b)
+			colecao.add_child(l)
+	var aviso := Label.new()
+	aviso.theme_type_variation = "Pequeno"
+	aviso.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	aviso.text = "Novos trajes, ferramentas, planadores e emotes chegam com o passe e a loja."
+	colecao.add_child(aviso)
+	# histórico de desbloqueios
+	var hist := _rolagem(abas, "Desbloqueios")
+	var lista: Array = pf["unlocks"].duplicate()
+	lista.reverse()
+	for u: Dictionary in lista:
+		var origem := str(u["source"])
+		origem = "item inicial" if origem == "inicial" else origem.replace("nivel:", "nível ")
+		_linha_texto(hist, "%s  ·  %s" % [u.get("nome", u["item"]), origem], Time.get_datetime_string_from_unix_time(int(u["at"])).replace("T", " ").left(16))
+	# Faíscas (ledger)
+	var faiscas := _rolagem(abas, "Faíscas")
+	var partidas := _rolagem(abas, "Partidas")
+	var r := await Meta.get_ledger()
+	if r["ok"] and is_instance_valid(faiscas):
+		if r["data"]["entries"].is_empty():
+			_linha_texto(faiscas, "Nenhuma movimentação ainda. Suba de nível e conclua missões!", "")
+		for e: Dictionary in r["data"]["entries"]:
+			_linha_texto(faiscas, "%s%d  ·  %s" % ["+" if int(e["delta"]) > 0 else "", int(e["delta"]), e["reason"]], "saldo %s" % _milhar(int(e["balance_after"])))
+	var hp := await Meta.get_history()
+	if hp["ok"] and is_instance_valid(partidas):
+		if hp["data"]["matches"].is_empty():
+			_linha_texto(partidas, "Nenhuma partida de Battle Royale com conta ainda.", "")
+		for m: Dictionary in hp["data"]["matches"]:
+			_linha_texto(partidas, "#%d de %d  ·  %d eliminações  ·  %d:%02d vivo" % [int(m["placement"]), int(m["total"]), int(m["kills"]),
+					int(m["time_alive_s"]) / 60, int(m["time_alive_s"]) % 60], "+%d XP" % int(m["xp"]))
+
+
+func _rolagem(abas: TabContainer, titulo: String) -> VBoxContainer:
+	var s := ScrollContainer.new()
+	s.name = titulo
+	s.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	abas.add_child(s)
+	var v := VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_theme_constant_override("separation", 8)
+	s.add_child(v)
+	return v
+
+
+func _linha_texto(pai: Control, texto: String, direita: String) -> void:
+	var l := HBoxContainer.new()
+	var a := Label.new()
+	a.text = texto
+	a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	a.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.add_child(a)
+	if not direita.is_empty():
+		var b := Label.new()
+		b.theme_type_variation = "Pequeno"
+		b.text = direita
+		l.add_child(b)
+	pai.add_child(l)
 
 
 # ---------------------------------------------------------------- amigos

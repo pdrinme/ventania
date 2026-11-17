@@ -8,6 +8,7 @@ from .config import Config
 from .contas import Contas
 from .http import HttpError, Request, Response, Router
 from .partidas import Partidas
+from .progressao import Progressao
 from .social import Eventos, Social
 
 
@@ -33,6 +34,7 @@ class App:
         self.social = Social(con, self.contas, self.eventos)
         self.segredo = segredo_dos_servidores(con, self.cfg)
         self.partidas = Partidas(self.social, self.contas, self.segredo, self.cfg.ticket_ttl_s)
+        self.progressao = Progressao(con, self.contas, self.eventos)
         r = self.router = Router()
         r.add("GET", "/v1/health", self.health)
         r.add("GET", "/v1/compat", self.compat)
@@ -64,6 +66,13 @@ class App:
         r.add("POST", "/v1/rooms/start", self._a(lambda c, d: self.partidas.iniciar_privada(c)))
         r.add("GET", "/v1/rooms", self._a(lambda c, d: {"rooms": self.partidas.lista_salas()}))
         r.add("POST", "/v1/servers/heartbeat", self.heartbeat)
+        # progressão (Etapa 9)
+        r.add("GET", "/v1/profile", self._a(lambda c, d: self.progressao.perfil(c)))
+        r.add("GET", "/v1/quests", self._a(lambda c, d: self.progressao.missoes(c)))
+        r.add("GET", "/v1/ledger", self._a(lambda c, d: {"entries": self.progressao.ledger(c)}))
+        r.add("GET", "/v1/history", self._a(lambda c, d: {"matches": self.progressao.historico(c)}))
+        r.add("POST", "/v1/loadout", self._a(lambda c, d: self.progressao.equipar(c, str(d.get("slot", "")), str(d.get("item", "")))))
+        r.add("POST", "/v1/servers/report", self.relatorio)
 
     # ---------- utilidades ----------
     def _a(self, f):
@@ -120,6 +129,7 @@ class App:
         d = self._corpo(req)
         r = self.contas.registrar(d.get("username", ""), d.get("password", ""))
         self.social.tocar(r["account"]["id"])
+        self.progressao.garantir(r["account"]["id"])
         return Response(201, r)
 
     def entrar(self, req: Request) -> Response:
@@ -153,6 +163,15 @@ class App:
         evs = await self.eventos.esperar(conta, since, espera)
         self.social.tocar(conta)
         return Response(200, {"events": evs, "seq": self.eventos.ultimo(conta)})
+
+    def relatorio(self, req: Request) -> Response:
+        """Relatório de fim de partida do servidor de partida (autenticado pelo segredo)."""
+        import hmac
+        if not self.segredo or not hmac.compare_digest(req.headers.get("x-ventania-server", ""), self.segredo):
+            raise HttpError(403, "Segredo do servidor inválido.")
+        d = self._corpo(req)
+        sala = f"{d.get('host') or req.peer}:{d.get('port', '?')}"
+        return Response(200, self.progressao.aplicar_relatorio(d, sala))
 
     def heartbeat(self, req: Request) -> Response:
         return Response(200, self.partidas.heartbeat(req.headers.get("x-ventania-server", ""), req.peer, self._corpo(req)))

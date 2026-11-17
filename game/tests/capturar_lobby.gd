@@ -37,6 +37,12 @@ func _init() -> void:
 	menu._on_convite({"id": "x", "from": {"username": "Garoa"}})
 	await _esperar(10)
 	_foto(pasta, "convite")
+	menu._abrir_missoes()
+	await _esperar(40)
+	_foto(pasta, "missoes")
+	menu._abrir_perfil()
+	await _esperar(40)
+	_foto(pasta, "perfil")
 	quit()
 
 

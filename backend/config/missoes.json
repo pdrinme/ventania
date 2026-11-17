@@ -1,0 +1,25 @@
+{
+  "_doc": "Missões (Etapa 9). Diárias: 3 sorteadas por dia (mesmas para todos, semente pela data UTC). Semanais: 5 por semana ISO. Tipos contam estatísticas das partidas de BR: partidas, eliminacoes, baus, minutos_vivo, top10, vitorias, coleta, construcoes, dano, curas.",
+  "diarias_por_dia": 3,
+  "semanais_por_semana": 5,
+  "diarias": [
+    {"id": "d_partidas_3", "titulo": "Jogue 3 partidas", "tipo": "partidas", "meta": 3, "xp": 150, "faiscas": 50},
+    {"id": "d_baus_5", "titulo": "Abra 5 baús", "tipo": "baus", "meta": 5, "xp": 150, "faiscas": 50},
+    {"id": "d_elim_3", "titulo": "Elimine 3 adversários", "tipo": "eliminacoes", "meta": 3, "xp": 200, "faiscas": 50},
+    {"id": "d_vivo_15", "titulo": "Sobreviva 15 minutos (somando partidas)", "tipo": "minutos_vivo", "meta": 15, "xp": 150, "faiscas": 50},
+    {"id": "d_coleta_300", "titulo": "Colete 300 materiais", "tipo": "coleta", "meta": 300, "xp": 150, "faiscas": 50},
+    {"id": "d_constr_20", "titulo": "Construa 20 peças", "tipo": "construcoes", "meta": 20, "xp": 150, "faiscas": 50},
+    {"id": "d_dano_500", "titulo": "Cause 500 de dano", "tipo": "dano", "meta": 500, "xp": 200, "faiscas": 50},
+    {"id": "d_top10_1", "titulo": "Fique entre os 10 melhores", "tipo": "top10", "meta": 1, "xp": 150, "faiscas": 50}
+  ],
+  "semanais": [
+    {"id": "s_partidas_15", "titulo": "Jogue 15 partidas", "tipo": "partidas", "meta": 15, "xp": 600, "faiscas": 150},
+    {"id": "s_elim_20", "titulo": "Elimine 20 adversários", "tipo": "eliminacoes", "meta": 20, "xp": 800, "faiscas": 150},
+    {"id": "s_baus_30", "titulo": "Abra 30 baús", "tipo": "baus", "meta": 30, "xp": 600, "faiscas": 150},
+    {"id": "s_vitoria_1", "titulo": "Vença uma partida", "tipo": "vitorias", "meta": 1, "xp": 1000, "faiscas": 200},
+    {"id": "s_top10_5", "titulo": "Fique entre os 10 melhores 5 vezes", "tipo": "top10", "meta": 5, "xp": 600, "faiscas": 150},
+    {"id": "s_coleta_2000", "titulo": "Colete 2.000 materiais", "tipo": "coleta", "meta": 2000, "xp": 600, "faiscas": 150},
+    {"id": "s_constr_150", "titulo": "Construa 150 peças", "tipo": "construcoes", "meta": 150, "xp": 600, "faiscas": 150},
+    {"id": "s_curas_15", "titulo": "Use 15 itens de cura", "tipo": "curas", "meta": 15, "xp": 500, "faiscas": 150}
+  ]
+}

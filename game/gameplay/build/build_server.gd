@@ -123,6 +123,7 @@ func try_build(c: GameServer.Cliente, b: Dictionary) -> int:
 	estado.add(p)
 	_corpo(p)
 	construidas += 1
+	GameServer.add_stat(c, "construcoes")
 	server.broadcast(Protocol.pack_piece(p.to_dict()), true)
 	return Inventory.Err.OK
 
@@ -155,12 +156,14 @@ func damage(id: int, quanto: float, quem: GameServer.Cliente = null, picareta :=
 	# picareta numa peça do mapa: coleta o material dela
 	if picareta and quem and p.dono == 0:
 		quem.inv.add_material(Grade.MATERIAIS[p.material], int(cfg["coleta"]["peca_mapa"]))
+		GameServer.add_stat(quem, "coleta", int(cfg["coleta"]["peca_mapa"]))
 		quem.dirty = true
 	p.hp -= quanto
 	_mudaram[id] = true
 	if p.hp <= 0.0:
 		if picareta and quem and p.dono == 0:
 			quem.inv.add_material(Grade.MATERIAIS[p.material], int(cfg["coleta"]["bonus_destruir"]))
+			GameServer.add_stat(quem, "coleta", int(cfg["coleta"]["bonus_destruir"]))
 		destroy(id, Protocol.GONE_DESTRUIDA)
 		return true
 	return false
@@ -177,9 +180,11 @@ func on_pickaxe(c: GameServer.Cliente, collider: Object, material: int) -> void:
 	match material:
 		ImpactMaterial.MADEIRA:
 			c.inv.add_material("madeira", int(col["arvore"]))
+			GameServer.add_stat(c, "coleta", int(col["arvore"]))
 			c.dirty = true
 		ImpactMaterial.PEDRA:
 			c.inv.add_material("pedra", int(col["pedra"]))
+			GameServer.add_stat(c, "coleta", int(col["pedra"]))
 			c.dirty = true
 
 

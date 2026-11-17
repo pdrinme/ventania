@@ -8,6 +8,7 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 - **M1 — "Jogável com amigos"** (Etapas 1–7): partida Battle Royale em servidor dedicado, com 2–4 humanos e bots, combate, construção e Tormenta. Esse é o primeiro objetivo real.
 - **M2 — "Jogo completo"** (Etapas 8–11): lobby real, contas, grupos, progressão, passe e loja.
 - **M3 — "Distribuível"** (Etapa 12): builds para Windows, Linux e Android, além do guia para os amigos.
+- **M4 — "Com estilo"** (Etapa 13): os primeiros cosméticos originais, equipáveis e visíveis na partida.
 
 ## Ajuste proposto à ordem original (aguarda aprovação)
 
@@ -481,8 +482,34 @@ Login, identidade, lobby com o personagem em destaque, grupos, amigos, convites,
 - ✅ **v0.8.1:** os nomes dos adversários (humanos e bots) ficam ocultos durante o ônibus e o jogo, porque a plaquinha de tamanho fixo entregava a posição de longe. Na espera, no fim e no treino, o nome aparece só a até 25 m.
 - ⏳ **Falta:** testar com amigos de verdade (2 PCs + celular) usando o meta-servidor, conforme `docs/TESTE_EM_HARDWARE.md` §2.3. Os cosméticos no lobby chegam com o Armário e a Loja (Etapas 9–11).
 
-### Etapa 9 — Inventário e progressão ⬜
+### Etapa 9 — Inventário e progressão ✅
 Inventário persistente, nível, XP, missões, recompensas, Faíscas (com ledger) e histórico de desbloqueios, tudo validado pelo servidor.
+
+- ✅ **Relatório de partida:**
+  - no fim de cada BR, o servidor de partida envia por jogador com conta: colocação, eliminações, tempo vivo, baús, coleta, construções, dano e curas;
+  - vai para `/v1/servers/report`, autenticado pelo segredo; o cliente não pode enviar, e sem o segredo o pedido é recusado (403);
+  - cada partida é aplicada uma única vez, pelo `match_id`, e o servidor tenta de novo se o meta-servidor estiver fora;
+  - os números são limitados a valores plausíveis.
+- ✅ **XP e nível:** regras em `backend/config/progressao.json` (participação, tempo vivo, eliminações, top 10/top 5/vitória, baús, coleta, construções). A curva é 800 + 80 por nível, com teto de 3.000. O treino não dá XP.
+- ✅ **Faíscas com ledger:**
+  - cada mudança grava saldo e motivo numa transação, com uma chave de idempotência única;
+  - o saldo nunca fica negativo;
+  - ganhos: +50 por nível, bônus nos níveis 5 e 10, e as missões.
+- ✅ **Missões** (`backend/config/missoes.json`): 3 diárias e 5 semanais, sorteadas com semente pela data (iguais para todos). Os 10 tipos contam as estatísticas do servidor, e a recompensa (XP + Faíscas) é automática ao concluir.
+- ✅ **Inventário persistente:**
+  - itens iniciais (traje, picareta, planador) e o emote Aceno como recompensa do nível 2;
+  - histórico de desbloqueios com a origem e a data;
+  - itens equipados por espaço, e só equipa quem tem o item;
+  - a configuração é validada ao subir o servidor; se estiver inválida, ele não sobe.
+- ✅ **Interface:**
+  - chip de nível, barra de XP e Faíscas no topo do lobby;
+  - tela de Missões com o progresso e quando trocam;
+  - Perfil com Coleção (equipar), Desbloqueios, Faíscas (extrato) e Partidas;
+  - a tela de resultado mostra o XP detalhado que o meta-servidor concedeu.
+- ✅ **Estatísticas novas no servidor de partida:** baús, coleta e construções (as dos bots também).
+- ✅ **Testes:**
+  - 10 novos no meta-servidor (26 no total): idempotência, limites, níveis, ledger, missões e troca de dia, equipar, segredo e configuração inválida;
+  - `test_lobby.gd` agora vai até o fim da partida e confere o XP no evento, no perfil e no histórico (22 verificações).
 
 ### Etapa 10 — Passe de batalha ⬜
 Temporadas via JSON, níveis, interface de progressão, recompensas gratuitas, desafios e ferramenta de validação de temporadas.
@@ -492,6 +519,10 @@ Catálogo, categorias, preços, pré-visualização, compra atômica, temporizad
 
 ### Etapa 12 — Polimento e distribuição ⬜
 UI final, áudio, animações, otimizações, tratamento de erros, testes multiplayer, exportações para Android, Windows e Linux, e o guia de instalação e de hospedagem para os amigos.
+
+### Etapa 13 — Primeiros cosméticos ⬜
+Criação dos primeiros cosméticos originais do jogo: trajes (variações do esqueleto padrão), ferramentas de coleta, mochilas, planadores, emotes e acessórios, com modelagem e texturas próprias no pipeline de assets (Blender por script). Também ícones e cartões de raridade, registro no catálogo (`backend/config/catalog/`) com licença em `ASSET_LICENSES.md`, e exibição no lobby (Armário) e dentro da partida. Os cosméticos não alteram hitbox nem visibilidade (ARCHITECTURE §8).
+**Aceite:** pelo menos 1 conjunto completo por raridade (Incomum → Lendário) equipável no Armário, visível para os outros jogadores na partida, distribuído entre o passe (Etapa 10) e a loja (Etapa 11).
 
 ## Riscos conhecidos
 

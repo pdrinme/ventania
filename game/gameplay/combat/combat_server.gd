@@ -236,6 +236,7 @@ func _interagir(c: GameServer.Cliente, cmd: Protocol.InputCmd) -> void:
 		c.interact_chest = bau
 		if c.interact_steps >= LootServer.ABRIR_BAU_PASSOS:
 			server.loot.open_chest(bau)
+			GameServer.add_stat(c, "baus")
 			server.loot.chests[bau]["abrindo"] = 0
 			c.interact_steps = 0
 			c.interact_chest = -1

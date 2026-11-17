@@ -6,6 +6,8 @@ extends SceneTree
 ## encontrada (ticket) -> os dois entram na mesma sala com o nome da conta ->
 ## bots completam -> partida começa. Sem ticket: recusado. Sala privada: código,
 ## outro grupo entra pelo código, o dono manda começar.
+## Etapa 9: no fim da partida, o servidor envia o relatório e o meta-servidor
+## aplica o XP (evento "progress", perfil e histórico).
 ## Uso: godot --headless --path game -s res://tests/integration/test_lobby.gd -- <url_meta>
 
 var falhas := 0
@@ -175,6 +177,21 @@ func _init() -> void:
 		if c.partida.get("estado", 0) != Protocol.MATCH_ESPERA:
 			break
 	_checar(c.partida.get("estado", 0) in [Protocol.MATCH_CONTAGEM, Protocol.MATCH_ONIBUS], "o dono mandou começar: contagem (estado %s)" % str(c.partida.get("estado")))
+	# ---- Etapa 9: fim da partida -> relatório -> XP aplicado pelo meta-servidor ----
+	for i in 30 * 240:
+		await physics_frame
+		if a.partida.get("estado", 0) == Protocol.MATCH_FIM:
+			break
+	_checar(a.partida.get("estado", 0) == Protocol.MATCH_FIM, "a partida da Ana e da Bia terminou")
+	var pa := await a.puxar("progress", 20.0)
+	var pb := await b.puxar("progress", 5.0)
+	_checar(int(pa.get("xp_total", 0)) >= 50 and int(pb.get("xp_total", 0)) >= 50, "XP aplicado pelo meta-servidor (Ana +%s, Bia +%s)" % [str(pa.get("xp_total")), str(pb.get("xp_total"))])
+	var perfil: Dictionary = (await a.chamar(HTTPClient.METHOD_GET, "/v1/profile"))["data"]
+	_checar(int(perfil.get("xp_total", 0)) == int(pa.get("xp_total", -1)) and int(perfil.get("matches", 0)) == 1, "perfil da Ana: %s XP, %s partida" % [str(perfil.get("xp_total")), str(perfil.get("matches"))])
+	var hist: Array = (await a.chamar(HTTPClient.METHOD_GET, "/v1/history"))["data"]["matches"]
+	_checar(hist.size() == 1 and int(hist[0]["placement"]) == int(pa.get("colocacao", -1)), "histórico da partida gravado (colocação %s)" % str(pa.get("colocacao")))
+	var pc := await c.puxar("progress", 1.0)
+	_checar(pc.is_empty(), "quem não jogou aquela partida não ganhou XP")
 	for j in [a, b, c, d]:
 		j.client.close()
 	await create_timer(0.5).timeout

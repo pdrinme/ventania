@@ -108,7 +108,7 @@ PIDM=$!
 PIDS=$!
 for i in $(seq 1 150); do grep -q "servidor dedicado pronto" "$TMPDB/srv.log" 2>/dev/null && break; sleep 0.1; done
 FILTRO="LOBBY|FALHOU"
-rodar_godot timeout 300 "$GODOT" --headless --path game -s res://tests/integration/test_lobby.gd -- "http://127.0.0.1:$PORTA_META"; checar $? "lobby"
+rodar_godot timeout 480 "$GODOT" --headless --path game -s res://tests/integration/test_lobby.gd -- "http://127.0.0.1:$PORTA_META"; checar $? "lobby"
 kill "$PIDS" "$PIDM" 2>/dev/null; wait "$PIDS" "$PIDM" 2>/dev/null; rm -rf "$TMPDB"
 
 passo "Etapa 5: custo das construções (limite de peças)"

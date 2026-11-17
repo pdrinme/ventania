@@ -30,6 +30,7 @@ var _espectador: Label
 var _resultado: PanelContainer
 var _res_titulo: Label
 var _res_texto: Label
+var _res_xp: Label
 var _nomes := {}
 var _info_col: VBoxContainer
 var eliminacoes := 0                 # minhas eliminações nesta partida (só exibição)
@@ -121,6 +122,10 @@ func _ready() -> void:
 	v.add_child(_res_titulo)
 	_res_texto = _rotulo("Subtitulo")
 	v.add_child(_res_texto)
+	_res_xp = _rotulo("Pequeno")
+	_res_xp.add_theme_color_override("font_color", VentaniaTheme.AMARELO)
+	_res_xp.visible = false
+	v.add_child(_res_xp)
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 12)
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -224,7 +229,24 @@ func show_result(r: Dictionary, nome_vencedor: String, meu_id: int) -> void:
 		_res_texto.text += "\nVencedor: %s" % nome_vencedor
 
 
+## Etapa 9: XP desta partida, calculado e concedido pelo meta-servidor.
+func show_progress(p: Dictionary) -> void:
+	var linhas := []
+	for x: Dictionary in p.get("xp", []):
+		linhas.append("%s  +%d" % [x["motivo"], int(x["xp"])])
+	var topo := "+%d XP" % int(p.get("xp_total", 0))
+	if int(p.get("nivel", 0)) > int(p.get("nivel_antes", 0)):
+		topo += "  ·  NÍVEL %d!" % int(p["nivel"])
+	if int(p.get("faiscas", 0)) > 0:
+		topo += "  ·  +%d Faíscas" % int(p["faiscas"])
+	for d: Dictionary in p.get("desbloqueados", []):
+		linhas.append("Desbloqueado: %s" % d.get("nome", "?"))
+	_res_xp.text = topo + "\n" + "\n".join(linhas)
+	_res_xp.visible = true
+
+
 func hide_result() -> void:
+	_res_xp.visible = false
 	_resultado.visible = false
 
 

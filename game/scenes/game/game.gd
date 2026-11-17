@@ -143,6 +143,7 @@ func _ready() -> void:
 	add_child(client)
 	client.welcomed.connect(_on_welcome)
 	client.simulate_from_args(OS.get_cmdline_user_args())
+	Meta.progress.connect(func(pr): if match_hud: match_hud.show_progress(pr))
 	client.rejected.connect(_on_recusa)
 	client.disconnected.connect(_on_queda)
 	client.snapshot_received.connect(_on_snapshot)

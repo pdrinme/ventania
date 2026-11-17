@@ -1,0 +1,34 @@
+{
+  "_doc": "Progressão (Etapa 9). XP por partida de Battle Royale (o treino não dá XP), curva de níveis e recompensas. Só o meta-servidor aplica; o cliente nunca concede nada.",
+  "xp": {
+    "participacao": 50,
+    "por_minuto_vivo": 10,
+    "minutos_max": 20,
+    "por_eliminacao": 40,
+    "eliminacoes_max": 15,
+    "top10": 60,
+    "top5": 120,
+    "vitoria": 300,
+    "por_bau": 10,
+    "baus_max": 20,
+    "coleta_por_xp": 20,
+    "coleta_xp_max": 50,
+    "construcoes_por_xp": 5,
+    "construcoes_xp_max": 40
+  },
+  "niveis": {
+    "_doc": "XP para passar do nível n para n+1 = base + passo * (n - 1), no máximo teto.",
+    "base": 800,
+    "passo": 80,
+    "teto": 3000,
+    "maximo": 200
+  },
+  "faiscas_por_nivel": 50,
+  "recompensas_nivel": {
+    "2": {"item": "emote_aceno"},
+    "5": {"faiscas": 100},
+    "10": {"faiscas": 200}
+  },
+  "itens_iniciais": ["traje_recruta", "picareta_padrao", "planador_padrao"],
+  "equipados_iniciais": {"traje": "traje_recruta", "picareta": "picareta_padrao", "planador": "planador_padrao"}
+}

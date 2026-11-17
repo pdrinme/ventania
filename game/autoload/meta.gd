@@ -11,6 +11,8 @@ signal invite_received(invite: Dictionary)
 signal friend_request(from: Dictionary)
 signal match_found(m: Dictionary)
 signal notice(text: String)                      # avisos curtos para a interface
+signal profile_changed(profile: Dictionary)      # Etapa 9: nível, XP, Faíscas, itens
+signal progress(p: Dictionary)                   # resumo do XP de uma partida (vem do servidor)
 
 const SESSAO := "user://session.cfg"
 const ESPERA_EVENTOS_S := 25.0
@@ -22,6 +24,8 @@ var last_error := ""
 var account := {}
 var party := {}
 var friends := {"friends": [], "incoming": [], "outgoing": []}
+var profile := {}
+var last_progress := {}       # último resumo de partida (a tela de resultado mostra)
 var _seq := 0
 var _geracao := 0           # muda a cada login/logout: o laço de eventos antigo para
 
@@ -93,6 +97,7 @@ func logout() -> void:
 	_geracao += 1
 	account = {}
 	party = {}
+	profile = {}
 	account_changed.emit(account)
 
 
@@ -115,6 +120,7 @@ func _retomar_sessao() -> void:
 	account_changed.emit(account)
 	Log.info("conta", "entrou como %s" % account["username"])
 	refresh_friends()
+	refresh_profile()
 	_geracao += 1
 	_laco_eventos(_geracao)
 
@@ -158,6 +164,10 @@ func _tratar(ev: Dictionary) -> void:
 			notice.emit("%s recusou o convite." % d.get("by", {}).get("username", "?"))
 		"kicked":
 			notice.emit("Você foi removido do grupo.")
+		"progress":
+			last_progress = d
+			progress.emit(d)
+			refresh_profile()
 		"match_found":
 			var m := d.duplicate()
 			m["host"] = _host_alcancavel(str(m.get("host", "")))
@@ -176,6 +186,37 @@ func _host_alcancavel(h: String) -> String:
 func _set_party(p: Dictionary) -> void:
 	party = p
 	party_changed.emit(party)
+
+
+# ---------- progressão (Etapa 9) ----------
+
+func refresh_profile() -> void:
+	var r := await request_json(HTTPClient.METHOD_GET, "/v1/profile")
+	if r["ok"]:
+		profile = r["data"]
+		profile_changed.emit(profile)
+
+
+func get_quests() -> Dictionary:
+	return await request_json(HTTPClient.METHOD_GET, "/v1/quests")
+
+
+func get_ledger() -> Dictionary:
+	return await request_json(HTTPClient.METHOD_GET, "/v1/ledger")
+
+
+func get_history() -> Dictionary:
+	return await request_json(HTTPClient.METHOD_GET, "/v1/history")
+
+
+func equip(slot: String, item: String) -> Dictionary:
+	var r := await request_json(HTTPClient.METHOD_POST, "/v1/loadout", {"slot": slot, "item": item})
+	if r["ok"]:
+		profile = r["data"]
+		profile_changed.emit(profile)
+	else:
+		notice.emit(r["error"])
+	return r
 
 
 # ---------- amigos e grupo ----------

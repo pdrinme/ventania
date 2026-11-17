@@ -39,6 +39,67 @@ MIGRACOES = [
         );
         CREATE INDEX friendships_b ON friendships(b);
     """),
+    (3, "progressão: perfil, ledger de Faíscas, desbloqueios, equipados, missões e partidas (Etapa 9)", """
+        CREATE TABLE profiles (
+            account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+            xp_total INTEGER NOT NULL DEFAULT 0,
+            level INTEGER NOT NULL DEFAULT 1,
+            sparks INTEGER NOT NULL DEFAULT 0 CHECK (sparks >= 0),
+            matches INTEGER NOT NULL DEFAULT 0,
+            wins INTEGER NOT NULL DEFAULT 0,
+            kills INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE TABLE ledger (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            delta INTEGER NOT NULL,
+            balance_after INTEGER NOT NULL,
+            reason TEXT NOT NULL,
+            idem_key TEXT NOT NULL UNIQUE,
+            created_at INTEGER NOT NULL
+        );
+        CREATE INDEX ledger_account ON ledger(account_id, id);
+        CREATE TABLE unlocks (
+            account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            item_id TEXT NOT NULL,
+            source TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            PRIMARY KEY (account_id, item_id)
+        );
+        CREATE TABLE loadout (
+            account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            slot TEXT NOT NULL,
+            item_id TEXT NOT NULL,
+            PRIMARY KEY (account_id, slot)
+        );
+        CREATE TABLE quest_progress (
+            account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            quest_id TEXT NOT NULL,
+            period TEXT NOT NULL,
+            progress INTEGER NOT NULL DEFAULT 0,
+            completed_at INTEGER,
+            PRIMARY KEY (account_id, quest_id, period)
+        );
+        CREATE TABLE match_reports (
+            match_id TEXT PRIMARY KEY,
+            room TEXT NOT NULL,
+            mode TEXT NOT NULL,
+            total INTEGER NOT NULL,
+            received_at INTEGER NOT NULL
+        );
+        CREATE TABLE match_results (
+            match_id TEXT NOT NULL REFERENCES match_reports(match_id),
+            account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            placement INTEGER NOT NULL,
+            kills INTEGER NOT NULL,
+            time_alive_s INTEGER NOT NULL,
+            xp INTEGER NOT NULL,
+            sparks INTEGER NOT NULL,
+            details TEXT NOT NULL,
+            PRIMARY KEY (match_id, account_id)
+        );
+        CREATE INDEX match_results_account ON match_results(account_id);
+    """),
 ]
 
 

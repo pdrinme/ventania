@@ -60,6 +60,21 @@ func _draw() -> void:
 		"cadeado":
 			draw_rect(Rect2(c + Vector2(-s * 0.3, -s * 0.02), Vector2(s * 0.6, s * 0.42)), cor)
 			draw_arc(c + Vector2(0, -s * 0.05), s * 0.2, PI, TAU, 16, cor, e, true)
+		"faisca":
+			# estrela de 4 pontas (a moeda Faíscas)
+			var pts := PackedVector2Array()
+			for i in 8:
+				var a := TAU * i / 8.0 - PI / 2
+				var r := s * (0.46 if i % 2 == 0 else 0.16)
+				pts.append(c + Vector2(cos(a), sin(a)) * r)
+			draw_colored_polygon(pts, cor)
+		"missoes":
+			# prancheta com dois itens marcados
+			draw_rect(Rect2(c + Vector2(-s * 0.32, -s * 0.38), Vector2(s * 0.64, s * 0.78)), cor, false, e)
+			for k in 2:
+				var y := -s * 0.14 + k * s * 0.26
+				draw_polyline(PackedVector2Array([c + Vector2(-s * 0.2, y), c + Vector2(-s * 0.12, y + s * 0.08), c + Vector2(-s * 0.02, y - s * 0.06)]), cor, e * 0.8, true)
+				draw_line(c + Vector2(s * 0.04, y), c + Vector2(s * 0.2, y), cor, e * 0.8, true)
 		"sair":
 			draw_rect(Rect2(c + Vector2(-s * 0.38, -s * 0.36), Vector2(s * 0.4, s * 0.72)), cor, false, e)
 			draw_line(c + Vector2(-s * 0.05, 0), c + Vector2(s * 0.4, 0), cor, e, true)
