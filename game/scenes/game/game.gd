@@ -368,6 +368,24 @@ func _amostra_remoto(e: Protocol.EntityState, tick: int) -> void:
 		amostras.pop_front()
 
 
+const NOME_DISTANCIA_M := 25.0
+
+
+## Nomes sobre os outros jogadores entregariam a posição (a plaquinha tem tamanho
+## fixo na tela, então aparece mesmo quando o boneco já é um pontinho). Durante o
+## ônibus e o jogo do Battle Royale, adversários (humanos e bots) não têm nome à
+## mostra. Na espera, no fim e no treino o nome aparece, mas só de perto.
+## (Companheiros de time, quando existirem, poderão ter o nome sempre visível.)
+func _mostrar_nome(boneco: bool, pos: Vector3) -> bool:
+	if boneco:
+		return true
+	var estado: int = _partida.get("estado", Protocol.MATCH_TREINO)
+	if estado == Protocol.MATCH_ONIBUS or estado == Protocol.MATCH_JOGO:
+		return false
+	var olho := camera.global_position if camera else pos
+	return olho.distance_to(pos) <= NOME_DISTANCIA_M
+
+
 func _remover_remoto(id: int) -> void:
 	if _remotos.has(id):
 		(_remotos[id]["visual"] as Node).queue_free()
@@ -428,6 +446,7 @@ func _interpolar_remotos() -> void:
 		if rotulo.text.is_empty():
 			rotulo.text = _nomes.get(_remotos.find_key(r), "")
 		v.global_position = (anterior["pos"] as Vector3).lerp(proxima["pos"], t)
+		rotulo.visible = _mostrar_nome(proxima["flags"] & Protocol.F_DUMMY != 0, v.global_position)
 		var yaw := lerp_angle(anterior["yaw"], proxima["yaw"], t)
 		r["boneco"] = proxima["flags"] & Protocol.F_DUMMY != 0
 		v.visible = proxima["flags"] & Protocol.F_DEAD == 0 and proxima.get("queda", 0) != Pawn.NO_ONIBUS

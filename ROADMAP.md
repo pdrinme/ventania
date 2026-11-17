@@ -478,6 +478,7 @@ Login, identidade, lobby com o personagem em destaque, grupos, amigos, convites,
   - 10 testes novos do meta-servidor (16 no total);
   - ticket Python ↔ GDScript;
   - `test_lobby.gd`, ponta a ponta com processos reais (meta-servidor + servidor dedicado com 2 salas + 4 contas, 17 verificações).
+- ✅ **v0.8.1:** os nomes dos adversários (humanos e bots) ficam ocultos durante o ônibus e o jogo, porque a plaquinha de tamanho fixo entregava a posição de longe. Na espera, no fim e no treino, o nome aparece só a até 25 m.
 - ⏳ **Falta:** testar com amigos de verdade (2 PCs + celular) usando o meta-servidor, conforme `docs/TESTE_EM_HARDWARE.md` §2.3. Os cosméticos no lobby chegam com o Armário e a Loja (Etapas 9–11).
 
 ### Etapa 9 — Inventário e progressão ⬜
