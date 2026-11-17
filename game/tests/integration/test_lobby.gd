@@ -190,8 +190,9 @@ func _init() -> void:
 	_checar(int(perfil.get("xp_total", 0)) == int(pa.get("xp_total", -1)) and int(perfil.get("matches", 0)) == 1, "perfil da Ana: %s XP, %s partida" % [str(perfil.get("xp_total")), str(perfil.get("matches"))])
 	var hist: Array = (await a.chamar(HTTPClient.METHOD_GET, "/v1/history"))["data"]["matches"]
 	_checar(hist.size() == 1 and int(hist[0]["placement"]) == int(pa.get("colocacao", -1)), "histórico da partida gravado (colocação %s)" % str(pa.get("colocacao")))
+	# o Caio pode ter recebido XP da partida da própria sala privada, nunca da partida da Ana
 	var pc := await c.puxar("progress", 1.0)
-	_checar(pc.is_empty(), "quem não jogou aquela partida não ganhou XP")
+	_checar(pc.is_empty() or pc.get("match_id", "") != pa.get("match_id", ""), "quem não jogou aquela partida não ganhou XP por ela")
 	for j in [a, b, c, d]:
 		j.client.close()
 	await create_timer(0.5).timeout
