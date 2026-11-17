@@ -93,6 +93,8 @@ kill "$PID" 2>/dev/null; wait "$PID" 2>/dev/null; rm -f "$LOGSRV"
 passo "Entrada na partida: queda livre, mergulho, planador e pouso (física)"
 FILTRO="QUEDA|FALHOU"
 rodar_godot timeout 120 "$GODOT" --headless --path game -s res://tests/integration/test_queda.gd; checar $? "queda"
+FILTRO="PICARETA_COSMETICA|FALHA"
+rodar_godot timeout 300 "$GODOT" --headless --path game -s res://tests/integration/test_picareta_cosmetica.gd; checar $? "picareta cosmética"
 
 passo "Etapa 5: 2 clientes construindo e editando sem divergência (+ 1 que entra depois)"
 FILTRO="CONSTRUCAO_REDE|FALHOU"

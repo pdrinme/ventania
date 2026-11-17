@@ -4,7 +4,8 @@ extends Node3D
 ## "aquario" (Capitão Maré): três peixinhos nadando em círculos dentro do
 ## aquário da cabeça, bolhas subindo do tubo de ar e a água reagindo ao
 ## movimento (parâmetro por instância do shader M_agua_ventania).
-## Barato: 3 malhas pequenas + 1 CPUParticles3D com poucas partículas.
+## Barato: 3 malhas pequenas + 1 CPUParticles3D com poucas partículas, desenhados
+## só a até DISTANCIA_DETALHE metros.
 
 const PEIXES := ["res://assets/mochilas_acessorios/peixe_laranja_01.glb", "res://assets/mochilas_acessorios/peixe_amarelo_01.glb",
 		"res://assets/mochilas_acessorios/peixe_laranja_01.glb"]
@@ -12,6 +13,9 @@ const PEIXES := ["res://assets/mochilas_acessorios/peixe_laranja_01.glb", "res:/
 ## largura 0,40 (x), profundidade 0,30 (z), água de 0,03 a 0,29 m acima da base.
 const CENTRO := Vector3(0, 0.17, 0)
 const RAIO := Vector2(0.13, 0.08)
+## Peixes e bolhas só são desenhados até esta distância da câmera (de longe não se
+## distinguem; o vidro e a água continuam).
+const DISTANCIA_DETALHE := 30.0
 
 var tipo := ""
 var velocidade := Vector3.ZERO        # do personagem (o PawnVisual atualiza); a água reage
@@ -49,6 +53,9 @@ func _ready() -> void:
 	for i in PEIXES.size():
 		var p := (load(PEIXES[i]) as PackedScene).instantiate() as Node3D
 		add_child(p)
+		for gi in p.find_children("*", "GeometryInstance3D", true, false):
+			(gi as GeometryInstance3D).visibility_range_end = DISTANCIA_DETALHE
+			(gi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_peixes.append(p)
 		_fases.append(i * TAU / PEIXES.size() + randf() * 0.4)
 	var bolhas := CPUParticles3D.new()
@@ -74,6 +81,8 @@ func _ready() -> void:
 	esfera.material = mat
 	bolhas.mesh = esfera
 	bolhas.local_coords = true
+	bolhas.visibility_range_end = DISTANCIA_DETALHE
+	bolhas.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(bolhas)
 
 

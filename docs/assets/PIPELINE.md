@@ -168,3 +168,47 @@ na GPU).
 O asset `caixote_exemplo_01` (gerado por código em
 `tools/assets/blender/make_sample_crate.py`, original) existe só para testar a
 cadeia inteira e pode ser apagado quando houver assets reais.
+
+## 8. Cosméticos (trajes, picaretas, planadores) — Etapa 13
+
+A cadeia é: conceito → modelo → materiais → esqueleto → animações → validação → exportação → catálogo → imagem da loja → teste na loja e na partida.
+
+1. **Conceito e modelo:** acrescente uma função em `tools/assets/kit/blender/gerar_skins.py`.
+   - Use a classe `Corpo`: as peças são presas aos ossos do esqueleto padrão com skinning rígido.
+   - Registre a função em `SKINS` (trajes) ou `ACESSORIOS` (picaretas, planadores, peças avulsas).
+   - Um traje novo precisa de silhueta e cabeça próprias, não só de outra cor.
+2. **Materiais:**
+   - no máximo 3 por personagem (`budgets.json`);
+   - `M_paleta_ventania` (cores da paleta);
+   - `M_vidro_ventania` e `M_agua_ventania` (`kit_comum.material_especial`), trocados na importação por `post_import.gd`.
+3. **Animações:** o mesmo `gerar_personagem.animar()` gera todas as ações em qualquer skin.
+4. **Gerar, exportar e validar:**
+
+```bash
+python3 tools/assets/kit/blender/gerar_skins.py
+```
+
+```bash
+python3 tools/assets/validate_glb.py --todos
+```
+
+```bash
+python3 tools/assets/catalog.py validar
+```
+
+5. **Registrar:**
+   - `game/data/cosmeticos.json`: id → cena; um efeito opcional entra em `efeitos` e é implementado em `TrajeFx`;
+   - o item vai para `backend/config/catalog/` (loja ou passe);
+   - o meta-servidor recusa itens sem visual no jogo.
+6. **Imagem da loja (renderizada do modelo real):**
+
+```bash
+xvfb-run godot --path game --rendering-driver opengl3 --resolution 512x640 -s res://tests/gerar_imagens_loja.gd -- <id>
+```
+
+7. **Testar:**
+   - na loja: `game/tests/capturar_loja.gd`;
+   - na entrada da partida: `game/tests/capturar_entrada.gd -- <pasta> <traje> <planador> <picareta>`;
+   - deformação: `game/tests/capturar_animacoes.gd` com o `.glb`;
+   - desempenho: `game/tests/medir_trajes.gd -- <traje> [distância]`;
+   - picaretas: `tests/integration/test_picareta_cosmetica.gd`.

@@ -123,14 +123,20 @@ Eles ficam em arquivos de dados e serão ajustados com testes de jogo.
 - **Seções:** "Destaques" (rotação semanal, 2–4 itens) e "Diária" (rotação a cada 24 h, 6 itens).
 - **Rotação:** controlada pelo servidor. Existe uma agenda explícita por datas (`backend/config/shop/schedule.json`) e, sem agenda, um sorteio determinístico com semente por data a partir do catálogo elegível, sem repetir itens recentes.
 - **Item:** id único, nome, descrição, imagem, raridade, categoria e preço.
-- **Compra:** com a pré-visualização do item no personagem e a confirmação. O servidor valida a transação atomicamente.
+- **Imagem:** cada item tem a sua, renderizada do modelo real do jogo com fundo na cor da raridade (cartões da loja, do passe e da coleção).
+- **Detalhes:** visualizador 3D com o modelo real (arrastar para girar; Corpo, Rosto e Costas para trajes), categoria, raridade, descrição e preço.
+- **Compra:** a tela de confirmação mostra de novo o produto, o preço e o saldo depois. O servidor valida a transação atomicamente; depois aparece "Equipar agora".
 - **Preços iniciais por raridade** (Faíscas): Incomum 300, Raro 600, Épico 900, Lendário 1500, Emote 200–500.
 - A loja nunca vende vantagem de gameplay.
 
 ### 9.6 Categorias de cosméticos
 Traje, ferramenta de coleta, mochila, emote, acessório, trilha de queda e
-planador (nome a definir). Cada categoria tem um slot de equipamento (emotes têm
-até 6 slots).
+planador. Cada categoria tem um slot de equipamento (emotes têm até 6 slots).
+
+**Trajes são personagens novos**, não recolorações: silhueta, cabeça (ou objeto no
+lugar da cabeça), roupa, materiais e paleta próprios, sobre o esqueleto e as
+animações compartilhados. Picaretas e planadores são independentes do traje.
+Nenhum cosmético muda hitbox, tamanho, dano, coleta ou velocidade.
 
 ## 10. Lobby e social
 

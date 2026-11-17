@@ -249,6 +249,24 @@ O cliente guarda apenas um *cache* de leitura do perfil, para exibir o lobby rap
 - Um cosmético é: `id` → recursos visuais (malha, material, ícone, animação de emote). O catálogo (metadados e preço) vem do servidor, e os recursos visuais vêm do pacote do cliente.
 - Se o cliente não tiver o recurso de um id (versão antiga), ele usa um visual padrão.
 
+### 8.1 Estrutura (Etapa 13)
+
+| Peça | Onde | Papel |
+|---|---|---|
+| Catálogo | `backend/config/catalog/*.json` | id, nome, categoria, raridade, descrição (servidor = fonte da verdade). `progressao.py` recusa item sem visual no jogo |
+| Tabela de visuais | `game/data/cosmeticos.json` | id → cena: `trajes`, `picaretas`, `planadores`, `efeitos` (ex.: aquário), `trajes_dos_bots` |
+| Acesso | `Cosmeticos` (`outfit_scene`, `pickaxe_scene`, `glider_scene`, `valid_id`) | id desconhecido → padrão |
+| Modelos | `tools/assets/kit/blender/gerar_skins.py` → `game/assets/personagens/`, `armas/`, `mochilas_acessorios/` | esqueleto padrão, skinning rígido por osso, até 3 materiais (`M_paleta_ventania`, `M_vidro_ventania`, `M_agua_ventania`) |
+| Efeitos | `TrajeFx` (preso ao osso Head) | peixes, bolhas e água do aquário; só visual, com LOD de 30 m |
+| Rede | ticket (`traje`, `pic`, `plan`) → `GameServer` valida → `pack_player_info` (protocolo 11) → `game.gd` cria o `PawnVisual` | nenhum quadro a quadro: os outros jogadores recebem os ids uma vez |
+| Imagens | `game/tests/gerar_imagens_loja.gd` → `game/assets/ui/loja/<id>.png` | renderizadas do modelo real; regenerar ao mudar um modelo |
+| Visualizador | `VitrineCosmetico` (`game/ui/shared/`) | modelo real em SubViewport, arrastar para girar, enquadramentos |
+
+**Garantia de "só aparência":**
+- o servidor guarda `picareta` e `planador` no `Cliente` só para repassá-los no `player_info`;
+- dano, coleta, velocidade de queda, planeio e hitbox não leem esses campos;
+- `test_picareta_cosmetica.gd` confere isso numa partida real.
+
 ## 9. Desempenho e hardware
 
 **Renderizador: Compatibility** (OpenGL ES 3.0 / OpenGL 3.3). **[ADR-1]**

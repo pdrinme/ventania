@@ -40,6 +40,9 @@
 | `game/assets/armas/picareta_01.glb` (picareta permanente, 532 triângulos) | Projeto Ventania (`tools/assets/kit/blender/gerar_armas.py`) | Original | Original. Design próprio; variações cosméticas futuras usam os mesmos marcadores |
 | `game/assets/ui/icones/*.png` (miniaturas do inventário, incluindo a picareta) | Projeto Ventania (`game/tests/gerar_icones.gd`, renderizadas dos modelos originais) | Original | Original |
 | `game/data/nomes_jogadores.txt` (1000 nomes de jogadores dos bots) | Lista fornecida pelo dono do projeto | Projeto | Uso no projeto |
+| Skins da Etapa 13: 9 trajes, `picareta_ancora_01`, `planador_arraia_01`, `planador_folha_01`, peixes do aquário | Projeto Ventania (`tools/assets/kit/blender/gerar_skins.py`) | Original | Original. Conceitos próprios, sem personagens de outros jogos |
+| `game/assets/texturas_materiais/vidro_aquario.gdshader`, `agua_aquario.gdshader`, `M_vidro_ventania.tres`, `M_agua_ventania.tres` | Projeto Ventania | Original | Original |
+| `game/assets/ui/loja/*.png` (imagens dos cosméticos) e `game/ui/shared/fundo_cosmetico.gdshader` | Projeto Ventania (`game/tests/gerar_imagens_loja.gd`, renderizadas dos modelos originais) | Original | Original |
 | `game/assets/ui/icone.png` | Projeto Ventania (`tools/assets/kit/gerar_icone.py`) | Original | Original |
 | `game/assets/texturas_materiais/paleta_ventania.png`, `toon_paleta.gdshader`, `M_paleta_ventania.tres` | Projeto Ventania | Original | Original |
 

@@ -866,58 +866,106 @@ func _abrir_loja() -> void:
 	dica.theme_type_variation = "Pequeno"
 	dica.text = "   Faíscas vêm do passe, das missões e dos níveis. Sem dinheiro real."
 	dica.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	dica.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	dica.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	saldo.add_child(dica)
+	# seções lado a lado (destaques grandes à esquerda, diária em grade), com rolagem se a tela for baixa
+	var rolar := ScrollContainer.new()
+	rolar.custom_minimum_size.y = minf(470.0, size.y - 190.0)
+	rolar.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	col.add_child(rolar)
+	var secoes := HFlowContainer.new()
+	secoes.add_theme_constant_override("h_separation", 26)
+	secoes.add_theme_constant_override("v_separation", 14)
+	secoes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rolar.add_child(secoes)
 	for sec: Dictionary in r["data"]["secoes"]:
+		var destaque: bool = sec["id"] == "destaques"
+		var bloco := VBoxContainer.new()
+		bloco.add_theme_constant_override("separation", 8)
+		secoes.add_child(bloco)
 		var cab := Label.new()
 		cab.theme_type_variation = "Rotulo"
 		var h := int(sec["troca_em_s"]) / 3600
 		cab.text = "%s  ·  TROCA EM %s" % [str(sec["nome"]).to_upper(), ("%d h %02d min" % [h, (int(sec["troca_em_s"]) % 3600) / 60]) if h < 48 else ("%d dias" % (h / 24))]
-		col.add_child(cab)
-		var linha := HBoxContainer.new()
-		linha.add_theme_constant_override("separation", 12)
-		col.add_child(linha)
+		bloco.add_child(cab)
+		var grade := GridContainer.new()
+		grade.columns = 2 if destaque or sec["itens"].size() > 2 else maxi(1, sec["itens"].size())
+		grade.add_theme_constant_override("h_separation", 12)
+		grade.add_theme_constant_override("v_separation", 12)
+		bloco.add_child(grade)
 		for it: Dictionary in sec["itens"]:
-			linha.add_child(_cartao_loja(it, sec["id"] == "destaques"))
+			grade.add_child(_cartao_loja(it, destaque))
 
 
+## Cartão da loja: imagem gerada do modelo real + nome, categoria, raridade e preço.
 func _cartao_loja(it: Dictionary, destaque: bool) -> Control:
 	var cor: Color = CORES_RARIDADE.get(it["raridade"], VentaniaTheme.CINZA)
 	var b := Button.new()
-	b.custom_minimum_size = Vector2(250 if destaque else 190, 210 if destaque else 190)
-	var sb := VentaniaTheme._caixa(cor.darkened(0.5), 18, VentaniaTheme.TINTA, 3, 5)
+	b.custom_minimum_size = Vector2(230, 400) if destaque else Vector2(170, 194)
+	b.clip_contents = true
+	var sb := VentaniaTheme._caixa(cor.darkened(0.5), 18, cor.darkened(0.1), 3, 5)
+	sb.content_margin_left = 0
 	b.add_theme_stylebox_override("normal", sb)
-	var sb_h := VentaniaTheme._caixa(cor.darkened(0.35), 18, VentaniaTheme.AMARELO, 3, 6)
+	var sb_h := VentaniaTheme._caixa(cor.darkened(0.35), 18, VentaniaTheme.AMARELO, 4, 6)
 	b.add_theme_stylebox_override("hover", sb_h)
 	b.add_theme_stylebox_override("focus", sb_h)
 	b.add_theme_stylebox_override("pressed", sb)
+	var img := VitrineCosmetico.imagem(it["id"])
+	if img:
+		var tr := TextureRect.new()
+		tr.texture = img
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		tr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		tr.offset_left = 3
+		tr.offset_top = 3
+		tr.offset_right = -3
+		tr.offset_bottom = -3
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(tr)
+	else:
+		var icone := IconeUI.criar("pessoa", 64 if destaque else 52, cor.lightened(0.25))
+		icone.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+		icone.position.y = 24
+		icone.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(icone)
+	# faixa inferior com o texto, legível sobre a imagem
+	var faixa := PanelContainer.new()
+	var sf := StyleBoxFlat.new()
+	sf.bg_color = Color(VentaniaTheme.TINTA, 0.82)
+	sf.corner_radius_bottom_left = 15
+	sf.corner_radius_bottom_right = 15
+	sf.content_margin_left = 8
+	sf.content_margin_right = 8
+	sf.content_margin_top = 4
+	sf.content_margin_bottom = 6
+	faixa.add_theme_stylebox_override("panel", sf)
+	faixa.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	faixa.offset_left = 3
+	faixa.offset_right = -3
+	faixa.offset_bottom = -3
+	faixa.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	faixa.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(faixa)
 	var v := VBoxContainer.new()
-	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	v.offset_left = 10
-	v.offset_right = -10
-	v.offset_top = 10
-	v.offset_bottom = -10
-	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_theme_constant_override("separation", 0)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	b.add_child(v)
-	var icone := IconeUI.criar("pessoa", 64 if destaque else 52, cor.lightened(0.25))
-	icone.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	v.add_child(icone)
+	faixa.add_child(v)
+	var rar := Label.new()
+	rar.text = "%s · %s" % [VitrineCosmetico.nome_categoria(it.get("categoria", "traje")), _raridade(it["raridade"])]
+	rar.add_theme_font_size_override("font_size", 12 if destaque else 11)
+	rar.add_theme_color_override("font_color", cor.lightened(0.35))
+	v.add_child(rar)
 	var nome := Label.new()
 	nome.text = str(it["nome"])
 	nome.add_theme_font_override("font", VentaniaTheme.FONTE_FORTE)
-	nome.add_theme_font_size_override("font_size", 20 if destaque else 17)
-	nome.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	nome.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	nome.add_theme_font_size_override("font_size", 20 if destaque else 15)
+	nome.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	v.add_child(nome)
-	var rar := Label.new()
-	rar.text = "TRAJE · %s" % _raridade(it["raridade"])
-	rar.add_theme_font_size_override("font_size", 12)
-	rar.add_theme_color_override("font_color", cor.lightened(0.3))
-	rar.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(rar)
 	var preco := Label.new()
 	preco.add_theme_font_override("font", VentaniaTheme.FONTE_FORTE)
-	preco.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	preco.add_theme_font_size_override("font_size", 17 if destaque else 14)
 	if it["tem"]:
 		preco.text = "JÁ É SEU"
 		preco.add_theme_color_override("font_color", VentaniaTheme.VERDE)
@@ -925,6 +973,7 @@ func _cartao_loja(it: Dictionary, destaque: bool) -> Control:
 		preco.text = "%s Faíscas" % _milhar(int(it["preco"]))
 		preco.add_theme_color_override("font_color", VentaniaTheme.AMARELO)
 	v.add_child(preco)
+	b.tooltip_text = "%s — %s" % [it["nome"], it.get("descricao", "")]
 	b.pressed.connect(func():
 		Audio.play_ui("clique")
 		_previa_item(it))
@@ -935,52 +984,44 @@ static func _raridade(r: String) -> String:
 	return {"comum": "COMUM", "incomum": "INCOMUM", "raro": "RARO", "epico": "ÉPICO", "lendario": "LENDÁRIO", "mitico": "MÍTICO"}.get(r, r.to_upper())
 
 
-## Pré-visualização: o traje em 3D, girando, com descrição e compra.
+## Detalhes: o modelo real em 3D (arraste para girar; corpo/rosto/costas), descrição e compra.
 func _previa_item(it: Dictionary) -> void:
-	var col := _modal(str(it["nome"]), 760)
+	var cat: String = it.get("categoria", "traje")
+	var col := _modal(str(it["nome"]), 820)
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 18)
 	col.add_child(h)
-	var vpc := SubViewportContainer.new()
-	vpc.custom_minimum_size = Vector2(300, 360)
-	vpc.stretch = true
-	h.add_child(vpc)
-	var vp := SubViewport.new()
-	vp.own_world_3d = true
-	vp.transparent_bg = true
-	vp.msaa_3d = Viewport.MSAA_2X
-	vpc.add_child(vp)
-	var env := Environment.new()
-	env.background_mode = Environment.BG_CLEAR_COLOR
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("c8d2ff")
-	env.ambient_light_energy = 0.55
-	var we := WorldEnvironment.new()
-	we.environment = env
-	vp.add_child(we)
-	var sol := DirectionalLight3D.new()
-	sol.rotation_degrees = Vector3(-35, -30, 0)
-	vp.add_child(sol)
-	var giro := Node3D.new()
-	vp.add_child(giro)
-	var m := (load(Cosmeticos.outfit_scene(it["id"])) as PackedScene).instantiate() as Node3D
-	giro.add_child(m)
-	var aps := m.find_children("*", "AnimationPlayer", true, false)
-	if not aps.is_empty():
-		(aps[0] as AnimationPlayer).play("idle")
-	var cam := Camera3D.new()
-	cam.fov = 30
-	vp.add_child(cam)
-	cam.look_at_from_position(Vector3(0, 1.2, 4.6), Vector3(0, 0.95, 0))
-	var tw := giro.create_tween().set_loops()
-	tw.tween_property(giro, "rotation:y", TAU, 6.0).from(0.0)
+	var esq := VBoxContainer.new()
+	esq.add_theme_constant_override("separation", 8)
+	h.add_child(esq)
+	var vit := VitrineCosmetico.criar(it["id"], cat, it["raridade"])
+	vit.custom_minimum_size = Vector2(320, minf(420.0, size.y - 260.0))
+	esq.add_child(vit)
+	var dica_giro := Label.new()
+	dica_giro.theme_type_variation = "Pequeno"
+	dica_giro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dica_giro.text = "Arraste para girar"
+	esq.add_child(dica_giro)
+	if cat == "traje":
+		var quadros := HBoxContainer.new()
+		quadros.alignment = BoxContainer.ALIGNMENT_CENTER
+		quadros.add_theme_constant_override("separation", 6)
+		esq.add_child(quadros)
+		for q in [["corpo", "Corpo"], ["rosto", "Rosto"], ["costas", "Costas"]]:
+			var bq := Button.new()
+			bq.text = q[1]
+			bq.theme_type_variation = "BotaoFantasma"
+			bq.add_theme_font_size_override("font_size", 15)
+			bq.pressed.connect(vit.enquadrar.bind(q[0]))
+			quadros.add_child(bq)
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.alignment = BoxContainer.ALIGNMENT_CENTER
+	info.add_theme_constant_override("separation", 10)
 	h.add_child(info)
 	var rar := Label.new()
 	rar.theme_type_variation = "Rotulo"
-	rar.text = "TRAJE · %s" % _raridade(it["raridade"])
+	rar.text = "%s · %s" % [VitrineCosmetico.nome_categoria(cat), _raridade(it["raridade"])]
 	rar.add_theme_color_override("font_color", CORES_RARIDADE.get(it["raridade"], VentaniaTheme.CINZA).lightened(0.3))
 	info.add_child(rar)
 	var desc := Label.new()
@@ -990,57 +1031,139 @@ func _previa_item(it: Dictionary) -> void:
 	var nota := Label.new()
 	nota.theme_type_variation = "Pequeno"
 	nota.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	nota.text = "Só aparência: o mesmo tamanho e a mesma hitbox de qualquer traje."
+	nota.text = {"traje": "Só aparência: o mesmo tamanho, a mesma hitbox e as mesmas animações de qualquer traje.",
+			"picareta": "Só aparência: coleta exatamente igual à picareta padrão (mesmo dano, alcance e ritmo).",
+			"planador": "Só aparência: mesma velocidade de queda e de planeio de qualquer planador."}.get(cat, "Só aparência.")
 	info.add_child(nota)
-	var erro := Label.new()
-	erro.add_theme_color_override("font_color", VentaniaTheme.CORAL)
-	erro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	erro.visible = false
-	info.add_child(erro)
+	var preco := Label.new()
+	preco.add_theme_font_override("font", VentaniaTheme.FONTE_FORTE)
+	preco.add_theme_font_size_override("font_size", 26)
+	preco.add_theme_color_override("font_color", VentaniaTheme.VERDE if it["tem"] else VentaniaTheme.AMARELO)
+	preco.text = "JÁ É SEU" if it["tem"] else "%s Faíscas" % _milhar(int(it["preco"]))
+	info.add_child(preco)
 	var comprar := Button.new()
 	comprar.theme_type_variation = "BotaoPrimario"
 	comprar.add_theme_font_size_override("font_size", 24)
 	comprar.custom_minimum_size.y = _alvo + 10
 	info.add_child(comprar)
 	if it["tem"]:
-		comprar.text = "EQUIPAR"
-		comprar.pressed.connect(func():
-			await Meta.equip("traje", it["id"])
-			_fechar_modal()
-			_aviso("%s equipado!" % it["nome"]))
+		var equipado: bool = Meta.profile.get("equipped", {}).get(cat, "") == it["id"]
+		comprar.text = "EQUIPADO" if equipado else "EQUIPAR"
+		comprar.disabled = equipado
+		comprar.pressed.connect(_equipar_item.bind(it))
 	else:
-		comprar.text = "COMPRAR · %s" % _milhar(int(it["preco"]))
-		var confirmando := [false]
-		var chave := "%d-%d-%s" % [Time.get_unix_time_from_system() * 1000, randi(), it["id"]]
+		comprar.text = "COMPRAR"
 		comprar.pressed.connect(func():
-			if not confirmando[0]:
-				confirmando[0] = true
-				comprar.text = "CONFIRMAR: %s FAÍSCAS" % _milhar(int(it["preco"]))
-				return
-			comprar.disabled = true
-			erro.visible = false
-			var r := await Meta.buy(it["id"], int(it["preco"]), chave)
-			if not is_instance_valid(comprar):
-				return
-			if r["ok"]:
-				Audio.play_ui("compra")
-				comprar.disabled = false
-				comprar.text = "EQUIPAR AGORA"
-				it["tem"] = true
-				for c in comprar.pressed.get_connections():
-					comprar.pressed.disconnect(c["callable"])
-				comprar.pressed.connect(func():
-					await Meta.equip("traje", it["id"])
-					_fechar_modal()
-					_aviso("%s equipado!" % it["nome"]))
-				_aviso("Comprado: %s!" % it["nome"])
-			else:
-				comprar.disabled = false
-				confirmando[0] = false
-				comprar.text = "COMPRAR · %s" % _milhar(int(it["preco"]))
-				erro.text = r["error"]
-				erro.visible = true)
+			Audio.play_ui("clique")
+			_confirmar_compra(it))
 	comprar.grab_focus.call_deferred()
+
+
+func _equipar_item(it: Dictionary) -> void:
+	var r := await Meta.equip(it.get("categoria", "traje"), it["id"])
+	_fechar_modal()
+	_aviso("%s equipado!" % it["nome"] if r["ok"] else str(r["error"]))
+
+
+## Confirmação de compra: mostra de novo o produto (imagem do modelo real), o preço e o saldo depois.
+func _confirmar_compra(it: Dictionary) -> void:
+	var cat: String = it.get("categoria", "traje")
+	var col := _modal("Confirmar compra", 600)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 18)
+	col.add_child(h)
+	var img := VitrineCosmetico.imagem(it["id"])
+	if img:
+		var tr := TextureRect.new()
+		tr.texture = img
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(200, 250)
+		h.add_child(tr)
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.alignment = BoxContainer.ALIGNMENT_CENTER
+	info.add_theme_constant_override("separation", 8)
+	h.add_child(info)
+	var nome := Label.new()
+	nome.theme_type_variation = "Subtitulo"
+	nome.text = str(it["nome"])
+	nome.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.add_child(nome)
+	var rar := Label.new()
+	rar.theme_type_variation = "Rotulo"
+	rar.text = "%s · %s" % [VitrineCosmetico.nome_categoria(cat), _raridade(it["raridade"])]
+	rar.add_theme_color_override("font_color", CORES_RARIDADE.get(it["raridade"], VentaniaTheme.CINZA).lightened(0.3))
+	info.add_child(rar)
+	var preco := HBoxContainer.new()
+	preco.add_theme_constant_override("separation", 6)
+	info.add_child(preco)
+	var fa := IconeUI.criar("faisca", 26, VentaniaTheme.AMARELO)
+	fa.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	preco.add_child(fa)
+	var pl := Label.new()
+	pl.add_theme_font_override("font", VentaniaTheme.FONTE_FORTE)
+	pl.add_theme_font_size_override("font_size", 28)
+	pl.add_theme_color_override("font_color", VentaniaTheme.AMARELO)
+	pl.text = "%s Faíscas" % _milhar(int(it["preco"]))
+	preco.add_child(pl)
+	var saldo := int(Meta.profile.get("sparks", 0))
+	var depois := Label.new()
+	depois.theme_type_variation = "Pequeno"
+	depois.text = "Saldo: %s  →  depois: %s" % [_milhar(saldo), _milhar(saldo - int(it["preco"]))]
+	depois.add_theme_color_override("font_color", VentaniaTheme.CORAL if saldo < int(it["preco"]) else VentaniaTheme.CINZA)
+	info.add_child(depois)
+	var erro := Label.new()
+	erro.add_theme_color_override("font_color", VentaniaTheme.CORAL)
+	erro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	erro.visible = saldo < int(it["preco"])
+	erro.text = "Faíscas insuficientes."
+	info.add_child(erro)
+	var botoes := HBoxContainer.new()
+	botoes.add_theme_constant_override("separation", 10)
+	info.add_child(botoes)
+	var voltar := Button.new()
+	voltar.text = "VOLTAR"
+	voltar.theme_type_variation = "BotaoFantasma"
+	voltar.pressed.connect(_previa_item.bind(it))
+	botoes.add_child(voltar)
+	var ok := Button.new()
+	ok.theme_type_variation = "BotaoPrimario"
+	ok.text = "CONFIRMAR"
+	ok.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ok.custom_minimum_size.y = _alvo + 6
+	botoes.add_child(ok)
+	# a chave de idempotência é por tela de confirmação: tocar duas vezes não compra duas vezes
+	var chave := "%d-%d-%s" % [Time.get_unix_time_from_system() * 1000, randi(), it["id"]]
+	ok.pressed.connect(func():
+		ok.disabled = true
+		voltar.disabled = true
+		erro.visible = false
+		var r := await Meta.buy(it["id"], int(it["preco"]), chave)
+		if not is_instance_valid(ok):
+			return
+		if r["ok"]:
+			Audio.play_ui("compra")
+			it["tem"] = true
+			nome.text = "Comprado: %s!" % it["nome"]
+			depois.text = "Saldo: %s Faíscas" % _milhar(int(Meta.profile.get("sparks", 0)))
+			depois.add_theme_color_override("font_color", VentaniaTheme.VERDE)
+			voltar.queue_free()
+			ok.disabled = false
+			ok.text = "EQUIPAR AGORA"
+			for c in ok.pressed.get_connections():
+				ok.pressed.disconnect(c["callable"])
+			ok.pressed.connect(_equipar_item.bind(it))
+			_aviso("Comprado: %s!" % it["nome"])
+		else:
+			ok.disabled = false
+			voltar.disabled = false
+			erro.text = str(r["error"])
+			erro.visible = true)
+	if saldo >= int(it["preco"]):
+		ok.grab_focus.call_deferred()
+	else:
+		voltar.grab_focus.call_deferred()
 
 
 # ---------------------------------------------------------------- passe (Etapa 10)
@@ -1156,9 +1279,19 @@ func _cartao_nivel(n: Dictionary, nivel_atual: int) -> Control:
 	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(num)
 	if n["item"] != "":
-		var icone := IconeUI.criar("pessoa", 54, cor.lightened(0.2))
-		icone.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		v.add_child(icone)
+		var img := VitrineCosmetico.imagem(n["item"])
+		if img:
+			var tr := TextureRect.new()
+			tr.texture = img
+			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			tr.custom_minimum_size = Vector2(96, 112)
+			tr.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			v.add_child(tr)
+		else:
+			var icone := IconeUI.criar("pessoa", 54, cor.lightened(0.2))
+			icone.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			v.add_child(icone)
 		var nome := Label.new()
 		nome.text = str(n["nome"])
 		nome.add_theme_font_override("font", VentaniaTheme.FONTE_FORTE)
@@ -1167,7 +1300,7 @@ func _cartao_nivel(n: Dictionary, nivel_atual: int) -> Control:
 		nome.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(nome)
 		var rar := Label.new()
-		rar.text = "TRAJE · %s" % str(n["raridade"]).to_upper().replace("EPICO", "ÉPICO").replace("LENDARIO", "LENDÁRIO")
+		rar.text = "%s · %s" % [VitrineCosmetico.nome_categoria(str(n.get("categoria", "traje"))), _raridade(str(n["raridade"]))]
 		rar.add_theme_font_size_override("font_size", 12)
 		rar.add_theme_color_override("font_color", cor.lightened(0.3))
 		rar.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1224,9 +1357,19 @@ func _abrir_perfil() -> void:
 		colecao.add_child(rot)
 		for u: Dictionary in por_cat[cat]:
 			var l := HBoxContainer.new()
+			l.add_theme_constant_override("separation", 10)
+			var mini := VitrineCosmetico.imagem(u["item"])
+			if mini:
+				var tr := TextureRect.new()
+				tr.texture = mini
+				tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+				tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+				tr.custom_minimum_size = Vector2(44, 55)
+				l.add_child(tr)
 			var info := Label.new()
+			info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			info.text = "%s  ·  %s" % [u.get("nome", u["item"]), str(u.get("raridade", "")).capitalize()]
+			info.text = "%s  ·  %s" % [u.get("nome", u["item"]), _raridade(str(u.get("raridade", ""))).capitalize()]
 			l.add_child(info)
 			var equipado: bool = pf["equipped"].get(cat, "") == u["item"]
 			var b := Button.new()

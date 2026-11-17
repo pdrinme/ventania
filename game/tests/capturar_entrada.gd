@@ -2,7 +2,7 @@ extends SceneTree
 ## Fases da entrada na partida, numa partida BR local de verdade (precisa de janela):
 ## porta do ônibus, salto, queda livre, curva, mergulho, abertura do planador,
 ## planador e aterrissagem. Salva uma imagem por fase.
-## Uso: godot --path game --rendering-driver opengl3 -s res://tests/capturar_entrada.gd -- <pasta> [traje]
+## Uso: godot --path game --rendering-driver opengl3 -s res://tests/capturar_entrada.gd -- <pasta> [traje] [planador] [picareta]
 
 var jogo
 var pasta := ""
@@ -14,7 +14,8 @@ func _init() -> void:
 	await process_frame
 	root.theme = VentaniaTheme.build(false)
 	if a.size() > 1:
-		root.get_node("Meta").profile = {"equipped": {"traje": a[1]}}
+		root.get_node("Meta").profile = {"equipped": {"traje": a[1], "planador": a[2] if a.size() > 2 else "",
+				"picareta": a[3] if a.size() > 3 else ""}}
 	await root.get_node("SceneManager").go("game", {"modo": "br_local", "bots": 0})
 	jogo = current_scene
 	for i in 30 * 40:

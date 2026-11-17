@@ -10,6 +10,7 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 - **M3 — "Distribuível"** (Etapa 12): builds para Windows, Linux e Android, além do guia para os amigos.
 - **M4 — "Com estilo"** (Etapa 13): os primeiros cosméticos originais, equipáveis e visíveis na partida.
 - ✅ **v1.0.0** (Etapa 12): M3 entregue: pacotes do jogo e do servidor completo, com os guias.
+- ✅ **v1.1.0** (Etapa 13): M4 entregue: 9 trajes originais novos, picareta-âncora, 2 planadores, animações de entrada e loja com imagens reais e visualizador 3D.
 
 ## Ajuste proposto à ordem original (aguarda aprovação)
 
@@ -615,9 +616,48 @@ UI final, áudio, animações, otimizações, tratamento de erros, testes multip
 - ✅ **Windows:** o servidor exporta também o `.console.exe` (o log funciona no `iniciar.bat`).
 - ⏳ **Falta (só com pessoas e aparelhos reais):** a partida de aceite com 2 PCs + celular (`docs/TESTE_EM_HARDWARE.md` §2.2 e §2.3).
 
-### Etapa 13 — Primeiros cosméticos ⬜
-Criação dos primeiros cosméticos originais do jogo: trajes (variações do esqueleto padrão), ferramentas de coleta, mochilas, planadores, emotes e acessórios, com modelagem e texturas próprias no pipeline de assets (Blender por script). Também ícones e cartões de raridade, registro no catálogo (`backend/config/catalog/`) com licença em `ASSET_LICENSES.md`, e exibição no lobby (Armário) e dentro da partida. Os cosméticos não alteram hitbox nem visibilidade (ARCHITECTURE §8).
-**Aceite:** pelo menos 1 conjunto completo por raridade (Incomum → Lendário) equipável no Armário, visível para os outros jogadores na partida, distribuído entre o passe (Etapa 10) e a loja (Etapa 11).
+### Etapa 13 — Primeiros cosméticos ✅ (v1.1.0)
+Criação dos primeiros cosméticos originais do jogo, com modelagem própria no pipeline de assets (Blender por script), registro no catálogo, exibição no lobby e dentro da partida. Os cosméticos não alteram hitbox, tamanho, visibilidade nem valores de gameplay (ARCHITECTURE §8).
+
+- ✅ **Trajes como personagens novos, não recoloridos** (`tools/assets/kit/blender/gerar_skins.py`): silhueta, cabeça, roupa, materiais e paleta próprios; esqueleto e animações compartilhados. As 12 variações só de cor da versão anterior foram removidas.
+
+| Traje | Raridade | Origem | Conceito |
+|---|---|---|---|
+| **Capitão Maré** | Lendário | loja (1500) | cabeça de aquário (vidro, água, 3 peixes nadando, bolhas, castelinho) sobre corpo de robô de metal com placas, juntas e rebites |
+| Escafandro | Épico | loja | mergulhador de capacete de latão com visores redondos |
+| Entregador | Raro | loja | capacete de moto com viseira e mochila térmica |
+| Faz-Tudo | Raro | loja | robô de manutenção, cabeça-monitor, cinto de ferramentas e rodinhas |
+| Espantalho | Incomum | loja | saco de estopa costurado, chapéu de palha e um corvo no ombro |
+| Explorador das Nuvens | Raro | passe nv 8 | aviador de óculos e cachecol |
+| Botânico | Incomum | passe nv 18 | cabeça-vaso com broto e cipós |
+| Astrônomo | Épico | passe nv 30 | cabeça-planeta com anel |
+| Guardião da Tempestade | Lendário | passe nv 50 | armadura com raio no capacete |
+
+- ✅ **Âncora de Coleta** (picareta, Épico, loja): mesmos marcadores da picareta padrão; o servidor nunca lê o id da picareta para gameplay.
+- ✅ **Planadores** Arraia (Raro, loja) e Folha ao Vento (Raro, passe nv 25).
+- ✅ **Efeito do aquário** (`TrajeFx`): peixes nadando, bolhas e água reagindo ao movimento (shader com parâmetro por instância). Peixes e bolhas só são desenhados a até 30 m.
+- ✅ **Rede:** protocolo 11. O `player_info` leva traje, picareta e planador; o meta-servidor põe os três no ticket assinado e o servidor valida os ids.
+- ✅ **Animações de entrada** no esqueleto compartilhado: preparar na porta do ônibus, saltar, queda livre, curvas com inclinação, mergulho (até 38 m/s), abertura do planador, planar, aterrissagem pesada e recuperação. São replicadas pelo estado de queda, sem sincronizar quadro a quadro.
+- ✅ **Loja:**
+  - imagens geradas dos modelos reais (`game/tests/gerar_imagens_loja.gd` → `game/assets/ui/loja/<id>.png`) com fundo na cor da raridade, usadas nos cartões da loja, no passe e na coleção;
+  - detalhes com visualizador 3D do modelo real (arrastar para girar; Corpo/Rosto/Costas), categoria, raridade, descrição e preço;
+  - tela de confirmação com a imagem, o preço e o saldo depois da compra, depois "Equipar agora".
+- ✅ **Testes executados:**
+  - `test_picareta_cosmetica.gd`: âncora contra padrão na mesma parede, 6 golpes → 6 impactos e 42 de madeira nas duas;
+  - `capturar_loja.gd` (LOJA_OK): detalhes de todos os 16 cosméticos, compra pela interface de cada item da loja do dia, saldo conferido e equipar;
+  - `capturar_entrada.gd` com Capitão Maré + Arraia + Âncora, Guardião + Folha e Espantalho: as 9 fases da entrada numa partida real;
+  - tiras de animação das 11 skins (queda livre, mergulho, planador, aterrissagem, correr);
+  - `test_lobby.gd` (LOBBY OK) e a suíte completa (`tools/run_tests.sh`).
+- ✅ **Desempenho** (`game/tests/medir_trajes.gd`, 24 personagens animados):
+
+| Traje | Chamadas de desenho a 14 m | Chamadas de desenho a 45 m |
+|---|---|---|
+| Recruta | 24 | 24 |
+| Capitão Maré | 168 | 72 |
+
+  - O tempo de quadro foi medido em renderização por software (sem GPU no ambiente). Ele só vale como comparação: 26 ms contra 40 ms a 14 m, e 27 contra 32 ms a 45 m.
+- ⬜ **Não incluído nesta etapa:** mochilas, novos emotes, acessórios avulsos, trilhas de queda e som das bolhas do aquário.
+- ⏳ **Falta (só com pessoas e aparelhos reais):** ver as skins de outro jogador numa partida com 2 PCs + celular, e medir em GPU real (`docs/TESTE_EM_HARDWARE.md`).
 
 ## Riscos conhecidos
 
