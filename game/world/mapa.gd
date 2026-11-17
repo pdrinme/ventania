@@ -62,9 +62,15 @@ func ground_height(_x: float, _z: float) -> float:
 	return 0.0
 
 
-## Pontos de interesse: [{"nome", "pos": Vector3, "raio"}] (mapa e minimapa).
+## Pontos de interesse: [{"id", "nome", "pos": Vector3, "raio", "cor": Color,
+## "limite": PackedVector2Array (x, z)}] — mapa, minimapa e região atual.
 func points_of_interest() -> Array:
 	return []
+
+
+## Região (ponto de interesse) que contém o ponto (x, z), ou {}.
+func region_at(_x: float, _z: float) -> Dictionary:
+	return {}
 
 
 ## Construções do mapa na grade (Etapa 5): [{"tipo","cell","rot","material"}].

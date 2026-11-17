@@ -37,13 +37,16 @@ const M_JANELA := 511 & ~(1 << 4)
 const M_VITRINE := 511 & ~((1 << 3) | (1 << 4) | (1 << 5))
 const M_PORTAO := (1 << 6) | (1 << 7) | (1 << 8)
 
+## Pontos de interesse: FONTE ÚNICA de nome, id, posição, raio e cor da região. O mapa
+## grande, o minimapa e o indicador de região leem daqui (points_of_interest()); os
+## limites são calculados das próprias construções de cada POI (region_bounds()).
 const POIS := [
-	{"nome": "Vila Brisa", "pos": Vector2(-150, 55), "raio": 48.0, "tipo": "vila"},
-	{"nome": "Pedreira Cinza", "pos": Vector2(40, -170), "raio": 40.0, "tipo": "pedreira"},
-	{"nome": "Porto Ferrugem", "pos": Vector2(185, 45), "raio": 44.0, "tipo": "porto", "costa": 52.0},
-	{"nome": "Fazenda Girassol", "pos": Vector2(-40, 170), "raio": 44.0, "tipo": "fazenda"},
-	{"nome": "Mirante do Vento", "pos": Vector2(10, 5), "raio": 26.0, "tipo": "mirante"},
-	{"nome": "Acampamento Coral", "pos": Vector2(-175, -150), "raio": 34.0, "tipo": "acampamento", "costa": 46.0},
+	{"id": "vila_brisa", "nome": "Vila Brisa", "pos": Vector2(-150, 55), "raio": 48.0, "tipo": "vila", "cor": Color("5fd6a4")},
+	{"id": "pedreira_cinza", "nome": "Pedreira Cinza", "pos": Vector2(40, -170), "raio": 40.0, "tipo": "pedreira", "cor": Color("b4b7c2")},
+	{"id": "porto_ferrugem", "nome": "Porto Ferrugem", "pos": Vector2(185, 45), "raio": 44.0, "tipo": "porto", "costa": 52.0, "cor": Color("e0703f")},
+	{"id": "fazenda_girassol", "nome": "Fazenda Girassol", "pos": Vector2(-40, 170), "raio": 44.0, "tipo": "fazenda", "cor": Color("f5c542")},
+	{"id": "mirante_vento", "nome": "Mirante do Vento", "pos": Vector2(10, 5), "raio": 26.0, "tipo": "mirante", "cor": Color("7cc8ff")},
+	{"id": "acampamento_coral", "nome": "Acampamento Coral", "pos": Vector2(-175, -150), "raio": 34.0, "tipo": "acampamento", "costa": 46.0, "cor": Color("ff7f7a")},
 ]
 
 ## Rede de estradas: pontos de passagem (x, z). asfalto 8 m, rua 7 m (com calçadas), terra 4 m.
@@ -79,6 +82,9 @@ var _props: Array = []              # [caminho, Transform3D, material]
 var _pecas: Array = []              # construções do mapa: {"tipo","cell","rot","material","mask"} (Etapa 5)
 var _slots := {}
 var _ocupado: Array = []            # [Vector2 centro, raio]
+var _ocupado_poi := {}              # id do POI -> áreas ocupadas pelas construções dele
+var _pois_cache: Array = []
+var _limites := {}                  # id do POI -> PackedVector2Array (contorno da região)
 var _faixas: Array = []             # faixas de pedestres: [centro Vector2, direção Vector2, largura]
 var _lagos_terra: Array = []        # chão de terra/rocha (plantação, pedreira): [Vector2, raio(, rocha)]
 var _deficit_pois: Array = []
@@ -102,7 +108,9 @@ func _init() -> void:
 	_gerar_alturas()
 	# tudo é planejado aqui (sem nós): o servidor e o cliente têm as mesmas listas
 	for p in POIS:
+		var antes := _ocupado.size()
 		call("_poi_" + p["tipo"], p)
+		_ocupado_poi[p["id"]] = _ocupado.slice(antes)
 	for p in _pads:
 		if p.get("cabana", false):
 			_cabana(p)
@@ -153,7 +161,59 @@ func limit() -> float:
 
 
 func points_of_interest() -> Array:
-	return POIS.map(func(p): return {"nome": p["nome"], "pos": Vector3(p["pos"].x, ground_height(p["pos"].x, p["pos"].y), p["pos"].y), "raio": p["raio"]})
+	if _pois_cache.is_empty():
+		_pois_cache = POIS.map(func(p): return {"id": p["id"], "nome": p["nome"], "cor": p["cor"],
+				"pos": Vector3(p["pos"].x, ground_height(p["pos"].x, p["pos"].y), p["pos"].y), "raio": p["raio"],
+				"limite": region_bounds(p["id"])})
+	return _pois_cache
+
+
+## Contorno aproximado da região de um POI (x, z), calculado do que existe no mundo:
+## em cada direção vai até a construção/área ocupada mais distante do POI (+6 m de
+## folga), no mínimo 70% do raio, sem passar da linha da costa.
+func region_bounds(id: String) -> PackedVector2Array:
+	if _limites.has(id):
+		return _limites[id]
+	var poi: Dictionary = {}
+	for p in POIS:
+		if p["id"] == id:
+			poi = p
+	if poi.is_empty():
+		return PackedVector2Array()
+	var c: Vector2 = poi["pos"]
+	var areas: Array = _ocupado_poi.get(id, [])
+	var n := 36
+	var raios := PackedFloat32Array()
+	raios.resize(n)
+	for k in n:
+		var dir := Vector2.from_angle(k * TAU / n)
+		var r := float(poi["raio"]) * 0.7
+		for a in areas:
+			var rel: Vector2 = a[0] - c
+			# projeção da área nesta direção (só o que está dentro de um cone de ±25°)
+			var ang := absf(angle_difference(rel.angle(), dir.angle()))
+			if ang < 0.45:
+				r = maxf(r, rel.length() * cos(ang) + float(a[1]) + 6.0)
+		r = minf(r, float(poi["raio"]) * 1.35)
+		# não entra no mar
+		while r > 8.0 and not is_land(c.x + dir.x * r, c.y + dir.y * r):
+			r -= 2.0
+		raios[k] = r
+	var out := PackedVector2Array()
+	for k in n:
+		# suaviza (média com os vizinhos) para um contorno orgânico
+		var r := (raios[(k - 1 + n) % n] + raios[k] * 2.0 + raios[(k + 1) % n]) / 4.0
+		out.append(c + Vector2.from_angle(k * TAU / n) * r)
+	_limites[id] = out
+	return out
+
+
+## Região (POI) em que um ponto do mundo está, ou {} fora de todas.
+func region_at(x: float, z: float) -> Dictionary:
+	for p in points_of_interest():
+		if Geometry2D.is_point_in_polygon(Vector2(x, z), p["limite"]):
+			return p
+	return {}
 
 
 func roads() -> Array:
