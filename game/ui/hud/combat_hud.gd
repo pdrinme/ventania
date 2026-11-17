@@ -28,6 +28,9 @@ var _acao: ProgressBar
 var _acao_txt: Label
 var _aviso: Label
 var _feed: VBoxContainer
+var _vit: VBoxContainer
+var _barra_itens: HBoxContainer
+var _toque := false
 var _eliminado: Label
 var _marcador: Control
 var _marcador_t := 0.0
@@ -57,6 +60,7 @@ func _ready() -> void:
 	vit.custom_minimum_size.x = 260
 	vit.position.y -= 40
 	add_child(vit)
+	_vit = vit
 	vit.add_theme_constant_override("separation", 9)
 	_escudo = _barra(AZUL, 20, true)
 	vit.add_child(_escudo)
@@ -69,6 +73,7 @@ func _ready() -> void:
 
 	# inventário (centro inferior)
 	var barra := HBoxContainer.new()
+	_barra_itens = barra
 	barra.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 40)
 	barra.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	barra.grow_vertical = Control.GROW_DIRECTION_BEGIN
@@ -333,11 +338,45 @@ func damage_flash() -> void:
 	_dano_t = 0.35
 
 
+## Arranjo do HUD para PC (false) ou toque (true). Ver HudLayout.
+func set_touch_layout(toque: bool) -> void:
+	_toque = toque
+	var m := HudLayout.MARGEM
+	var slot := ItemSlot.TAM.y
+	if toque:
+		# centro de baixo: barra de itens, vida/escudo logo acima, munição acima de tudo
+		HudLayout.pin(_barra_itens, 0.5, 1.0, 0, -m, 0, -1)
+		_vit.custom_minimum_size.x = 300
+		HudLayout.pin(_vit, 0.5, 1.0, 0, -m - slot - 22, 0, -1)
+		HudLayout.pin(_municao, 0.5, 1.0, 0, -m - slot - 22 - 130, 0, -1)
+		HudLayout.pin(_nome_item, 0.5, 1.0, 0, -m - slot - 22 - 160, 0, -1)
+		HudLayout.pin(_feed, 0.0, 0.0, m, m + HudLayout.MAPA_TOQUE + 96, 1, 1)
+		_feed.alignment = BoxContainer.ALIGNMENT_BEGIN
+	else:
+		# PC: vida embaixo à esquerda; itens embaixo à direita; feed à esquerda
+		_vit.custom_minimum_size.x = 280
+		HudLayout.pin(_vit, 0.0, 1.0, m, -m, 1, -1)
+		HudLayout.pin(_barra_itens, 1.0, 1.0, -m - 92, -m, -1, -1)
+		var centro_barra := -m - 92 - _barra_itens.get_combined_minimum_size().x / 2.0
+		HudLayout.pin(_municao, 1.0, 1.0, centro_barra, -m - slot - 18, 0, -1)
+		HudLayout.pin(_nome_item, 1.0, 1.0, centro_barra, -m - slot - 50, 0, -1)
+		HudLayout.pin(_feed, 0.0, 0.3, m, 0, 1, 1)
+		_feed.alignment = BoxContainer.ALIGNMENT_BEGIN
+	_vida_txt.visible = false
+
+
 func kill_feed(texto: String) -> void:
 	var l := Label.new()
 	l.theme_type_variation = "Pequeno"
 	l.text = texto
 	_contorno(l)
+	var sb := VentaniaTheme._caixa(Color(VentaniaTheme.TINTA, 0.5), 10, Color.TRANSPARENT, 0, 0)
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	sb.content_margin_top = 1
+	sb.content_margin_bottom = 1
+	l.add_theme_stylebox_override("normal", sb)
+	l.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	_feed.add_child(l)
 	if _feed.get_child_count() > 5:
 		_feed.get_child(0).queue_free()

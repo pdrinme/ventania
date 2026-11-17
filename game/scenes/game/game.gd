@@ -694,6 +694,8 @@ func _on_elim(e: Dictionary) -> void:
 	if na_tormenta:
 		texto = "%s foi pego pela Tormenta" % vitima
 	combat_hud.kill_feed(texto)
+	if pawn and e["killer"] == pawn.entity_id and e["victim"] != e["killer"] and _em_partida():
+		match_hud.eliminacoes += 1
 	if pawn and e["victim"] == pawn.entity_id:
 		if _em_partida():
 			combat_hud.show_eliminated("Eliminado por %s" % quem if e["killer"] != e["victim"] else ("Eliminado pela Tormenta" if na_tormenta else "Você caiu!"))
@@ -955,8 +957,19 @@ func _pausar(v: bool) -> void:
 
 func _atualizar_toque(d: String) -> void:
 	touch.visible = (d == "toque" or Settings.is_mobile) and not (inventario and inventario.is_open())
+	var toque := d == "toque" or Settings.is_mobile
+	if toque != _layout_toque or not _layout_feito:
+		_layout_toque = toque
+		_layout_feito = true
+		for h in [combat_hud, build_hud, match_hud, hud]:
+			if h and h.has_method("set_touch_layout"):
+				h.set_touch_layout.call_deferred(toque)
 	if combat_hud:
 		combat_hud.set_pickaxe_key(_rotulo_picareta(d))
+
+
+var _layout_toque := false
+var _layout_feito := false
 
 
 func _rotulo_picareta(d: String) -> String:
@@ -1133,6 +1146,7 @@ func _on_match(m: Dictionary) -> void:
 			Protocol.MATCH_ONIBUS:
 				hud.flash("Embarque! Salte do ônibus quando quiser.", 3.0)
 			Protocol.MATCH_ESPERA:
+				match_hud.eliminacoes = 0
 				tormenta.clear()
 				_tormenta_antes = {}
 				onibus = null

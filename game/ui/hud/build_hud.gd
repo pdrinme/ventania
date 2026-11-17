@@ -6,6 +6,7 @@ extends Control
 
 var modo: BuildMode
 var _mats: Array[Label] = []      # chips de material (madeira, pedra, metal)
+var _linha_mats: BoxContainer
 var _barra: Control
 var _ajuda: Label
 
@@ -18,7 +19,8 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# materiais: chips compactos acima da vida (canto inferior esquerdo), longe
 	# dos botões de toque, que ficam à direita
-	var linha := HBoxContainer.new()
+	var linha := BoxContainer.new()
+	_linha_mats = linha
 	linha.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	linha.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	linha.offset_left = 16
@@ -64,6 +66,18 @@ func _ready() -> void:
 	_ajuda.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_ajuda.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	add_child(_ajuda)
+
+
+## PC: coluna na borda direita, acima da barra de itens. Toque: linha no centro, acima da vida.
+func set_touch_layout(toque: bool) -> void:
+	var m := HudLayout.MARGEM
+	_linha_mats.vertical = not toque
+	_linha_mats.alignment = BoxContainer.ALIGNMENT_END
+	if toque:
+		HudLayout.pin(_linha_mats, 0.5, 1.0, 0, -m - ItemSlot.TAM.y - 22 - 88, 0, -1)
+	else:
+		HudLayout.pin(_linha_mats, 1.0, 1.0, -m, -m - ItemSlot.TAM.y - 14, -1, -1)
+	HudLayout.pin(_ajuda, 0.5, 1.0, 0, -(m + ItemSlot.TAM.y + 200) if toque else -(m + 120), 0, -1)
 
 
 func _process(_delta: float) -> void:

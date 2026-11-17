@@ -130,6 +130,13 @@ func device_changed(d: String) -> void:
 			_dica.text = ""
 
 
+## Ping no canto superior esquerdo (PC) ou ao lado do minimapa (toque).
+func set_touch_layout(toque: bool) -> void:
+	# dica de teclas (só PC): no alto, centralizada, longe da barra de itens
+	HudLayout.pin(_dica, 0.5, 0.0, 0, HudLayout.MARGEM + 34, 0, 1)
+	_info.position = Vector2(HudLayout.MARGEM + HudLayout.MAPA_TOQUE + 12, HudLayout.MARGEM) if toque else Vector2(HudLayout.MARGEM, HudLayout.MARGEM)
+
+
 func set_info(ping_ms: int, jogadores: int, extra := "") -> void:
 	var p := "—" if ping_ms < 0 else "%d ms" % ping_ms
 	_info.text = "Ping %s · Jogadores %d%s" % [p, jogadores, extra]

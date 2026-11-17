@@ -31,6 +31,8 @@ var _resultado: PanelContainer
 var _res_titulo: Label
 var _res_texto: Label
 var _nomes := {}
+var _info_col: VBoxContainer
+var eliminacoes := 0                 # minhas eliminações nesta partida (só exibição)
 
 
 func _ready() -> void:
@@ -42,14 +44,18 @@ func _ready() -> void:
 	_roxo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_roxo)
 
+	# informações da partida: abaixo do minimapa (ver set_touch_layout)
 	var topo := VBoxContainer.new()
 	topo.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 10)
 	topo.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	topo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	topo.add_theme_constant_override("separation", 6)
 	add_child(topo)
-	_topo = _rotulo("Subtitulo")
+	_info_col = topo
+	_topo = _chip(_rotulo("Subtitulo"))
+	_topo.add_theme_font_size_override("font_size", 20)
 	topo.add_child(_topo)
-	_sub = _rotulo("Pequeno")
+	_sub = _chip(_rotulo("Pequeno"))
 	topo.add_child(_sub)
 
 	_aviso = _rotulo("Subtitulo")
@@ -129,6 +135,34 @@ func _ready() -> void:
 	menu.custom_minimum_size = Vector2(200, 52)
 	menu.pressed.connect(func(): back_to_menu.emit())
 	h.add_child(menu)
+
+
+func _chip(l: Label) -> Label:
+	var sb := VentaniaTheme._caixa(Color(VentaniaTheme.NOITE, 0.78), 12, VentaniaTheme.TINTA, 2, 0)
+	sb.content_margin_left = 12
+	sb.content_margin_right = 12
+	sb.content_margin_top = 2
+	sb.content_margin_bottom = 2
+	l.add_theme_stylebox_override("normal", sb)
+	return l
+
+
+## PC: minimapa no canto superior direito, informações embaixo dele (à direita).
+## Toque: minimapa no canto superior esquerdo, informações embaixo (à esquerda).
+func set_touch_layout(toque: bool) -> void:
+	var m := HudLayout.MARGEM
+	var lado := HudLayout.MAPA_TOQUE if toque else HudLayout.MAPA_PC
+	_mini.custom_minimum_size = Vector2(lado, lado)
+	_mini.size = Vector2(lado, lado)
+	if toque:
+		HudLayout.pin(_mini, 0.0, 0.0, m, m, 1, 1)
+		HudLayout.pin(_info_col, 0.0, 0.0, m, m + lado + 8, 1, 1)
+	else:
+		HudLayout.pin(_mini, 1.0, 0.0, -m, m, -1, 1)
+		HudLayout.pin(_info_col, 1.0, 0.0, -m, m + lado + 8, -1, 1)
+	_info_col.alignment = BoxContainer.ALIGNMENT_BEGIN
+	for l: Label in [_topo, _sub]:
+		l.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if toque else Control.SIZE_SHRINK_END
 
 
 func _rotulo(variacao: String) -> Label:
@@ -245,7 +279,8 @@ func _process(_delta: float) -> void:
 			_topo.text = "Ônibus de Batalha · %d jogadores" % _estado["total"]
 			_sub.text = "Salte sobre a ilha · a Tormenta se forma quando o ônibus partir (%s)" % _tempo(resta)
 		Protocol.MATCH_JOGO:
-			_topo.text = "Vivos %d / %d" % [_estado["vivos"], _estado["total"]]
+			_topo.text = "%d %s  ·  %d %s" % [_estado["vivos"], "vivo" if _estado["vivos"] == 1 else "vivos",
+					eliminacoes, "eliminação" if eliminacoes == 1 else "eliminações"]
 			if tormenta and tormenta.active():
 				var d: Dictionary = tormenta.dados
 				if d["terminou"]:
@@ -269,6 +304,8 @@ func _process(_delta: float) -> void:
 		_faixa_t -= get_process_delta_time()
 		_faixa.modulate.a = clampf(_faixa_t / 0.6, 0.0, 1.0)
 		_faixa.visible = _faixa_t > 0.0
+	_topo.visible = not _topo.text.is_empty()
+	_sub.visible = not _sub.text.is_empty()
 	if _mini.visible:
 		_mini.queue_redraw()
 	if _grande.visible:
@@ -327,4 +364,9 @@ func _desenhar(c: Control, inteiro: bool) -> void:
 		var dir := Vector2(-sin(yaw), -cos(yaw))
 		var lado := Vector2(-dir.y, dir.x)
 		c.draw_colored_polygon(PackedVector2Array([p + dir * 9, p - dir * 5 + lado * 6, p - dir * 5 - lado * 6]), Color("ffc93c"))
-	c.draw_rect(area, Color(1, 1, 1, 0.6), false, 2.0)
+	if inteiro:
+		c.draw_rect(area, Color(1, 1, 1, 0.6), false, 2.0)
+	else:
+		# moldura no estilo do HUD: contorno grosso escuro com filete claro
+		c.draw_rect(area.grow(-2), VentaniaTheme.TINTA, false, 4.0)
+		c.draw_rect(area.grow(-5), Color(1, 1, 1, 0.35), false, 1.5)

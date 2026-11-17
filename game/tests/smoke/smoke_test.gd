@@ -444,7 +444,7 @@ func _jogar_br(tree: SceneTree) -> void:
 		await tree.physics_frame
 		await tree.process_frame
 	_checar(jogo.tormenta.active() and jogo.tormenta.visible, "Tormenta recebida e desenhada")
-	_checar(jogo.match_hud._topo.text.begins_with("Vivos 1"), "HUD da partida: %s" % jogo.match_hud._topo.text)
+	_checar(jogo.match_hud._topo.text.begins_with("1 vivo"), "HUD da partida: %s" % jogo.match_hud._topo.text)
 	_checar(jogo.combat_hud.current_item() == "picareta", "começa só com a picareta na mão")
 	_checar(jogo._status["slots"].all(func(sl): return sl["item"] == 0), "inventário vazio no início da partida")
 	_checar(jogo.server.loot.loot.size() > 40, "loot do mapa sorteado (%d itens)" % jogo.server.loot.loot.size())
