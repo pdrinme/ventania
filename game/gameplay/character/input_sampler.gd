@@ -9,6 +9,7 @@ var touch_jump := false
 var touch_fire := false            # botão Atirar segurado
 var touch_reload := false          # pedido de recarga (um passo)
 var touch_interact := false        # botão Interagir segurado
+var touch_aim := false             # botão Mirar segurado (celular)
 var morto := false                 # eliminado: não envia ações
 var selected := 0                  # espaço atual (vem do servidor); Inventory.PICKAXE = picareta
 var _slot_pendente := 0            # 1..5; Protocol.SLOT_PICKAXE = picareta
@@ -85,7 +86,7 @@ func make_cmd(seq: int, yaw: float, pitch: float) -> Protocol.InputCmd:
 	if not modo_construcao:
 		if Input.is_action_pressed("fire") or touch_fire:
 			c.buttons |= Protocol.BTN_FIRE
-		if Input.is_action_pressed("aim"):
+		if Input.is_action_pressed("aim") or touch_aim:
 			c.buttons |= Protocol.BTN_AIM
 		if Input.is_action_pressed("reload") or touch_reload:
 			c.buttons |= Protocol.BTN_RELOAD

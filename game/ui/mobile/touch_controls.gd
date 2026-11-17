@@ -15,6 +15,8 @@ const RAIO_BOTAO := 62.0
 var sampler: InputSampler
 var camera: PlayerCamera
 var construcao: BuildMode         # botões de construção (Construir, Peça, Material, Editar)
+## Diz se o item na mão tem mira (armas). Sem arma, o botão Mirar fica apagado e não faz nada.
+var pode_mirar: Callable = func() -> bool: return true
 
 var _joy_dedo := -1
 var _joy_centro := Vector2.ZERO
@@ -22,6 +24,7 @@ var _joy_pos := Vector2.ZERO
 var _olhar_dedo := -1
 var _botoes := {}            # nome -> {"centro": Vector2, "raio": float, "dedo": int}
 var _escala := 1.0
+var _pode_antes := true
 
 
 func _ready() -> void:
@@ -40,6 +43,10 @@ func _layout() -> void:
 	var t := size
 	_botoes = {
 		"atirar": {"centro": Vector2(t.x - r * 1.6, t.y - r * 4.2), "raio": r * 1.1, "dedo": -1, "texto": "Atirar"},
+		# Mirar: acima e à esquerda do Atirar, ao alcance do mesmo polegar (sem encostar em
+		# Atirar, Recarga, Pular ou nos botões de construção; em telas baixas desce até
+		# não encostar em Construir/Mochila)
+		"mirar": {"centro": Vector2(t.x - r * 3.45, maxf(t.y - r * 5.45, r * 3.75)), "raio": r * 0.78, "dedo": -1, "texto": "Mirar"},
 		"pular": {"centro": Vector2(t.x - r * 1.5, t.y - r * 1.6), "raio": r, "dedo": -1, "texto": "Pular"},
 		"agachar": {"centro": Vector2(t.x - r * 3.9, t.y - r * 1.1), "raio": r * 0.8, "dedo": -1, "texto": "Agachar"},
 		"recarregar": {"centro": Vector2(t.x - r * 4.0, t.y - r * 3.4), "raio": r * 0.7, "dedo": -1, "texto": "Recarga"},
@@ -99,7 +106,8 @@ func _arrasto(e: InputEventScreenDrag) -> void:
 		_joy_pos = _joy_centro + d
 		sampler.touch_move = Vector2(d.x, -d.y) / raio   # para cima = frente
 		queue_redraw()
-	elif camera and (e.index == _olhar_dedo or (_botoes.has("atirar") and _botoes["atirar"]["dedo"] == e.index)):
+	elif camera and (e.index == _olhar_dedo or (_botoes.has("atirar") and _botoes["atirar"]["dedo"] == e.index)
+			or (_botoes.has("mirar") and _botoes["mirar"]["dedo"] == e.index)):
 		# arrastar o dedo no botão Atirar também mira (padrão de jogos de toque)
 		camera.add_look(e.relative * float(Settings.get_value("controls", "touch_sensitivity")) * 1.4)
 
@@ -109,7 +117,7 @@ func _visivel(nome: String) -> bool:
 	var em_construcao := construcao != null and (construcao.ativo or construcao.editando >= 0)
 	if _botoes[nome].get("so_construcao", false):
 		return em_construcao
-	return not (em_construcao and nome == "recarregar")
+	return not (em_construcao and (nome == "recarregar" or nome == "mirar"))
 
 
 func _apertar(nome: String) -> void:
@@ -141,6 +149,8 @@ func _apertar(nome: String) -> void:
 			sampler.touch_crouch = not sampler.touch_crouch
 		"atirar":
 			sampler.touch_fire = true
+		"mirar":
+			_mirar(pode_mirar.call())
 		"recarregar":
 			sampler.touch_reload = true
 		"interagir":
@@ -149,8 +159,29 @@ func _apertar(nome: String) -> void:
 			inventory_pressed.emit()
 
 
+## Segurar = mirar (zoom/FOV e sensibilidade de mira da câmera); soltar volta ao normal.
+func _mirar(v: bool) -> void:
+	sampler.touch_aim = v
+	if camera:
+		camera.mira_toque = v
+
+
+func _process(_delta: float) -> void:
+	if not visible:
+		return
+	var pode: bool = pode_mirar.call()
+	if pode != _pode_antes:
+		_pode_antes = pode
+		queue_redraw()
+	# trocou para um item sem mira com o botão segurado: solta a mira
+	if sampler and sampler.touch_aim and not pode:
+		_mirar(false)
+
+
 func _soltar(nome: String) -> void:
 	match nome:
+		"mirar":
+			_mirar(false)
 		"atirar":
 			sampler.touch_fire = false
 		"interagir":
@@ -174,11 +205,16 @@ func _draw() -> void:
 			continue
 		var b: Dictionary = _botoes[nome]
 		var ativo: bool = b["dedo"] != -1 or (nome == "agachar" and sampler and sampler.touch_crouch)
+		var apagado: bool = nome == "mirar" and not pode_mirar.call()
+		if nome == "mirar":
+			ativo = ativo and not apagado
 		# redesign: disco escuro translúcido com contorno grosso; Atirar em amarelo (ação principal)
 		var principal: bool = nome == "atirar"
 		var fundo := Color(VentaniaTheme.AMARELO, 0.92 if ativo else 0.78) if principal else (Color(VentaniaTheme.NOITE_CLARA, 0.9) if ativo else Color(VentaniaTheme.NOITE, 0.55))
 		draw_circle(b["centro"] + Vector2(0, 4), b["raio"], Color(VentaniaTheme.TINTA, 0.45))
+		if apagado:
+			fundo.a *= 0.45
 		draw_circle(b["centro"], b["raio"], fundo)
 		draw_arc(b["centro"], b["raio"] - 1.5, 0, TAU, 48, VentaniaTheme.TINTA if principal else Color(1, 1, 1, 0.75 if ativo else 0.45), 3.0, true)
-		var cor_txt := VentaniaTheme.TINTA if principal else Color.WHITE
+		var cor_txt := VentaniaTheme.TINTA if principal else Color(1, 1, 1, 0.4 if apagado else 1.0)
 		draw_string(VentaniaTheme.FONTE_FORTE, b["centro"] + Vector2(-b["raio"], 7), b["texto"], HORIZONTAL_ALIGNMENT_CENTER, b["raio"] * 2, int(19 * _escala), cor_txt)

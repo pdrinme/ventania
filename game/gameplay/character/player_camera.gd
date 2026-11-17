@@ -19,6 +19,7 @@ var alvo: Node3D             # Pawn (jogando) ou PawnVisual de outro jogador (es
 var yaw := 0.0
 var pitch := -10.0          # graus
 var mirando := false
+var mira_toque := false     # botão Mirar do celular (segurado); o PC usa a ação "aim"
 var bloqueado := false      # pausa: ignora o olhar
 var _braco: SpringArm3D
 var _cam: Camera3D
@@ -72,7 +73,7 @@ func _process(delta: float) -> void:
 		add_look(eixo * 900.0 * delta * s)
 	if alvo == null:
 		return
-	mirando = Input.is_action_pressed("aim") and not bloqueado
+	mirando = (Input.is_action_pressed("aim") or mira_toque) and not bloqueado
 	var agachado: bool = alvo is Pawn and (alvo as Pawn).crouched
 	var altura_alvo := ALTURA_AGACHADO if agachado else ALTURA_PE
 	_altura = lerpf(_altura, altura_alvo, minf(1.0, delta * 12.0))

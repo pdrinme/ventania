@@ -100,6 +100,7 @@ func _ready() -> void:
 	touch.theme = tema
 	touch.sampler = sampler
 	touch.camera = camera
+	touch.pode_mirar = func() -> bool: return combat_hud != null and ItemDB.is_weapon(combat_hud.current_item())
 	camada.add_child(touch)
 	match_hud = MatchHud.new()
 	match_hud.theme = tema
