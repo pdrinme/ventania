@@ -82,7 +82,10 @@ func _ready() -> void:
 		vp.add_child(s)
 		var e := s.start(porta + i)
 		if e != OK:
-			Log.error("servidor", "não foi possível abrir a porta %d: %s" % [porta + i, error_string(e)])
+			Log.error("servidor", ("não foi possível abrir a porta %d (UDP): ela provavelmente já está em uso — outro servidor " +
+					"do Ventania aberto? Feche-o (Linux: pkill -f ventania_servidor) ou use outra porta, ex.: --porta=%d. " +
+					"Para ver quem usa a porta: Linux 'ss -ulpn | grep %d', Windows 'netstat -ano -p udp | findstr %d'.") %
+					[porta + i, porta + i + 10, porta + i, porta + i])
 			get_tree().quit(1)
 			return
 		salas.append(s)

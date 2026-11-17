@@ -9,7 +9,7 @@ extends Control
 ## servidor) e RECONCILIADO a cada snapshot. Os outros são INTERPOLADOS ~150 ms atrás.
 
 const ATRASO_INTERP_TICKS := 4.5
-const PORTAS_LOCAIS := [24801, 24802, 24803, 24804]
+const PORTAS_LOCAIS := [24891, 24892, 24893, 24894]   # longe de 24800+ (servidor dedicado e salas)
 
 var modo := "local"
 var server: GameServer
