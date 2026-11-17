@@ -40,7 +40,10 @@ func _coletar(n: Node, acumulado: Transform3D, d: Dictionary) -> void:
 		if c is Node3D:
 			t = acumulado * (c as Node3D).transform
 		if c is MeshInstance3D and (c as MeshInstance3D).mesh:
-			d["malhas"].append([(c as MeshInstance3D).mesh, t])
+			var mi := c as MeshInstance3D
+			# distância de visibilidade do próprio asset (metadado visibilidade_m, ver
+			# post_import.gd) e sombra: a mobília só aparece de perto e não projeta sombra
+			d["malhas"].append([mi.mesh, t, mi.visibility_range_end, mi.cast_shadow])
 		elif c is CollisionShape3D and (c as CollisionShape3D).shape:
 			d["formas"].append([(c as CollisionShape3D).shape, t])
 		_coletar(c, t, d)
@@ -67,7 +70,7 @@ func place(caminho: String, xform: Transform3D, material: int) -> void:
 	for i in d["malhas"].size():
 		var chave := "%s|%d|%d|%d" % [caminho, i, rx, rz]
 		if not _grupos.has(chave):
-			_grupos[chave] = {"mesh": d["malhas"][i][0], "xforms": []}
+			_grupos[chave] = {"mesh": d["malhas"][i][0], "xforms": [], "vis": float(d["malhas"][i][2]), "sombra": d["malhas"][i][3]}
 		_grupos[chave]["xforms"].append(xform * d["malhas"][i][1])
 
 
@@ -83,7 +86,9 @@ func build() -> int:
 			mm.set_instance_transform(i, g["xforms"][i])
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
-		mmi.visibility_range_end = distancia_visivel
+		var vis: float = g.get("vis", 0.0)
+		mmi.visibility_range_end = minf(distancia_visivel, vis) if vis > 0.0 else distancia_visivel
+		mmi.cast_shadow = g.get("sombra", GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
 		mmi.visibility_range_end_margin = 20.0
 		mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 		_pai.add_child(mmi)

@@ -390,6 +390,150 @@
       "nome": "Guarda-corpo do vão da escada (metal)",
       "categoria": "cenario",
       "notas": "Só no último andar"
+    },
+    {
+      "id": "sofa_01",
+      "nome": "Sofá",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "mesa_01",
+      "nome": "Mesa",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "cadeira_01",
+      "nome": "Cadeira",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "cama_01",
+      "nome": "Cama de solteiro",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "armario_01",
+      "nome": "Guarda-roupa",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "geladeira_01",
+      "nome": "Geladeira",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "fogao_01",
+      "nome": "Fogão",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "pia_cozinha_01",
+      "nome": "Pia de cozinha",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "tv_01",
+      "nome": "TV com rack",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "prateleira_01",
+      "nome": "Estante de livros",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "luminaria_01",
+      "nome": "Luminária de chão",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "tapete_01",
+      "nome": "Tapete",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "balcao_caixa_01",
+      "nome": "Balcão com caixa registradora",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "gondola_01",
+      "nome": "Gôndola de loja",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "expositor_01",
+      "nome": "Expositor",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "maquina_01",
+      "nome": "Máquina industrial",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "bancada_01",
+      "nome": "Bancada de ferramentas",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "armario_metal_01",
+      "nome": "Armário de metal",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "caixas_01",
+      "nome": "Pilha de caixotes",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "tambores_01",
+      "nome": "Tambores de óleo",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "barril_01",
+      "nome": "Barris de madeira",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "sacos_01",
+      "nome": "Sacos de grãos",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "feno_01",
+      "nome": "Fardo de feno",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
+    },
+    {
+      "id": "ferramentas_01",
+      "nome": "Ferramentas agrícolas",
+      "categoria": "cenario",
+      "notas": "Mobília dos interiores (gerar_interiores.py)"
     }
   ]
 }

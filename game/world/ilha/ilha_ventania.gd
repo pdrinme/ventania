@@ -811,12 +811,254 @@ func _casa(origem: Vector3, w: int, d: int, andares: int, mat: String, porta := 
 	# baú no cômodo do fundo e loot dentro (candidatos; a escolha final fixa 37/102)
 	var piso := o.y + 0.1
 	var fundo := Vector2i(w - 1, 0) if porta != "n" else Vector2i(w - 1, d - 1)
-	_cand["bau_casa"].append([Vector3(o.x + fundo.x * CELULA + 2.0, piso, o.z + fundo.y * CELULA + 2.0), 0.0 if porta != "n" else 180.0])
+	if fundo == rampa_cel:
+		fundo = Vector2i(0, 0) if fundo != Vector2i(0, 0) else Vector2i(w - 1, 0)
+	# mobília conforme o tipo do edifício; o baú fica encostado numa parede do fundo
+	var bau := _mobiliar(o, w, d, andares, estilo, mat, porta, rampa_cel, escada_rot, fundo)
+	if bau.is_empty():
+		_cand["bau_casa"].append([Vector3(o.x + fundo.x * CELULA + 2.0, piso, o.z + fundo.y * CELULA + 2.0), 0.0 if porta != "n" else 180.0])
+	else:
+		_cand["bau_casa"].append(bau)
 	_cand["loot_casa"].append(Vector3(o.x + 2.0, piso, o.z + 2.0) if w * d > 1 else Vector3(o.x + 1.2, piso, o.z + 1.2))
 	if andares > 1:
 		_cand["loot_casa"].append(Vector3(o.x + (w - 1) * CELULA + 2.0, o.y + CELULA + 0.1, o.z + 2.0))
 	if w * d >= 6:
 		_cand["loot_casa"].append(Vector3(o.x + (w - 1) * CELULA + 2.0, piso, o.z + (d - 1) * CELULA + 2.0))
+
+
+# ---------------- mobília (interiores) ----------------
+
+## Móveis (gerar_interiores.py): [largura ao longo da parede, profundidade, alto?, giro extra]
+## Alto = não vai embaixo de janela (meio da parede) nem na vitrine da loja.
+const MOVEIS := {
+	"sofa_01": [2.0, 0.9, false, 0.0], "mesa_01": [1.4, 0.9, false, 0.0], "cama_01": [2.0, 1.0, false, 90.0],
+	"armario_01": [1.2, 0.6, true, 0.0], "geladeira_01": [0.75, 0.7, true, 0.0], "fogao_01": [0.75, 0.65, false, 0.0],
+	"pia_cozinha_01": [1.6, 0.62, false, 0.0], "tv_01": [1.4, 0.45, false, 0.0], "prateleira_01": [1.0, 0.35, true, 0.0],
+	"luminaria_01": [0.35, 0.35, true, 0.0], "balcao_caixa_01": [2.2, 0.7, false, 0.0], "gondola_01": [1.8, 0.6, true, 0.0],
+	"expositor_01": [1.0, 1.0, false, 0.0], "maquina_01": [1.6, 1.0, true, 0.0], "bancada_01": [2.0, 0.8, true, 0.0],
+	"armario_metal_01": [1.5, 0.5, true, 0.0], "caixas_01": [1.2, 1.0, true, 0.0], "tambores_01": [1.3, 1.0, false, 0.0],
+	"barril_01": [1.24, 0.6, false, 0.0], "sacos_01": [1.5, 0.75, false, 0.0], "feno_01": [1.6, 0.9, false, 0.0],
+	"ferramentas_01": [1.4, 0.3, true, 0.0], "cadeira_01": [0.45, 0.45, false, 0.0],
+}
+## Cômodos: móveis em ordem de prioridade (os primeiros quase sempre entram).
+const COMODOS := {
+	"cozinha": ["geladeira_01", "fogao_01", "pia_cozinha_01", "mesa_01", "prateleira_01"],
+	"sala": ["sofa_01", "tv_01", "prateleira_01", "luminaria_01", "mesa_01"],
+	"quarto": ["cama_01", "armario_01", "luminaria_01", "prateleira_01"],
+	"cabana": ["cama_01", "mesa_01", "prateleira_01", "luminaria_01"],
+	"loja": ["gondola_01", "balcao_caixa_01", "expositor_01", "gondola_01", "caixas_01"],
+	"escritorio": ["mesa_01", "armario_metal_01", "prateleira_01", "sofa_01", "luminaria_01"],
+	"industria": ["bancada_01", "armario_metal_01", "maquina_01", "caixas_01", "tambores_01"],
+	"celeiro": ["ferramentas_01", "feno_01", "barril_01", "sacos_01", "caixas_01"],
+}
+## Lados de um cômodo: normal para fora (x, z).
+const LADOS := {"n": Vector2(0, -1), "s": Vector2(0, 1), "o": Vector2(-1, 0), "l": Vector2(1, 0)}
+
+var _rng_mob := RandomNumberGenerator.new()
+var _comodos: Array = []            # {"centro","tipo","olhar"} (fotos/testes)
+var moveis_colocados := 0
+var _moveis: Array = []             # dados dos móveis colocados (testes): pos, centro do cômodo, eixos, tamanho
+
+
+## Tipo de cada cômodo conforme o edifício e o andar.
+func _tipos_comodos(estilo: String, mat: String, nivel: int, andares: int, n: int) -> Array:
+	var base: Array
+	match estilo:
+		"loja":
+			base = ["loja"] if nivel == 0 else ["quarto", "sala"]
+		"predio":
+			base = ["escritorio"] if nivel == 0 else ["sala", "quarto", "cozinha", "quarto"]
+		"galpao":
+			base = ["industria"] if mat == "metal" else ["celeiro"]
+		_:
+			if n == 1:
+				base = ["cabana"]
+			elif andares > 1:
+				base = ["sala", "cozinha"] if nivel == 0 else ["quarto", "quarto", "sala"]
+			else:
+				base = ["sala", "cozinha", "quarto", "quarto"]
+	var out := []
+	for k in n:
+		out.append(base[k % base.size()])
+	return out
+
+
+## Coloca a mobília de um edifício. Regras: só junto às paredes EXTERNAS (o meio
+## de cada cômodo e as passagens entre cômodos ficam livres), nunca na parede da
+## porta, nada alto embaixo das janelas/vitrines, nada no cômodo da escada nem nos
+## cantos do cômodo vizinho por onde se entra e sai dela. Retorna o baú
+## [pos, rot] (encostado numa parede do cômodo `fundo`) ou [].
+func _mobiliar(o: Vector3, w: int, d: int, andares: int, estilo: String, mat: String, porta: String,
+		escada_cel: Vector2i, escada_rot: float, fundo: Vector2i) -> Array:
+	_rng_mob.seed = hash(Vector3i(roundi(o.x), roundi(o.y), roundi(o.z))) ^ SEMENTE
+	var bau := []
+	var vizinho := escada_cel + (Vector2i(1, 0) if is_zero_approx(escada_rot) else Vector2i(-1, 0))
+	var porta_i := w / 2
+	var porta_j := d / 2
+	for nivel in andares:
+		var celulas: Array[Vector2i] = []
+		for i in w:
+			for j in d:
+				var c := Vector2i(i, j)
+				if andares > 1 and c == escada_cel:
+					continue
+				celulas.append(c)
+		var tipos := _tipos_comodos(estilo, mat, nivel, andares, celulas.size())
+		# embaralha a ordem dos tipos (casas iguais ficam diferentes por dentro)
+		for k in range(tipos.size() - 1, 0, -1):
+			var r := _rng_mob.randi_range(0, k)
+			var t = tipos[k]
+			tipos[k] = tipos[r]
+			tipos[r] = t
+		for idx in celulas.size():
+			var cel := celulas[idx]
+			var centro := o + Vector3(cel.x * CELULA + 2.0, nivel * CELULA + 0.1, cel.y * CELULA + 2.0)
+			var tipo: String = tipos[idx]
+			var cantos := {}          # cantos ocupados (Vector2i)
+			# vizinho da escada: os dois cantos junto à aresta da escada ficam livres
+			if andares > 1 and cel == vizinho:
+				var sx := -1 if is_zero_approx(escada_rot) else 1
+				cantos[Vector2i(sx, -1)] = true
+				cantos[Vector2i(sx, 1)] = true
+			var lados: Array = []
+			for nome in LADOS:
+				var ext: bool = (nome == "n" and cel.y == 0) or (nome == "s" and cel.y == d - 1) or (nome == "o" and cel.x == 0) or (nome == "l" and cel.x == w - 1)
+				if not ext:
+					continue
+				var tem_porta: bool = nivel == 0 and nome == porta and ((nome in ["n", "s"] and cel.x == porta_i) or (nome in ["o", "l"] and cel.y == porta_j))
+				if tem_porta:
+					continue
+				lados.append(nome)
+			if lados.is_empty():
+				continue
+			# ordem dos lados variada
+			for k in range(lados.size() - 1, 0, -1):
+				var r := _rng_mob.randi_range(0, k)
+				var t = lados[k]
+				lados[k] = lados[r]
+				lados[r] = t
+			var vitrine := estilo == "loja" and nivel == 0
+			var itens: Array = COMODOS[tipo].duplicate()
+			# ordem variada (a cama continua primeiro nos quartos); nem todo cômodo tem tudo
+			var fixo := 1 if tipo in ["quarto", "cabana"] else 0
+			for k in range(itens.size() - 1, fixo, -1):
+				var r := _rng_mob.randi_range(fixo, k)
+				var t = itens[k]
+				itens[k] = itens[r]
+				itens[r] = t
+			if _rng_mob.randf() < 0.5 and itens.size() > 3:
+				itens.remove_at(itens.size() - 1)
+			var quer_bau := bau.is_empty() and nivel == 0 and cel == fundo
+			var com_tapete := tipo in ["sala", "quarto", "cabana"] and _rng_mob.randf() < 0.75
+			for nome in lados:
+				var nrm: Vector2 = LADOS[nome]
+				var tg := Vector2(-nrm.y, nrm.x)
+				var frente: bool = porta == nome and nivel == 0
+				var baixo_so: bool = vitrine and frente
+				# o meio da parede tem abertura (janela, vitrine, portão)?
+				var idx_parede := cel.x if nome in ["n", "s"] else cel.y
+				var meio_porta := idx_parede == (porta_i if nome in ["n", "s"] else porta_j)
+				var janela := _mascara(estilo, frente, nivel, meio_porta, idx_parede) != -1
+				var ca := Vector2i(roundi(nrm.x - tg.x), roundi(nrm.y - tg.y))
+				var cb := Vector2i(roundi(nrm.x + tg.x), roundi(nrm.y + tg.y))
+				# 1) meio: o baú (cômodo do fundo) ou a peça larga mais importante
+				if not cantos.has(ca) and not cantos.has(cb):
+					var meio := ""
+					if quer_bau:
+						meio = "bau"
+					else:
+						var estreitos := itens.filter(func(it): return float(MOVEIS[it][0]) <= 1.25).size()
+						for it in itens:
+							var dd0: Array = MOVEIS[it]
+							if float(dd0[0]) > 1.2 and not (bool(dd0[2]) and (janela or baixo_so)):
+								meio = it
+								break
+						# variedade: às vezes a parede fica com duas peças nos cantos em vez de uma larga
+						if not meio.is_empty() and estreitos >= 2 and _rng_mob.randf() < 0.45:
+							meio = ""
+					if meio == "bau":
+						var pb: Vector3 = centro + Vector3(nrm.x, 0, nrm.y) * (1.88 - 0.35 - 0.05)
+						bau = [Vector3(pb.x, centro.y, pb.z), rad_to_deg(atan2(-nrm.x, -nrm.y))]
+						quer_bau = false
+						continue                      # a parede do baú fica só com ele
+					elif not meio.is_empty():
+						itens.erase(meio)
+						_colocar_movel(meio, centro, nrm, tg, 0.0)
+						if float(MOVEIS[meio][0]) > 1.3:
+							cantos[ca] = true          # ocupou a parede inteira (e os cantos dela)
+							cantos[cb] = true
+							continue
+				# 2) cantos: peças de até 1,2 m (altas podem: o canto da parede é fechado)
+				for pos_k in [-1, 1]:
+					var canto := ca if pos_k < 0 else cb
+					if cantos.has(canto) or itens.is_empty():
+						continue
+					var escolhido := ""
+					for it in itens:
+						var dd: Array = MOVEIS[it]
+						if float(dd[0]) <= 1.25 and not (bool(dd[2]) and baixo_so):
+							escolhido = it
+							break
+					if escolhido.is_empty():
+						continue
+					itens.erase(escolhido)
+					_colocar_movel(escolhido, centro, nrm, tg, pos_k * (1.85 - float(MOVEIS[escolhido][0]) / 2.0))
+					cantos[canto] = true
+			if quer_bau:
+				# nenhum meio de parede livre: baú num canto livre
+				for nome in lados:
+					var nrm: Vector2 = LADOS[nome]
+					var tg := Vector2(-nrm.y, nrm.x)
+					for pos_k in [-1, 1]:
+						var canto := Vector2i(roundi(nrm.x + tg.x * pos_k), roundi(nrm.y + tg.y * pos_k))
+						if quer_bau and not cantos.has(canto):
+							var pb: Vector3 = centro + Vector3(nrm.x, 0, nrm.y) * (1.88 - 0.4) + Vector3(tg.x, 0, tg.y) * pos_k * 1.2
+							bau = [Vector3(pb.x, centro.y, pb.z), rad_to_deg(atan2(-nrm.x, -nrm.y))]
+							cantos[canto] = true
+							quer_bau = false
+			if com_tapete:
+				_prop("tapete_01", centro + Vector3(0, -0.09, 0), 90.0 * _rng_mob.randi_range(0, 1), 1.0, ImpactMaterial.MADEIRA)
+			_comodos.append({"centro": centro, "tipo": tipo, "olhar": Vector2(1.2, 1.6)})
+	return bau
+
+
+func furniture() -> Array:
+	return _moveis
+
+
+## Coloca um móvel encostado na parede de normal `nrm` (para fora), deslocado
+## `desloc` ao longo dela. Mesa ganha cadeira; tampos ganham ponto de loot.
+func _colocar_movel(id: String, centro: Vector3, nrm: Vector2, tg: Vector2, desloc: float) -> void:
+	var dd: Array = MOVEIS[id]
+	var larg := float(dd[0])
+	var prof := float(dd[1])
+	var giro := rad_to_deg(atan2(-nrm.x, -nrm.y)) + float(dd[3])
+	if id == "cama_01":
+		# ao longo da parede, cabeceira num canto
+		desloc = (1.85 - 1.0) * (1.0 if _rng_mob.randf() < 0.5 else -1.0)
+		var cab := Basis(Vector3.UP, deg_to_rad(giro)) * Vector3(0, 0, -1)
+		if Vector2(cab.x, cab.z).dot(tg * signf(desloc)) < 0.0:
+			giro += 180.0
+		prof = 1.0
+		larg = 2.0
+	var p: Vector3 = centro + Vector3(nrm.x, 0, nrm.y) * (1.88 - prof / 2.0 - 0.03) + Vector3(tg.x, 0, tg.y) * desloc
+	p.y = centro.y
+	var metal := id in ["geladeira_01", "fogao_01", "maquina_01", "armario_metal_01", "tambores_01", "gondola_01"]
+	_prop(id, p, giro, 1.0, ImpactMaterial.METAL if metal else ImpactMaterial.MADEIRA)
+	moveis_colocados += 1
+	_moveis.append({"id": id, "pos": p, "centro": centro, "tg": tg, "nrm": nrm, "larg": larg, "prof": prof})
+	if id == "mesa_01":
+		# cadeira na ponta da mesa que fica para o lado de dentro da parede
+		var lado := -1.0 if desloc > 0.0 else 1.0
+		_prop("cadeira_01", p + Vector3(tg.x, 0, tg.y) * (0.95 * lado), giro - 90.0 * lado, 1.0, ImpactMaterial.MADEIRA)
+	if id in ["mesa_01", "balcao_caixa_01", "bancada_01", "expositor_01"]:
+		var topo: float = {"mesa_01": 0.8, "balcao_caixa_01": 1.0, "bancada_01": 0.97, "expositor_01": 1.08}[id]
+		_cand["loot_casa"].append(p + Vector3(0, topo, 0) + Vector3(tg.x, 0, tg.y) * 0.3)
+
+
+## Cômodos mobiliados (fotos e testes): [{"centro": Vector3, "tipo", "olhar": Vector2}].
+func rooms() -> Array:
+	return _comodos
 
 
 ## Ladrilhos da parede conforme o estilo (frente = lado da porta).

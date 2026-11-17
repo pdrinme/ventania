@@ -97,6 +97,8 @@ FILTRO="RAMPAS|FALHOU"
 rodar_godot timeout 120 "$GODOT" --headless --fixed-fps 30 --path game -s res://tests/integration/test_rampas.gd; checar $? "rampas"
 FILTRO="ESCADAS|FALHOU|percorridas"
 rodar_godot timeout 300 "$GODOT" --headless --fixed-fps 30 --path game -s res://tests/integration/test_escadas.gd; checar $? "escadas"
+FILTRO="INTERIORES|FALHOU|móveis"
+rodar_godot timeout 200 "$GODOT" --headless --fixed-fps 30 --path game -s res://tests/integration/test_interiores.gd; checar $? "interiores"
 FILTRO="PICARETA_COSMETICA|FALHA"
 rodar_godot timeout 300 "$GODOT" --headless --path game -s res://tests/integration/test_picareta_cosmetica.gd; checar $? "picareta cosmética"
 

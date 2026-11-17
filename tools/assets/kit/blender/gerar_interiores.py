@@ -242,7 +242,323 @@ def escada_metal_01():
     _escada("escada_metal_01", METAL, balaustres=False, aberta=True, tubo=True)
 
 
-GERADORES = {f.__name__: f for f in (escada_madeira_01, escada_concreto_01, escada_metal_01,
+# ------------------------------------------------------------------ mobília
+# Convenção: origem no centro do móvel, no chão (y = 0); FRENTE para +z (Godot),
+# costas em -z (encostadas na parede). Colisão: caixas simples (ou nenhuma, para
+# peças pequenas que não devem prender ninguém: cadeira, luminária, tapete).
+# Visível a até VIS_MOVEL m e sem sombra (dentro das casas a sombra já é da casa).
+
+VIS_MOVEL = 40.0
+
+
+def gcil(nome, raio, altura, pos, cor, lados=10):
+    """Cilindro em pé (eixo Y da Godot), pos = centro."""
+    return k.cilindro(nome, raio, altura, B(pos), cor, lados=lados)
+
+
+def gcol(asset_id, sufixo, tam, pos):
+    k.colisao_caixa(asset_id, (tam[0], tam[2], tam[1]), B(pos), sufixo=sufixo)
+
+
+def _fechar(asset_id, pecas):
+    o = k.unir(pecas, asset_id)
+    o.name = asset_id + "-noshadow"
+    o["visibilidade_m"] = VIS_MOVEL
+    return o
+
+
+def sofa_01():
+    p = [gcaixa("base", (2.0, 0.42, 0.9), (0, 0.21, 0), "teal_escuro", 0.04),
+         gcaixa("encosto", (2.0, 0.5, 0.22), (0, 0.66, -0.34), "teal_escuro", 0.05),
+         gcaixa("braco_e", (0.2, 0.25, 0.9), (-0.9, 0.55, 0), "teal_escuro", 0.05),
+         gcaixa("braco_d", (0.2, 0.25, 0.9), (0.9, 0.55, 0), "teal_escuro", 0.05)]
+    for i in range(2):
+        p.append(gcaixa(f"almofada{i}", (0.78, 0.14, 0.62), (-0.4 + i * 0.8, 0.49, 0.08), "teal", 0.05))
+    p.append(gcaixa("almofada_solta", (0.36, 0.32, 0.12), (0.62, 0.66, -0.15), "coral", 0.05))
+    _fechar("sofa_01", p)
+    gcol("sofa_01", "", (2.0, 0.9, 0.9), (0, 0.45, 0))
+
+
+def mesa_01():
+    p = [gcaixa("tampo", (1.4, 0.06, 0.9), (0, 0.75, 0), "madeira_media", 0.02)]
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            p.append(gcaixa(f"perna{sx}{sz}", (0.07, 0.72, 0.07), (sx * 0.62, 0.36, sz * 0.38), "madeira_escura"))
+    p.append(gcaixa("toalha", (0.7, 0.01, 0.9), (0, 0.785, 0), "branco"))
+    p.append(gcil("vaso", 0.07, 0.18, (0.35, 0.87, 0.1), "azul_ceu", 8))
+    p.append(k.icoesfera("flor", 0.09, B((0.35, 1.0, 0.1)), "amarelo_sol"))
+    _fechar("mesa_01", p)
+    gcol("mesa_01", "", (1.4, 0.78, 0.9), (0, 0.39, 0))
+
+
+def cadeira_01():
+    p = [gcaixa("assento", (0.45, 0.05, 0.45), (0, 0.46, 0), "madeira_media", 0.01),
+         gcaixa("encosto", (0.45, 0.45, 0.05), (0, 0.7, -0.2), "madeira_media", 0.01)]
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            p.append(gcaixa(f"perna{sx}{sz}", (0.05, 0.45, 0.05), (sx * 0.19, 0.22, sz * 0.19), "madeira_escura"))
+    _fechar("cadeira_01", p)          # sem colisão: não prende ninguém
+
+
+def cama_01():
+    """Cama de solteiro (1 × 2 m): cabe encostada na parede sem fechar o meio do cômodo."""
+    p = [gcaixa("estrado", (1.0, 0.3, 2.0), (0, 0.2, 0), "madeira_escura", 0.03),
+         gcaixa("colchao", (0.94, 0.2, 1.9), (0, 0.45, 0.03), "branco", 0.05),
+         gcaixa("coberta", (0.98, 0.08, 1.3), (0, 0.56, 0.33), "azul_tormenta", 0.04),
+         gcaixa("dobra", (0.98, 0.09, 0.18), (0, 0.6, -0.32), "branco", 0.03),
+         gcaixa("cabeceira", (1.0, 1.0, 0.1), (0, 0.5, -0.98), "madeira_media", 0.03),
+         gcaixa("travesseiro", (0.6, 0.12, 0.35), (0, 0.6, -0.7), "branco", 0.05)]
+    _fechar("cama_01", p)
+    gcol("cama_01", "", (1.0, 0.62, 2.0), (0, 0.31, 0))
+    gcol("cama_01", "_cab", (1.0, 1.0, 0.12), (0, 0.5, -0.98))
+
+
+def armario_01():
+    p = [gcaixa("corpo", (1.2, 2.0, 0.6), (0, 1.0, 0), "madeira_escura", 0.03),
+         gcaixa("porta_e", (0.57, 1.8, 0.02), (-0.295, 1.02, 0.305), "madeira_media"),
+         gcaixa("porta_d", (0.57, 1.8, 0.02), (0.295, 1.02, 0.305), "madeira_media"),
+         gcaixa("puxador_e", (0.03, 0.2, 0.03), (-0.05, 1.05, 0.33), "dourado"),
+         gcaixa("puxador_d", (0.03, 0.2, 0.03), (0.05, 1.05, 0.33), "dourado")]
+    _fechar("armario_01", p)
+    gcol("armario_01", "", (1.2, 2.0, 0.6), (0, 1.0, 0))
+
+
+def geladeira_01():
+    p = [gcaixa("corpo", (0.75, 1.8, 0.7), (0, 0.9, 0), "branco", 0.05),
+         gcaixa("divisao", (0.74, 0.02, 0.02), (0, 1.25, 0.355), "metal_claro"),
+         gcaixa("puxador1", (0.04, 0.3, 0.04), (0.3, 1.45, 0.37), "metal_escuro"),
+         gcaixa("puxador2", (0.04, 0.4, 0.04), (0.3, 0.85, 0.37), "metal_escuro"),
+         gcaixa("ima", (0.1, 0.1, 0.01), (-0.15, 1.5, 0.355), "coral")]
+    _fechar("geladeira_01", p)
+    gcol("geladeira_01", "", (0.75, 1.8, 0.7), (0, 0.9, 0))
+
+
+def fogao_01():
+    p = [gcaixa("corpo", (0.75, 0.88, 0.65), (0, 0.44, 0), "branco", 0.03),
+         gcaixa("forno", (0.6, 0.4, 0.02), (0, 0.4, 0.33), "preto"),
+         gcaixa("painel", (0.75, 0.12, 0.06), (0, 0.95, -0.3), "metal_claro")]
+    for i, (x, z) in enumerate(((-0.18, -0.12), (0.18, -0.12), (-0.18, 0.15), (0.18, 0.15))):
+        p.append(gcil(f"boca{i}", 0.09, 0.02, (x, 0.89, z), "preto", 10))
+    p.append(gcil("panela", 0.13, 0.16, (-0.18, 0.98, 0.15), "vermelho", 10))
+    _fechar("fogao_01", p)
+    gcol("fogao_01", "", (0.75, 0.95, 0.65), (0, 0.475, 0))
+
+
+def pia_cozinha_01():
+    p = [gcaixa("armario", (1.6, 0.86, 0.62), (0, 0.43, 0), "madeira_clara", 0.02),
+         gcaixa("bancada", (1.64, 0.05, 0.66), (0, 0.885, 0), "pedra_clara", 0.01),
+         gcaixa("cuba", (0.5, 0.02, 0.36), (0.35, 0.91, 0.02), "metal_claro"),
+         gcil("torneira", 0.025, 0.25, (0.35, 1.03, -0.22), "metal_claro", 6)]
+    for i in range(3):
+        p.append(gcaixa(f"porta{i}", (0.5, 0.7, 0.02), (-0.53 + i * 0.53, 0.43, 0.315), "madeira_media"))
+    p.append(gcaixa("escorredor", (0.3, 0.12, 0.25), (-0.45, 0.97, -0.05), "azul_ceu"))
+    _fechar("pia_cozinha_01", p)
+    gcol("pia_cozinha_01", "", (1.6, 0.92, 0.62), (0, 0.46, 0))
+
+
+def tv_01():
+    p = [gcaixa("rack", (1.4, 0.5, 0.45), (0, 0.25, 0), "madeira_escura", 0.02),
+         gcaixa("tela", (1.1, 0.65, 0.06), (0, 0.9, -0.08), "preto", 0.02),
+         gcaixa("imagem", (1.0, 0.56, 0.01), (0, 0.9, -0.045), "azul_ceu"),
+         gcaixa("pe", (0.25, 0.08, 0.2), (0, 0.54, -0.08), "metal_escuro")]
+    for i in range(3):
+        p.append(gcaixa(f"livro{i}", (0.06, 0.22, 0.18), (0.45 + i * 0.07, 0.11, 0.05), ["coral", "teal", "amarelo_sol"][i]))
+    _fechar("tv_01", p)
+    gcol("tv_01", "", (1.4, 1.25, 0.45), (0, 0.625, 0))
+
+
+def prateleira_01():
+    p = [gcaixa("lado_e", (0.04, 1.8, 0.35), (-0.48, 0.9, 0), "madeira_media"),
+         gcaixa("lado_d", (0.04, 1.8, 0.35), (0.48, 0.9, 0), "madeira_media"),
+         gcaixa("fundo", (1.0, 1.8, 0.02), (0, 0.9, -0.165), "madeira_escura")]
+    cores = ["coral", "teal", "amarelo_sol", "azul_tormenta", "roxo", "verde_militar", "vermelho"]
+    for n in range(4):
+        y = 0.05 + n * 0.55
+        p.append(gcaixa(f"tabua{n}", (0.92, 0.03, 0.33), (0, y, 0), "madeira_clara"))
+        if n < 3:
+            for i in range(6):
+                h = 0.26 + (i * 7 % 5) * 0.03
+                p.append(gcaixa(f"livro{n}{i}", (0.07, h, 0.24), (-0.36 + i * 0.12 + (n % 2) * 0.05, y + 0.015 + h / 2, 0.0), cores[(i + n * 2) % len(cores)]))
+    _fechar("prateleira_01", p)
+    gcol("prateleira_01", "", (1.0, 1.8, 0.35), (0, 0.9, 0))
+
+
+def luminaria_01():
+    p = [gcil("base", 0.16, 0.04, (0, 0.02, 0), "metal_escuro", 10),
+         gcil("haste", 0.02, 1.4, (0, 0.72, 0), "metal_escuro", 6),
+         k.cilindro("cupula", 0.22, 0.28, B((0, 1.5, 0)), "amarelo_sol", lados=10, raio_topo=0.12)]
+    _fechar("luminaria_01", p)            # sem colisão
+
+
+def tapete_01():
+    p = [gcaixa("tapete", (2.0, 0.015, 1.4), (0, 0.008, 0), "coral"),
+         gcaixa("faixa1", (1.7, 0.017, 0.08), (0, 0.009, 0.4), "amarelo_sol"),
+         gcaixa("faixa2", (1.7, 0.017, 0.08), (0, 0.009, -0.4), "amarelo_sol")]
+    _fechar("tapete_01", p)               # sem colisão
+
+
+# ---- loja
+
+def balcao_caixa_01():
+    p = [gcaixa("balcao", (2.2, 0.95, 0.7), (0, 0.475, 0), "madeira_media", 0.02),
+         gcaixa("tampo", (2.26, 0.05, 0.76), (0, 0.975, 0), "pedra_escura", 0.01),
+         gcaixa("faixa", (2.2, 0.12, 0.02), (0, 0.7, 0.355), "teal"),
+         gcaixa("caixa", (0.42, 0.22, 0.36), (-0.6, 1.11, -0.05), "metal_escuro", 0.02),
+         gcaixa("visor", (0.3, 0.14, 0.03), (-0.6, 1.3, -0.15), "preto"),
+         gcaixa("teclas", (0.3, 0.02, 0.15), (-0.6, 1.23, 0.08), "metal_claro"),
+         gcaixa("sacola", (0.3, 0.3, 0.18), (0.6, 1.15, 0.0), "amarelo_sol", 0.02)]
+    _fechar("balcao_caixa_01", p)
+    gcol("balcao_caixa_01", "", (2.2, 1.0, 0.7), (0, 0.5, 0))
+
+
+def gondola_01():
+    p = [gcaixa("base", (1.8, 0.12, 0.6), (0, 0.06, 0), "metal_escuro"),
+         gcaixa("painel", (1.8, 1.5, 0.04), (0, 0.75, -0.28), "metal_claro")]
+    cores = ["vermelho", "amarelo_sol", "teal", "laranja", "azul_ceu", "rosa", "verde_militar", "coral"]
+    for n in range(3):
+        y = 0.16 + n * 0.45
+        p.append(gcaixa(f"prat{n}", (1.76, 0.03, 0.5), (0, y, 0), "metal_claro"))
+        for i in range(7):
+            alt = 0.22 if (i + n) % 3 else 0.3
+            p.append(gcaixa(f"prod{n}{i}", (0.2, alt, 0.3), (-0.75 + i * 0.25, y + 0.015 + alt / 2, 0.02), cores[(i * 3 + n) % len(cores)], 0.01))
+    _fechar("gondola_01", p)
+    gcol("gondola_01", "", (1.8, 1.5, 0.6), (0, 0.75, 0))
+
+
+def expositor_01():
+    p = [gcaixa("base", (1.0, 0.75, 1.0), (0, 0.375, 0), "madeira_clara", 0.03),
+         gcaixa("vidro", (0.9, 0.3, 0.9), (0, 0.9, 0), "azul_ceu"),
+         gcaixa("tampo", (1.0, 0.03, 1.0), (0, 1.065, 0), "madeira_escura")]
+    for i, cor in enumerate(("dourado", "coral", "teal", "amarelo_sol")):
+        p.append(k.icoesfera(f"item{i}", 0.08, B((-0.25 + (i % 2) * 0.5, 0.85, -0.2 + (i // 2) * 0.4)), cor))
+    _fechar("expositor_01", p)
+    gcol("expositor_01", "", (1.0, 1.08, 1.0), (0, 0.54, 0))
+
+
+# ---- indústria (galpões de metal)
+
+def maquina_01():
+    p = [gcaixa("base", (1.6, 0.3, 1.0), (0, 0.15, 0), "metal_escuro", 0.02),
+         gcaixa("corpo", (1.2, 1.0, 0.75), (-0.1, 0.8, -0.05), "verde_militar", 0.04),
+         gcaixa("painel", (0.4, 0.5, 0.08), (0.55, 1.0, 0.3), "metal_claro", 0.02),
+         gcaixa("tela", (0.25, 0.15, 0.01), (0.55, 1.12, 0.345), "teal"),
+         gcil("botao_v", 0.035, 0.03, (0.48, 0.88, 0.35), "vermelho", 8),
+         gcil("chamine", 0.12, 0.4, (-0.4, 1.5, -0.2), "metal_escuro", 8),
+         gcaixa("faixa", (1.2, 0.1, 0.77), (-0.1, 0.4, -0.05), "amarelo_sol")]
+    p.append(k.cilindro("roda", 0.28, 0.12, B((-0.1, 0.9, 0.38)), "metal_claro", lados=12, rot=(90, 0, 0)))
+    _fechar("maquina_01", p)
+    gcol("maquina_01", "", (1.6, 1.7, 1.0), (0, 0.85, 0))
+
+
+def bancada_01():
+    p = [gcaixa("tampo", (2.0, 0.08, 0.8), (0, 0.92, 0), "madeira_media", 0.01),
+         gcaixa("prateleira", (1.9, 0.04, 0.7), (0, 0.25, 0), "madeira_escura"),
+         gcaixa("painel", (2.0, 0.9, 0.04), (0, 1.41, -0.38), "metal_claro")]
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            p.append(gcaixa(f"pe{sx}{sz}", (0.07, 0.88, 0.07), (sx * 0.93, 0.44, sz * 0.35), "metal_escuro"))
+    p += [gcaixa("morsa", (0.25, 0.18, 0.2), (0.7, 1.05, 0.1), "azul_tormenta", 0.02),
+          gcaixa("martelo_cabo", (0.04, 0.03, 0.32), (-0.3, 0.98, 0.15), "madeira_clara"),
+          gcaixa("martelo_cabeca", (0.12, 0.06, 0.06), (-0.3, 0.99, 0.31), "metal_escuro"),
+          gcaixa("chave1", (0.04, 0.3, 0.02), (-0.6, 1.45, -0.35), "metal_escuro"),
+          gcaixa("chave2", (0.04, 0.24, 0.02), (-0.45, 1.48, -0.35), "metal_escuro"),
+          gcaixa("serrote", (0.3, 0.12, 0.01), (0.1, 1.55, -0.35), "metal_claro"),
+          gcaixa("caixa_ferr", (0.4, 0.2, 0.25), (0.2, 0.37, 0), "vermelho", 0.02)]
+    _fechar("bancada_01", p)
+    gcol("bancada_01", "", (2.0, 0.96, 0.8), (0, 0.48, 0))
+    gcol("bancada_01", "_painel", (2.0, 0.9, 0.06), (0, 1.41, -0.38))
+
+
+def armario_metal_01():
+    p = []
+    for i in range(3):
+        x = -0.5 + i * 0.5
+        p.append(gcaixa(f"porta{i}", (0.48, 1.9, 0.5), (x, 0.95, 0), "azul_tormenta" if i != 1 else "teal_escuro", 0.01))
+        for n in range(3):
+            p.append(gcaixa(f"vent{i}{n}", (0.3, 0.02, 0.01), (x, 1.65 - n * 0.05, 0.255), "metal_escuro"))
+        p.append(gcaixa(f"trinco{i}", (0.03, 0.12, 0.03), (x + 0.17, 1.0, 0.26), "metal_claro"))
+    _fechar("armario_metal_01", p)
+    gcol("armario_metal_01", "", (1.5, 1.9, 0.5), (0, 0.95, 0))
+
+
+def caixas_01():
+    """Pilha de caixotes, centrada (1,2 × 1,0 m)."""
+    p = [gcaixa("c1", (0.7, 0.7, 0.9), (-0.25, 0.35, -0.05), "madeira_media", 0.02),
+         gcaixa("c2", (0.5, 0.6, 0.6), (0.35, 0.3, 0.15), "madeira_clara", 0.02),
+         gcaixa("c3", (0.6, 0.55, 0.6), (-0.25, 0.975, -0.1), "madeira_clara", 0.02)]
+    for i, (x, y, z, lx, lz) in enumerate(((-0.25, 0.35, -0.05, 0.7, 0.9), (0.35, 0.3, 0.15, 0.5, 0.6))):
+        p.append(gcaixa(f"ripa{i}", (lx + 0.01, 0.06, lz + 0.01), (x, y, z), "madeira_escura"))
+    _fechar("caixas_01", p)
+    gcol("caixas_01", "", (0.7, 0.7, 0.9), (-0.25, 0.35, -0.05))
+    gcol("caixas_01", "_2", (0.5, 0.6, 0.6), (0.35, 0.3, 0.15))
+    gcol("caixas_01", "_3", (0.6, 0.55, 0.6), (-0.25, 0.975, -0.1))
+
+
+def tambores_01():
+    """Três tambores de óleo, centrados (1,3 × 1,0 m)."""
+    p = []
+    for i, (x, z, cor) in enumerate(((-0.35, 0.18, "vermelho"), (0.35, 0.18, "azul_tormenta"), (0.0, -0.2, "amarelo_sol"))):
+        p.append(gcil(f"t{i}", 0.3, 0.9, (x, 0.45, z), cor, 12))
+        for n in range(2):
+            p.append(gcil(f"aro{i}{n}", 0.31, 0.04, (x, 0.25 + n * 0.4, z), "metal_escuro", 12))
+    _fechar("tambores_01", p)
+    gcol("tambores_01", "", (1.3, 0.9, 1.0), (0, 0.45, 0))
+
+
+# ---- fazenda (celeiro)
+
+def barril_01():
+    p = []
+    for i, x in enumerate((-0.32, 0.32)):
+        p.append(k.cilindro(f"b{i}", 0.3, 0.9, B((x, 0.45, 0)), "madeira_media", lados=12, raio_topo=0.27))
+        for n in range(2):
+            p.append(gcil(f"aro{i}{n}", 0.305, 0.04, (x, 0.2 + n * 0.5, 0), "metal_escuro", 12))
+    _fechar("barril_01", p)
+    gcol("barril_01", "", (1.24, 0.9, 0.6), (0, 0.45, 0))
+
+
+def sacos_01():
+    p = []
+    pos = ((-0.4, 0.15, 0.0), (0.35, 0.15, 0.05), (0.0, 0.45, 0.0))
+    for i, (x, y, z) in enumerate(pos):
+        p.append(k.icoesfera(f"s{i}", 0.4, B((x, y, z)), "areia", escala=(1.0, 0.75, 0.38), ruido=0.06, semente=i))
+        p.append(gcaixa(f"amarra{i}", (0.08, 0.05, 0.3), (x + 0.32, y + 0.05, z), "terra"))
+    _fechar("sacos_01", p)
+    gcol("sacos_01", "", (1.5, 0.75, 0.75), (0, 0.375, 0))
+
+
+def feno_01():
+    p = [gcaixa("fardo", (1.6, 0.85, 0.9), (0, 0.425, 0), "amarelo_sol", 0.06)]
+    for i in range(2):
+        p.append(gcaixa(f"corda{i}", (0.05, 0.87, 0.92), (-0.4 + i * 0.8, 0.425, 0), "terra"))
+    _fechar("feno_01", p)
+    gcol("feno_01", "", (1.6, 0.85, 0.9), (0, 0.425, 0))
+
+
+def ferramentas_01():
+    p = [gcaixa("suporte", (1.4, 0.08, 0.12), (0, 1.6, -0.1), "madeira_escura")]
+    # forcado, pá e ancinho encostados
+    for i, (x, cab) in enumerate(((-0.45, "forcado"), (0.0, "pa"), (0.45, "ancinho"))):
+        p.append(gcaixa(f"cabo{i}", (0.04, 1.6, 0.04), (x, 0.85, -0.05), "madeira_clara"))
+        if cab == "pa":
+            p.append(gcaixa("pa", (0.25, 0.32, 0.02), (x, 0.2, -0.04), "metal_claro"))
+        elif cab == "forcado":
+            for d in range(3):
+                p.append(gcaixa(f"dente{d}", (0.02, 0.3, 0.02), (x - 0.07 + d * 0.07, 0.15, -0.04), "metal_escuro"))
+            p.append(gcaixa("trave_f", (0.18, 0.03, 0.03), (x, 0.31, -0.04), "metal_escuro"))
+        else:
+            p.append(gcaixa("trave_a", (0.4, 0.04, 0.04), (x, 0.08, -0.04), "metal_escuro"))
+    p.append(gcaixa("balde", (0.3, 0.3, 0.3), (0.0, 0.15, 0.25), "metal_claro", 0.02))
+    _fechar("ferramentas_01", p)
+    gcol("ferramentas_01", "", (1.4, 1.7, 0.25), (0, 0.85, -0.05))
+
+
+MOVEIS = (sofa_01, mesa_01, cadeira_01, cama_01, armario_01, geladeira_01, fogao_01, pia_cozinha_01, tv_01,
+          prateleira_01, luminaria_01, tapete_01, balcao_caixa_01, gondola_01, expositor_01, maquina_01,
+          bancada_01, armario_metal_01, caixas_01, tambores_01, barril_01, sacos_01, feno_01, ferramentas_01)
+
+
+GERADORES = {f.__name__: f for f in MOVEIS + (escada_madeira_01, escada_concreto_01, escada_metal_01,
                                       escada_madeira_topo_01, escada_concreto_topo_01, escada_metal_topo_01)}
 
 
