@@ -85,7 +85,7 @@ static func make_body(p: Construcoes.Peca) -> StaticBody3D:
 
 func _corpo(p: Construcoes.Peca) -> void:
 	if server.nav:
-		server.nav.set_wall(p.tipo, p.cell, p.mask, true)
+		server.nav.set_piece(p.tipo, p.cell, p.rot, p.mask, true)
 	if corpos.has(p.id):
 		(corpos[p.id] as Node).free()
 	var c := make_body(p)
@@ -197,7 +197,7 @@ func destroy(id: int, motivo: int) -> void:
 		(corpos[id] as Node).queue_free()
 		corpos.erase(id)
 	if server.nav:
-		server.nav.set_wall(p.tipo, p.cell, p.mask, false)
+		server.nav.set_piece(p.tipo, p.cell, p.rot, p.mask, false)
 	_mudaram.erase(id)
 	if motivo == Protocol.GONE_DESABOU:
 		desabaram += 1

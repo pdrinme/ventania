@@ -3,8 +3,9 @@ extends SceneTree
 ## servidor autoritativo (os bots usam as mesmas entradas e regras dos humanos).
 ## Verifica que a partida termina sem travar, que os bots saltam do ônibus, saqueiam,
 ## combatem, curam e fogem da Tormenta; imprime métricas por dificuldade e o custo
-## de CPU por bot. Tempos da Tormenta encurtados e simulação acelerada (time_scale).
-## Uso: godot --headless --path game -s res://tests/integration/test_bots.gd -- [bots=23] [partidas=1] [completa]
+## de CPU por bot. Tempos da Tormenta encurtados. Rode com --fixed-fps 30: simulação na velocidade
+## máxima com o passo do jogo (time_scale distorcia a física: passo de 0,13 s).
+## Uso: godot --headless --fixed-fps 30 --path game -s res://tests/integration/test_bots.gd -- [bots=23] [partidas=1] [completa]
 ## "completa": usa a Tormenta real (data/partida.json, ~10 min de jogo).
 
 var falhas := 0
@@ -42,12 +43,10 @@ func _init() -> void:
 	var server := GameServer.new(mundo, 77, "br", cfg)
 	root.add_child(server)
 	_checar(server.start(24871, "127.0.0.1") == OK, "servidor BR (só bots) abriu")
-	Engine.time_scale = 4.0
 	var inicio := Time.get_ticks_msec()
 	var limite_ms := (1800000 if completa else 900000) * partidas
 	while server.partida.historico.size() < partidas and Time.get_ticks_msec() - inicio < limite_ms:
 		await physics_frame
-	Engine.time_scale = 1.0
 	var real := (Time.get_ticks_msec() - inicio) / 1000.0
 	_checar(server.partida.historico.size() == partidas, "%d partida(s) terminaram (%.0f s reais)" % [server.partida.historico.size(), real])
 	var por_dif := {}
@@ -74,6 +73,14 @@ func _init() -> void:
 			a["vitorias"] += 1 if m["colocacao"] == 1 else 0
 			a["preso"] += int(m.get("preso_ticks", 0))
 			a["episodios"] += int(m.get("preso_episodios", 0))
+	# comportamentos (soma de todos os bots de todas as partidas)
+	var comp := {}
+	for h in server.partida.historico:
+		for id in h["metricas"]:
+			for k in h["metricas"][id]:
+				if str(k).begins_with("estado_") or k in ["recuperacoes", "manobras", "abandonos", "andar_cima_s", "preso_episodios"]:
+					comp[k] = int(comp.get(k, 0)) + int(h["metricas"][id][k])
+	print("  COMPORTAMENTOS (vezes que entraram em cada estado, soma dos bots): %s" % str(comp))
 	print("  MÉTRICAS POR DIFICULDADE (médias por bot):")
 	var tot := {"saques": 0, "curas": 0, "elim": 0, "tormenta": 0}
 	for d in ["facil", "medio", "dificil"]:
@@ -89,6 +96,19 @@ func _init() -> void:
 	_checar(tot["saques"] > n, "bots saqueiam (%d itens pegos)" % tot["saques"])
 	_checar(tot["elim"] > 0, "bots combatem e eliminam (%d eliminações)" % tot["elim"])
 	_checar(tot["curas"] > 0, "bots usam cura/escudo (%d)" % tot["curas"])
+	if completa:
+		_checar(int(comp.get("estado_cobertura", 0)) > 0, "bots procuram cobertura (%d vezes)" % int(comp.get("estado_cobertura", 0)))
+		_checar(int(comp.get("estado_perseguir", 0)) + int(comp.get("estado_investigar", 0)) > 0, "bots perseguem a última posição vista / investigam tiros (%d)" % (int(comp.get("estado_perseguir", 0)) + int(comp.get("estado_investigar", 0))))
+		_checar(int(comp.get("estado_tormenta", 0)) > 0, "bots fogem da Tormenta (%d)" % int(comp.get("estado_tormenta", 0)))
+		_checar(int(comp.get("andar_cima_s", 0)) > 0, "bots sobem aos andares de cima (%d s somados)" % int(comp.get("andar_cima_s", 0)))
+	var preso_pct := 0.0
+	var vivo := 0.0
+	var preso := 0.0
+	for d in por_dif:
+		vivo += por_dif[d]["tempo"]
+		preso += por_dif[d]["preso"] / float(Protocol.TICK_RATE)
+	preso_pct = 100.0 * preso / maxf(1.0, vivo)
+	_checar(preso_pct < 1.0, "bots presos (> 3 s sem progresso) menos de 1%% do tempo vivo (%.2f%%)" % preso_pct)
 	if por_dif.has("facil") and por_dif.has("dificil"):
 		var cf: float = por_dif["facil"]["colocacao"] / por_dif["facil"]["n"]
 		var cd: float = por_dif["dificil"]["colocacao"] / por_dif["dificil"]["n"]

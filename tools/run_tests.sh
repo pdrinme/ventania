@@ -99,6 +99,8 @@ FILTRO="ESCADAS|FALHOU|percorridas"
 rodar_godot timeout 300 "$GODOT" --headless --fixed-fps 30 --path game -s res://tests/integration/test_escadas.gd; checar $? "escadas"
 FILTRO="INTERIORES|FALHOU|móveis"
 rodar_godot timeout 200 "$GODOT" --headless --fixed-fps 30 --path game -s res://tests/integration/test_interiores.gd; checar $? "interiores"
+FILTRO="NAVEGACAO|FALHOU|destinos"
+rodar_godot timeout 900 "$GODOT" --headless --fixed-fps 30 --path game -s res://tests/integration/test_navegacao.gd -- 9999 97; checar $? "navegação"
 FILTRO="PICARETA_COSMETICA|FALHA"
 rodar_godot timeout 300 "$GODOT" --headless --path game -s res://tests/integration/test_picareta_cosmetica.gd; checar $? "picareta cosmética"
 
@@ -108,7 +110,7 @@ rodar_godot timeout 300 "$GODOT" --headless --path game -s res://tests/integrati
 
 passo "Etapa 6: partida só com 23 bots (simulação headless, métricas e CPU)"
 FILTRO="BOTS|FALHOU|partida [0-9]|CPU|facil|medio|dificil"
-rodar_godot timeout 900 "$GODOT" --headless --path game -s res://tests/integration/test_bots.gd -- 23 1; checar $? "bots"
+rodar_godot timeout 900 "$GODOT" --headless --fixed-fps 30 --path game -s res://tests/integration/test_bots.gd -- 23 1; checar $? "bots"
 
 passo "Etapa 7: rede — 2 salas, sala cheia, reconexão, banda, relevância, rede ruim simulada, lixo e inundação"
 FILTRO="REDE|FALHOU|kbit|entidades"

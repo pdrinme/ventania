@@ -659,8 +659,14 @@ static func _limpar_nome(n: String) -> String:
 func add_bot(dificuldade: String) -> Cliente:
 	if nav == null:
 		nav = NavGrade.new(world)
+		# pisos primeiro (as rampas e escadas se ligam a eles)
 		for p: Construcoes.Peca in build.estado.pecas.values():
-			nav.set_wall(p.tipo, p.cell, p.mask, true)
+			if p.tipo != Grade.RAMPA:
+				nav.set_piece(p.tipo, p.cell, p.rot, p.mask, true)
+		for p: Construcoes.Peca in build.estado.pecas.values():
+			if p.tipo == Grade.RAMPA:
+				nav.set_piece(p.tipo, p.cell, p.rot, p.mask, true)
+		nav.resolve_stairs()
 	var cfg := BotCerebro.config()
 	var c := Cliente.new()
 	c.id = _proximo_id

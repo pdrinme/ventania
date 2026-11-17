@@ -41,6 +41,9 @@ func _init() -> void:
 	for l in mundo.loot_points():
 		destinos.append(["loot", l])
 	destinos = destinos.slice(0, maximo)
+	if OS.get_environment("NAV_SO") != "":
+		var xz := OS.get_environment("NAV_SO").split(",")
+		destinos = destinos.filter(func(d): return Vector2(d[1].x, d[1].z).distance_to(Vector2(float(xz[0]), float(xz[1]))) < 4.0)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 11
 	var chegou := 0
@@ -72,7 +75,8 @@ func _init() -> void:
 		while (server.tick - t0) < LIMITE_S * Protocol.TICK_RATE:
 			await physics_frame
 			var p := c.pawn.global_position
-			if Vector2(p.x - alvo.x, p.z - alvo.z).length() < 1.6 and absf(p.y - alvo.y) < 1.3:
+			# perto o bastante para interagir (baú abre a 2,4 m; o bot pega loot a 1,7 m)
+			if Vector2(p.x - alvo.x, p.z - alvo.z).length() < (2.0 if d[0] == "baú" else 1.7) and absf(p.y - alvo.y) < 1.3:
 				ok = true
 				break
 		var s := (server.tick - t0) / float(Protocol.TICK_RATE)
@@ -85,7 +89,8 @@ func _init() -> void:
 			if alto:
 				chegou_alto += 1
 		else:
-			nao.append("%s %s%s" % [d[0], str(alvo.snapped(Vector3.ONE * 0.1)), " (andar de cima)" if alto else ""])
+			nao.append("%s %s%s — terminou em %s (rota de %d pontos, %d recuperações)" % [d[0], str(alvo.snapped(Vector3.ONE * 0.1)), " (andar de cima)" if alto else "",
+					str(c.pawn.global_position.snapped(Vector3.ONE * 0.1)), bot.caminho.size(), bot._recuperacoes])
 	var pct := 100.0 * chegou / maxf(1.0, destinos.size())
 	print("  destinos: %d · alcançados: %d (%.0f%%) · em andares de cima: %d de %d · tempo médio %.1f s · preso %.0f s no total" % [
 			destinos.size(), chegou, pct, chegou_alto, altos, tempo_total / maxf(1.0, chegou), preso_total / float(Protocol.TICK_RATE)])

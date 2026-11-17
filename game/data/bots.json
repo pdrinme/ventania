@@ -1,5 +1,5 @@
 {
-  "_doc": "Bots (Etapa 6). O servidor preenche a partida BR até 'preencher_ate' jogadores. Cada bot é um jogador do servidor (mesmas regras, entradas e física dos humanos). Dificuldade: reacao_s = tempo entre ver o inimigo e começar a atirar; erro_mira_graus = desvio aleatório; alcance_visao_m e campo_visao_graus = percepção (com raio de visibilidade); engaja_m = distância a partir da qual parte para o combate; cura_abaixo = vida+escudo para curar; constroi = levanta parede ao levar tiro; coleta = usa a picareta em árvores e pedras. Nomes: sorteados a cada partida de data/nomes_jogadores.txt (a dificuldade não aparece no nome).",
+  "_doc": "Bots (Etapa 6; revisão da IA). O servidor preenche a partida BR até 'preencher_ate' jogadores. Cada bot é um jogador do servidor (mesmas regras, entradas e física dos humanos). A dificuldade muda a QUALIDADE DAS DECISÕES, não só a mira: decisao_hz = reavaliações por segundo; reacao_s = tempo entre ver e atirar; erro_mira_graus = desvio com a mira assentada; mira_assenta_s = tempo de visada até o erro cair (começa 3x maior); alcance_visao_m e campo_visao_graus = percepção (com raio de visibilidade); memoria_s = quanto tempo lembra da última posição vista; investiga = chance de ir ver de onde veio um tiro ouvido; engaja_m = distância para partir para o combate; usa_cobertura = chance de buscar cobertura sob fogo/recarregando; cobertura_vida = só busca cobertura abaixo desta vida+escudo; recua_vida = recua em desvantagem abaixo disso; atira_andando = revida enquanto se move; rajada_ticks/pausa_ticks = controle de disparo nas automáticas; explora_predios = chance de explorar cômodos em vez de pontos ao acaso; cura_abaixo = vida+escudo para curar; constroi = levanta parede ao levar tiro; coleta = usa a picareta. Nomes: sorteados de data/nomes_jogadores.txt (a dificuldade não aparece no nome).",
   "preencher_ate": 16,
   "decisao_hz": 5,
   "decisao_longe_hz": 1,
@@ -17,7 +17,19 @@
       "cura_abaixo": 70,
       "constroi": false,
       "coleta": false,
-      "salto_cedo": 0.6
+      "salto_cedo": 0.6,
+      "decisao_hz": 2.5,
+      "mira_assenta_s": 1.4,
+      "memoria_s": 3.0,
+      "investiga": 0.3,
+      "usa_cobertura": 0.0,
+      "cobertura_vida": 0,
+      "recua_vida": 0,
+      "atira_andando": false,
+      "rajada_ticks": 7,
+      "pausa_ticks": 10,
+      "ritmo_lateral": 0.04,
+      "explora_predios": 0.4
     },
     "medio": {
       "nome": "Médio",
@@ -29,7 +41,19 @@
       "cura_abaixo": 110,
       "constroi": false,
       "coleta": true,
-      "salto_cedo": 0.45
+      "salto_cedo": 0.45,
+      "decisao_hz": 5,
+      "mira_assenta_s": 0.9,
+      "memoria_s": 6.0,
+      "investiga": 0.7,
+      "usa_cobertura": 0.5,
+      "cobertura_vida": 150,
+      "recua_vida": 45,
+      "atira_andando": false,
+      "rajada_ticks": 10,
+      "pausa_ticks": 7,
+      "ritmo_lateral": 0.07,
+      "explora_predios": 0.7
     },
     "dificil": {
       "nome": "Difícil",
@@ -41,7 +65,19 @@
       "cura_abaixo": 140,
       "constroi": true,
       "coleta": true,
-      "salto_cedo": 0.3
+      "salto_cedo": 0.3,
+      "decisao_hz": 7,
+      "mira_assenta_s": 0.55,
+      "memoria_s": 10.0,
+      "investiga": 1.0,
+      "usa_cobertura": 0.9,
+      "cobertura_vida": 200,
+      "recua_vida": 70,
+      "atira_andando": true,
+      "rajada_ticks": 13,
+      "pausa_ticks": 5,
+      "ritmo_lateral": 0.1,
+      "explora_predios": 0.85
     }
   },
   "mistura": [

@@ -237,7 +237,8 @@ func harvest_points() -> Array:
 	return _coleta
 
 
-## Obstáculos grandes para a navegação dos bots: [[centro Vector2, raio], ...]
+## Obstáculos grandes para a navegação dos bots: [[centro Vector2, raio], ...] ou,
+## para contêineres, [centro, meias medidas Vector2, ângulo] (retângulo)
 ## (troncos de árvore e postes ficam para o desvio local).
 func nav_obstacles() -> Array:
 	var raios := {"pedra_01": 1.3, "conteiner_01": 3.0, "conteiner_02": 3.0, "conteiner_03": 3.0, "silo_01": 2.4,
@@ -249,6 +250,12 @@ func nav_obstacles() -> Array:
 			var xf: Transform3D = pr[1]
 			var escala := xf.basis.get_scale().x
 			if nome == "pedra_01" and escala < 1.3:
+				continue
+			if nome.begins_with("conteiner"):
+				# retângulo de verdade (6 × 2,4 m): os corredores de 2,6 m entre as fileiras
+				# do Porto ficam livres (um círculo de 3 m fechava o pátio inteiro)
+				var eixo := xf.basis.x.normalized()
+				out.append([Vector2(xf.origin.x, xf.origin.z), Vector2(3.0, 1.2) * escala, atan2(eixo.z, eixo.x)])
 				continue
 			out.append([Vector2(xf.origin.x, xf.origin.z), float(raios[nome]) * escala])
 	return out
