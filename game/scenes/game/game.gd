@@ -127,6 +127,11 @@ func _ready() -> void:
 	hud = GameHud.new()
 	hud.theme = tema
 	camada.add_child(hud)
+	# tela de resultado por cima de tudo (botões clicáveis, com foco para teclado/controle)
+	match_hud.resultado.reparent(camada)
+	match_hud.resultado.theme = tema
+	match_hud.play_again.connect(_jogar_de_novo)
+	match_hud.watch.connect(_assistir)
 	fx = CombatFx.new()
 	add_child(fx)
 	chests = ChestsClient.new()
@@ -973,7 +978,7 @@ func _unhandled_input(e: InputEvent) -> void:
 	if e.is_action_pressed("pause") or (e.is_action_pressed("ui_cancel") and hud.is_paused()):
 		_pausar(not hud.is_paused())
 		get_viewport().set_input_as_handled()
-	elif e is InputEventMouseButton and e.pressed and not hud.is_paused() and not Settings.is_mobile \
+	elif e is InputEventMouseButton and e.pressed and not hud.is_paused() and not Settings.is_mobile and not match_hud.result_visible() \
 			and InputManager.device == "teclado_mouse" and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -1029,7 +1034,7 @@ func _falhar(motivo: String) -> void:
 	_sair()
 
 
-func _sair() -> void:
+func _sair(params := {}) -> void:
 	if _saindo:
 		return
 	_saindo = true
@@ -1040,7 +1045,7 @@ func _sair() -> void:
 		client.close()
 	if server:
 		server.stop()
-	SceneManager.go("menu")
+	SceneManager.go("menu", params)
 
 
 func _exit_tree() -> void:
@@ -1200,7 +1205,9 @@ func _on_match(m: Dictionary) -> void:
 				_tormenta_antes = {}
 				onibus = null
 				match_hud.onibus = null
-				match_hud.hide_result()
+				if match_hud.result_visible():
+					match_hud.hide_result()
+					_liberar_para_tela(false)
 				if antes == Protocol.MATCH_FIM:
 					hud.flash("Nova partida: área de espera", 2.5)
 
@@ -1208,9 +1215,49 @@ func _on_match(m: Dictionary) -> void:
 func _on_result(r: Dictionary) -> void:
 	resultado = r
 	combat_hud.show_eliminated("")
-	var venceu: bool = pawn != null and r["vencedor"] == pawn.entity_id
-	match_hud.show_result(r, _nomes.get(r["vencedor"], ""), pawn.entity_id if pawn else -1)
+	var meu := pawn.entity_id if pawn else -1
+	var venceu: bool = meu > 0 and r["vencedor"] == meu
+	var traje: String = _cosmeticos.get(meu, {}).get("traje", "")
+	if traje.is_empty():
+		traje = Cosmeticos.default_outfit()
+	var continua: bool = int(r["vencedor"]) == 0 and int(_partida.get("estado", 0)) == Protocol.MATCH_JOGO
+	var de_novo := modo == "br_local" or (not client.ticket.is_empty() and Meta.logged_in())
+	match_hud.show_result(r, _nomes.get(meu, Settings.get_value("network", "player_name")), _nomes.get(r["vencedor"], ""),
+			venceu, traje, continua, de_novo)
+	_liberar_para_tela(true)
+	if venceu:
+		Audio.play_ui("nivel")
 	Audio.play_sfx("escudo_ok" if venceu else "dano", -2.0)
+
+
+## Tela de resultado aberta: mouse livre, câmera e entradas paradas (PC); fechada: volta.
+func _liberar_para_tela(aberta: bool) -> void:
+	_inventario(false)
+	sampler.bloqueado = aberta or hud.is_paused()
+	camera.bloqueado = aberta or hud.is_paused()
+	var capturar := not aberta and not hud.is_paused() and not Settings.is_mobile and InputManager.device != "toque" \
+			and DisplayServer.get_name() != "headless"
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if capturar else Input.MOUSE_MODE_VISIBLE
+
+
+func _assistir() -> void:
+	_liberar_para_tela(false)
+	_proximo_assistido(1)
+
+
+## "Jogar de novo": volta ao lobby e já entra na fila do mesmo modo (online: o grupo
+## volta ao lobby e o líder busca de novo; local: nova partida contra bots).
+func _jogar_de_novo() -> void:
+	if modo == "br_local":
+		_saindo = true
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		if client:
+			client.close()
+		if server:
+			server.stop()
+		SceneManager.go("game", {"modo": "br_local", "bots": SceneManager.params.get("bots", BotCerebro.config().get("preencher_ate", 16))})
+		return
+	_sair({"jogar_de_novo": true})
 
 
 ## Espectador: segue o jogador assistido (visual remoto) com a câmera.

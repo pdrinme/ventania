@@ -67,9 +67,15 @@ func test_mensagens_da_partida() -> void:
 	assert_eq(s["fases"], 3)
 	assert_true(s["c_para"].distance_to(t.c_para) < 0.01)
 	assert_eq(s["r_para"], 150.0)
-	var r := Protocol.unpack_result(Protocol.pack_result({"colocacao": 3, "total": 12, "eliminacoes": 2, "tempo_s": 300, "vencedor": 5}))
+	var r := Protocol.unpack_result(Protocol.pack_result({"colocacao": 3, "total": 12, "eliminacoes": 2, "tempo_s": 300, "vencedor": 5,
+			"dano": 812, "baus": 4, "curas": 2, "coleta": 230, "construcoes": 17}))
 	assert_eq(r["colocacao"], 3)
 	assert_eq(r["vencedor"], 5)
+	assert_eq(r["dano"], 812)
+	assert_eq(r["baus"], 4)
+	assert_eq(r["curas"], 2)
+	assert_eq(r["coleta"], 230)
+	assert_eq(r["construcoes"], 17)
 
 
 func test_ilha_deterministica() -> void:

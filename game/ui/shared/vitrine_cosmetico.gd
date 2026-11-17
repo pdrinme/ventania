@@ -24,6 +24,7 @@ var _rot := -0.4
 var _rot_alvo := -0.4
 var _auto := true
 var _arrastando := false
+var _ap: AnimationPlayer
 
 
 static func criar(item_id: String, cat: String, raridade: String) -> VitrineCosmetico:
@@ -89,7 +90,8 @@ func _montar(item_id: String, raridade: String) -> void:
 		"traje":
 			var aps := m.find_children("*", "AnimationPlayer", true, false)
 			if not aps.is_empty():
-				(aps[0] as AnimationPlayer).play("idle")
+				_ap = aps[0] as AnimationPlayer
+				_ap.play("idle")
 			TrajeFx.attach(m, item_id)
 			enquadrar("corpo", true)
 		"picareta":
@@ -104,6 +106,14 @@ func _montar(item_id: String, raridade: String) -> void:
 			_rot = 0.49
 			_rot_alvo = _rot
 			_definir_camera(Vector3(0, 1.15, 5.0), Vector3(0, 1.05, 0), true)
+
+
+## Toca uma animação do esqueleto compartilhado (ex.: "acenar") e volta ao "idle".
+func animar(nome: String) -> void:
+	if _ap == null or not _ap.has_animation(nome):
+		return
+	_ap.play(nome)
+	_ap.queue("idle")
 
 
 ## "corpo", "rosto" ou "costas" (só trajes). Transição suave.

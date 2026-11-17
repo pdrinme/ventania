@@ -82,6 +82,13 @@ func _ready() -> void:
 		SceneManager.message = ""
 	if Meta.state == "desconhecido":
 		Meta.refresh()
+	# "Jogar de novo" na tela de resultado: entra na fila do mesmo modo
+	if SceneManager.params.get("jogar_de_novo", false) and Meta.is_leader():
+		SceneManager.params = {}
+		(func():
+			await get_tree().create_timer(0.6).timeout
+			if is_instance_valid(self) and Meta.party.get("state", "") != "fila":
+				_on_jogar()).call()
 
 
 func _process(_dt: float) -> void:

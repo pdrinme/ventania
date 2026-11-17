@@ -317,9 +317,11 @@ func _enviar_resultado(id: int) -> void:
 	if p.is_empty() or c == null:
 		return
 	var fim: int = p["fim"] if p["fim"] > 0 else server.tick
+	var st: Dictionary = c.stats if vivos.has(id) or not p.has("stats") else p["stats"]
 	server.send_to(c.peer_id, Protocol.pack_result({"colocacao": p["colocacao"], "total": total_inicial,
 			"eliminacoes": p["eliminacoes"], "tempo_s": roundi((fim - int(p["inicio"])) / float(Protocol.TICK_RATE)),
-			"vencedor": vencedor}), true)
+			"vencedor": vencedor, "dano": int(st.get("dano", 0)), "baus": int(st.get("baus", 0)), "curas": int(st.get("curas", 0)),
+			"coleta": int(st.get("coleta", 0)), "construcoes": int(st.get("construcoes", 0))}), true)
 
 
 ## A cada segundo: quem está fora da zona perde vida (ignora o escudo). Se o dano

@@ -4,7 +4,7 @@ extends RefCounted
 ## Cliente envia ENTRADAS (não posições); servidor envia SNAPSHOTS do estado.
 ## Ver ARCHITECTURE §4.
 
-const GAME_PROTOCOL := 11
+const GAME_PROTOCOL := 12
 const DEFAULT_PORT := 24800
 const TICK_RATE := 30            # simulação (Hz)
 const SNAPSHOT_EVERY := 2        # snapshot a cada N ticks (15 Hz)
@@ -698,6 +698,7 @@ static func unpack_storm(data: PackedByteArray) -> Dictionary:
 
 
 ## {"colocacao","total","eliminacoes","tempo_s","vencedor"}
+## v12: + estatísticas registradas pelo servidor (dano, baús, curas, coleta, construções).
 static func pack_result(r: Dictionary) -> PackedByteArray:
 	var b := _buf()
 	b.put_u8(S_RESULT)
@@ -706,15 +707,21 @@ static func pack_result(r: Dictionary) -> PackedByteArray:
 	b.put_u8(clampi(r["eliminacoes"], 0, 255))
 	b.put_u16(clampi(r["tempo_s"], 0, 65535))
 	b.put_u16(r.get("vencedor", 0))
+	b.put_u16(clampi(int(r.get("dano", 0)), 0, 65535))
+	b.put_u8(clampi(int(r.get("baus", 0)), 0, 255))
+	b.put_u8(clampi(int(r.get("curas", 0)), 0, 255))
+	b.put_u16(clampi(int(r.get("coleta", 0)), 0, 65535))
+	b.put_u16(clampi(int(r.get("construcoes", 0)), 0, 65535))
 	return b.data_array
 
 
 static func unpack_result(data: PackedByteArray) -> Dictionary:
-	if data.size() != 8:
+	if data.size() != 16:
 		return {}
 	var b := _reader(data)
 	b.seek(1)
-	return {"colocacao": b.get_u8(), "total": b.get_u8(), "eliminacoes": b.get_u8(), "tempo_s": b.get_u16(), "vencedor": b.get_u16()}
+	return {"colocacao": b.get_u8(), "total": b.get_u8(), "eliminacoes": b.get_u8(), "tempo_s": b.get_u16(), "vencedor": b.get_u16(),
+			"dano": b.get_u16(), "baus": b.get_u8(), "curas": b.get_u8(), "coleta": b.get_u16(), "construcoes": b.get_u16()}
 
 
 # ---------- construção ----------

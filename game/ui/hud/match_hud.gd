@@ -6,6 +6,8 @@ extends Control
 
 signal back_to_menu
 signal spectate_next
+signal play_again
+signal watch
 
 const TAM_MINI := 176.0
 
@@ -27,10 +29,7 @@ var _roxo: ColorRect
 var _mini: Control
 var _grande: Control
 var _espectador: Label
-var _resultado: PanelContainer
-var _res_titulo: Label
-var _res_texto: Label
-var _res_xp: Label
+var resultado: TelaResultado
 var _nomes := {}
 var _info_col: VBoxContainer
 var eliminacoes := 0                 # minhas eliminações nesta partida (só exibição)
@@ -104,42 +103,13 @@ func _ready() -> void:
 	_espectador.visible = false
 	add_child(_espectador)
 
-	_resultado = PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.05, 0.22, 0.25, 0.95)
-	sb.set_corner_radius_all(18)
-	sb.set_content_margin_all(26)
-	_resultado.add_theme_stylebox_override("panel", sb)
-	_resultado.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	_resultado.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_resultado.grow_vertical = Control.GROW_DIRECTION_BOTH
-	_resultado.visible = false
-	add_child(_resultado)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 14)
-	_resultado.add_child(v)
-	_res_titulo = _rotulo("Titulo")
-	v.add_child(_res_titulo)
-	_res_texto = _rotulo("Subtitulo")
-	v.add_child(_res_texto)
-	_res_xp = _rotulo("Pequeno")
-	_res_xp.add_theme_color_override("font_color", VentaniaTheme.AMARELO)
-	_res_xp.visible = false
-	v.add_child(_res_xp)
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 12)
-	h.alignment = BoxContainer.ALIGNMENT_CENTER
-	v.add_child(h)
-	var assistir := Button.new()
-	assistir.text = "Assistir"
-	assistir.custom_minimum_size = Vector2(170, 52)
-	assistir.pressed.connect(func(): _resultado.visible = false)
-	h.add_child(assistir)
-	var menu := Button.new()
-	menu.text = "Voltar ao menu"
-	menu.custom_minimum_size = Vector2(200, 52)
-	menu.pressed.connect(func(): back_to_menu.emit())
-	h.add_child(menu)
+	resultado = TelaResultado.new()
+	add_child(resultado)
+	resultado.voltar_ao_lobby.connect(func(): back_to_menu.emit())
+	resultado.jogar_de_novo.connect(func(): play_again.emit())
+	resultado.assistir.connect(func():
+		resultado.esconder()
+		watch.emit())
 
 
 func _chip(l: Label) -> Label:
@@ -215,18 +185,8 @@ func set_match(m: Dictionary) -> void:
 	_estado_t = Time.get_ticks_msec() / 1000.0
 
 
-func show_result(r: Dictionary, nome_vencedor: String, meu_id: int) -> void:
-	_resultado.visible = true
-	if r["colocacao"] == 1 and r["vencedor"] == meu_id:
-		_res_titulo.text = "VITÓRIA!"
-		_res_titulo.add_theme_color_override("font_color", Color("ffc93c"))
-	else:
-		_res_titulo.text = "#%d de %d" % [r["colocacao"], r["total"]]
-		_res_titulo.add_theme_color_override("font_color", Color.WHITE)
-	var t: int = r["tempo_s"]
-	_res_texto.text = "%d eliminação(ões) · %d:%02d vivo" % [r["eliminacoes"], t / 60, t % 60]
-	if r["colocacao"] != 1 and not nome_vencedor.is_empty():
-		_res_texto.text += "\nVencedor: %s" % nome_vencedor
+func show_result(r: Dictionary, meu_nome: String, nome_vencedor: String, eu_venci: bool, traje: String, pode_assistir: bool, pode_jogar_de_novo: bool) -> void:
+	resultado.mostrar(r, meu_nome, nome_vencedor, eu_venci, traje, pode_assistir, pode_jogar_de_novo)
 
 
 ## Etapa 9: XP desta partida, calculado e concedido pelo meta-servidor.
@@ -244,19 +204,17 @@ func show_progress(p: Dictionary) -> void:
 		topo += "  ·  PASSE NÍVEL %d" % int(passe["nivel"])
 	for d: Dictionary in p.get("desbloqueados", []):
 		linhas.append("Desbloqueado: %s" % d.get("nome", "?"))
-	_res_xp.text = topo + "\n" + "\n".join(linhas)
-	_res_xp.visible = true
+	resultado.set_progress(topo + "\n" + "\n".join(linhas))
 	var subiu: bool = int(p.get("nivel", 0)) > int(p.get("nivel_antes", 0)) or (passe is Dictionary and int(passe.get("nivel", 0)) > int(passe.get("nivel_antes", 0)))
 	Audio.play_ui("nivel" if subiu else ("recompensa" if not p.get("desbloqueados", []).is_empty() else "confirmar"))
 
 
 func hide_result() -> void:
-	_res_xp.visible = false
-	_resultado.visible = false
+	resultado.esconder()
 
 
 func result_visible() -> bool:
-	return _resultado.visible
+	return resultado.visible
 
 
 ## Aviso da entrada na partida (no ônibus, em queda, planando). Vazio = esconder.
