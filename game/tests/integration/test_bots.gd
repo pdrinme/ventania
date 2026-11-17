@@ -60,7 +60,7 @@ func _init() -> void:
 			var m: Dictionary = h["metricas"][id]
 			var d: String = m.get("dificuldade", "?")
 			if not por_dif.has(d):
-				por_dif[d] = {"n": 0, "colocacao": 0.0, "elim": 0, "saques": 0, "curas": 0, "dano": 0, "tormenta": 0, "construcoes": 0, "tempo": 0.0, "vitorias": 0}
+				por_dif[d] = {"n": 0, "colocacao": 0.0, "elim": 0, "saques": 0, "curas": 0, "dano": 0, "tormenta": 0, "construcoes": 0, "tempo": 0.0, "vitorias": 0, "preso": 0, "episodios": 0}
 			var a: Dictionary = por_dif[d]
 			a["n"] += 1
 			a["colocacao"] += float(m["colocacao"])
@@ -72,6 +72,8 @@ func _init() -> void:
 			a["construcoes"] += int(m.get("construcoes", 0))
 			a["tempo"] += float(m["tempo_s"])
 			a["vitorias"] += 1 if m["colocacao"] == 1 else 0
+			a["preso"] += int(m.get("preso_ticks", 0))
+			a["episodios"] += int(m.get("preso_episodios", 0))
 	print("  MÉTRICAS POR DIFICULDADE (médias por bot):")
 	var tot := {"saques": 0, "curas": 0, "elim": 0, "tormenta": 0}
 	for d in ["facil", "medio", "dificil"]:
@@ -79,8 +81,9 @@ func _init() -> void:
 			continue
 		var a: Dictionary = por_dif[d]
 		var k: float = a["n"]
-		print("    %-8s n=%2d colocação %.1f · eliminações %.2f · vitórias %d · saques %.1f · curas %.2f · dano causado %.0f · dano da Tormenta %.0f · tempo vivo %.0f s · paredes %d" % [
-				d, a["n"], a["colocacao"] / k, a["elim"] / k, a["vitorias"], a["saques"] / k, a["curas"] / k, a["dano"] / k, a["tormenta"] / k, a["tempo"] / k, a["construcoes"]])
+		print("    %-8s n=%2d colocação %.1f · eliminações %.2f · vitórias %d · saques %.1f · curas %.2f · dano causado %.0f · dano da Tormenta %.0f · tempo vivo %.0f s · paredes %d · preso %.1f s (%d episódios > 2 s, %.1f%% do tempo vivo)" % [
+				d, a["n"], a["colocacao"] / k, a["elim"] / k, a["vitorias"], a["saques"] / k, a["curas"] / k, a["dano"] / k, a["tormenta"] / k, a["tempo"] / k, a["construcoes"], a["preso"] / k / Protocol.TICK_RATE, a["episodios"],
+				100.0 * a["preso"] / Protocol.TICK_RATE / maxf(1.0, a["tempo"])])
 		for c in tot:
 			tot[c] += a["elim" if c == "elim" else c] if c != "tormenta" else a["tormenta"]
 	_checar(tot["saques"] > n, "bots saqueiam (%d itens pegos)" % tot["saques"])

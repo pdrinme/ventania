@@ -28,6 +28,7 @@ func _init() -> void:
 	collision_mask = LAYER_WORLD          # jogadores não se bloqueiam (evita erros de predição)
 	floor_max_angle = deg_to_rad(50.0)    # rampas da construção têm 45°
 	floor_snap_length = 0.0               # snap feito em Movement (determinístico)
+	floor_constant_speed = true           # rampas: mesma velocidade ao longo do piso que no plano
 	safe_margin = 0.02
 	motion_mode = MOTION_MODE_GROUNDED
 	_capsula = CapsuleShape3D.new()

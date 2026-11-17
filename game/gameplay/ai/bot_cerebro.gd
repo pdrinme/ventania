@@ -35,10 +35,14 @@ var bau_alvo := -1
 var coleta_alvo := Vector3.INF
 var ignorar := {}                     # loot/baús que não deram certo: id -> tick
 var destino_salto := Vector3.INF
+var ordem := Vector3.INF              # testes de navegação: destino fixo (ignora as decisões)
 var _dist_onibus := 1e9
 var _prox_decisao := 0
 var _ultima_pos := Vector3.ZERO
 var _parado := 0
+var _prog_tick := 0
+var _prog_dist := 1e9
+var _sem_progresso := 0                # segundos seguidos sem se aproximar do alvo
 var _construiu_tick := -9999
 var _yaw := 0.0
 var _pitch := 0.0
@@ -116,11 +120,19 @@ func pensar() -> Protocol.InputCmd:
 		Pawn.QUEDA_LIVRE, Pawn.PLANADOR:
 			_caindo(cmd)
 		_:
-			if server.tick >= _prox_decisao:
+			if ordem != Vector3.INF:             # testes: vai até um ponto, sem outras decisões
+				if estado != "ordem" or alvo != ordem:
+					estado = "ordem"
+					alvo = ordem
+					precisa_caminho = true
+				_andar(cmd, true)
+			elif server.tick >= _prox_decisao:
 				_decidir()
 				var hz := float(BotCerebro.config()["decisao_hz"]) if _perto_de_humano() else float(BotCerebro.config()["decisao_longe_hz"])
 				_prox_decisao = server.tick + maxi(1, roundi(Protocol.TICK_RATE / hz)) + rng.randi_range(0, 2)
-			_executar(cmd)
+				_executar(cmd)
+			else:
+				_executar(cmd)
 	tempo_decisao_us += Time.get_ticks_usec() - t0
 	_yaw = cmd.yaw
 	_pitch = cmd.pitch
@@ -370,6 +382,16 @@ func _andar(cmd: Protocol.InputCmd, correr: bool) -> void:
 			_desvio = clampf(_desvio + (0.6 if (c.id % 2) == 0 else -0.6), -1.4, 1.4)
 		else:
 			_desvio = move_toward(_desvio, 0.0, 0.2)
+	# diagnóstico: querendo andar e sem chegar mais perto do alvo há 3 s ou mais
+	if server.tick - _prog_tick >= Protocol.TICK_RATE:
+		var dist_alvo := Vector2(pos.x - alvo.x, pos.z - alvo.z).length()
+		_sem_progresso = _sem_progresso + 1 if _prog_dist - dist_alvo < 0.5 else 0
+		_prog_dist = dist_alvo
+		_prog_tick = server.tick
+		if _sem_progresso >= 3:
+			GameServer.add_stat(c, "preso_ticks", Protocol.TICK_RATE)
+			if _sem_progresso == 3:
+				GameServer.add_stat(c, "preso_episodios")
 	if pos.distance_to(_ultima_pos) < 0.05:
 		_parado += 1
 	else:

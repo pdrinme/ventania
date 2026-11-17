@@ -133,7 +133,15 @@ func test_sobe_rampa_ate_o_andar_de_cima() -> void:
 		_peca("rampa_" + mat, Vector3(0, 0, -2))
 		_peca("piso_" + mat, Vector3(0, 4, -6))
 		_colocar(Vector3(0, 0.05, 2.0))
-		await _andar(75, _cmd(Vector2(0, 1), Protocol.BTN_SPRINT))
+		# corre até passar do meio do piso de cima (z -4..-8) e para (antes de cair da borda)
+		await physics_frames(1)
+		var sobe := _cmd(Vector2(0, 1), Protocol.BTN_SPRINT)
+		for i in 120:
+			Movement.step(pawn, sobe, DT)
+			if pawn.global_position.z < -5.5:
+				break
+		for i in 10:
+			Movement.step(pawn, _cmd(Vector2.ZERO), DT)
 		assert_true(pawn.global_position.z < -5.0, "%s: chegou ao piso de cima (z=%.2f)" % [mat, pawn.global_position.z])
 		assert_true(absf(pawn.global_position.y - 4.10) < 0.08, "%s: altura do andar (y=%.2f)" % [mat, pawn.global_position.y])
 		# desce de volta sem "quicar" no ar
