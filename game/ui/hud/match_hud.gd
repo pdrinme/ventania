@@ -295,8 +295,8 @@ func _process(_delta: float) -> void:
 		resta = _estado["resta_ms"] / 1000.0 - (Time.get_ticks_msec() / 1000.0 - _estado_t)
 	match int(_estado.get("estado", Protocol.MATCH_TREINO)):
 		Protocol.MATCH_ESPERA:
-			_topo.text = "Aguardando jogadores (%d)" % _estado["vivos"]
-			_sub.text = "A partida começa em até %s" % _tempo(resta)
+			_topo.text = "Procurando jogadores (%d)" % _estado["vivos"]
+			_sub.text = "Sem mais ninguém, os bots completam a partida em %s" % _tempo(resta) if resta > 0.0 else "Esperando os jogadores entrarem…"
 		Protocol.MATCH_CONTAGEM:
 			_topo.text = "A partida começa em %d" % ceili(maxf(0.0, resta))
 			_sub.text = "Você vai aparecer num ponto do mapa, só com a picareta."

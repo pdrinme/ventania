@@ -145,6 +145,9 @@ func _init() -> void:
 			"na partida, a Bia vê a Ana de Recruta Brisa (e ela mesma de Recruta)")
 	var g: Dictionary = (await a.chamar(HTTPClient.METHOD_GET, "/v1/party"))["data"]
 	_checar(g["state"] == "partida", "grupo em partida no meta-servidor")
+	# matchmaking: a sala espera um pouco por mais pessoas (8 s nos testes) e depois os bots completam
+	await create_timer(3.0).timeout
+	_checar(a.partida.get("estado", 0) == Protocol.MATCH_ESPERA, "a sala ainda espera mais jogadores reais (estado %s)" % str(a.partida.get("estado")))
 	# a partida começa (2 humanos) e os bots completam
 	for i in 30 * 40:
 		await physics_frame

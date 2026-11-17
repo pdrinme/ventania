@@ -547,6 +547,15 @@ Temporadas via JSON, níveis, interface de progressão, recompensas gratuitas, d
   - os tetos por partida do relatório ficaram mais realistas;
   - `test_lobby.gd` confere que o XP de uma partida real sobe o passe.
 
+#### Ajuste do matchmaking (depois da Etapa 10)
+- ✅ Sala do matchmaking (`--meta`):
+  - a espera começa quando chega o primeiro humano;
+  - se a sala encher de pessoas, começa na hora;
+  - se o matchmaking não encontrar mais ninguém em 30 s (`espera_lobby_s`), a partida começa com quem estiver e os **bots completam as vagas**;
+  - grupos com vaga reservada que ainda estão entrando seguram a espera até 60 s (o meta-servidor informa as reservas pendentes no heartbeat).
+- ✅ Tela de espera: "Procurando jogadores (N) · Sem mais ninguém, os bots completam a partida em 0:25".
+- ✅ Testado de ponta a ponta: a sala espera, ninguém chega, os bots completam e a partida começa.
+
 ### Etapa 11 — Loja rotativa ⬜
 Catálogo, categorias, preços, pré-visualização, compra atômica, temporizador, rotação (agenda e sorteio determinístico) e uma ferramenta de administração do catálogo.
 

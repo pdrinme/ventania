@@ -82,6 +82,7 @@ func _enviar(s: GameServer) -> void:
 	var d: Variant = JSON.parse_string((r[3] as PackedByteArray).get_string_from_utf8())
 	if d is Dictionary:
 		s.privada = bool(d.get("private", false))
+		s.reservas_pendentes = int(d.get("pending", 0))
 		if d.get("start", false):
 			s.forcar_inicio = true
 

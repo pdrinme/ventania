@@ -78,6 +78,8 @@ func _ready() -> void:
 		s.max_jogadores = max_jog
 		s.segredo_tickets = segredo if not meta.is_empty() else ""
 		s.ticket_obrigatorio = not sem_conta
+		if not meta.is_empty() and s.partida:
+			s.partida.modo_lobby = true     # espera curta por humanos; depois os bots completam
 		s.outras_salas = ", ".join(portas.filter(func(p): return p != porta + i).map(func(p): return str(p)))
 		vp.add_child(s)
 		var e := s.start(porta + i)

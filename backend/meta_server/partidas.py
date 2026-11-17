@@ -112,7 +112,8 @@ class Partidas:
         # sala privada: libera quando esvazia
         if s.codigo and s.humanos == 0 and not s.reservas and agora - s.privada_desde > 30.0:
             s.codigo, s.dono, s.iniciar = "", 0, False
-        resp = {"private": bool(s.codigo), "start": s.iniciar}
+        pendentes = [c for c in s.reservas if c not in s.presentes]
+        resp = {"private": bool(s.codigo), "start": s.iniciar, "pending": len(pendentes)}
         if s.iniciar and s.estado != "espera":
             s.iniciar = False
         self.combinar()

@@ -111,6 +111,7 @@ signal match_report(d: Dictionary)   # fim de partida (Etapa 9): o MetaLink envi
 var privada := false         # sala privada (meta-servidor): só começa quando o dono mandar
 var traje_sem_ticket := ""   # traje de quem entra sem ticket: vazio (padrão); a partida local usa o equipado
 var forcar_inicio := false   # sala privada: o dono mandou começar
+var reservas_pendentes := 0  # matchmaking: jogadores com vaga reservada que ainda não chegaram
 var reconexoes := 0
 var kit_inicial := true      # treino: reaparece com uma pistola e munição
 var _proximo_id := 1

@@ -44,5 +44,7 @@
  },
  "bots": {
   "preencher_ate": 0
- }
+ },
+ "espera_lobby_s": 8,
+ "espera_lobby_max_s": 20
 }

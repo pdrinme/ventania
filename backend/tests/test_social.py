@@ -155,9 +155,11 @@ class TestPartidas(unittest.TestCase):
                 t = verificar("segredo-de-teste", ev["ticket"])
                 self.assertEqual((t["acc"], t["name"], t["port"]), (conta, nome, 24802))
                 self.assertIsNone(verificar("outro-segredo", ev["ticket"]))
-            # as 2 vagas ficam reservadas
+            # as 2 vagas ficam reservadas e o servidor sabe que tem gente chegando
+            self.assertEqual(a.heartbeat(24802, humans=3)[1]["pending"], 2)
+            self.assertEqual(a.heartbeat(24802, humans=5, accounts=[ia, ib])[1]["pending"], 0)
             salas = {r["port"]: r for r in a.chamar("/v1/rooms", token=ta)[1]["rooms"]}
-            self.assertEqual(salas[24802]["humans"], 3)
+            self.assertEqual(salas[24802]["humans"], 5)
             self.assertEqual(a.chamar("/v1/match/left", {}, tb)[1]["state"], "lobby")
 
     def test_sala_privada_com_codigo(self):

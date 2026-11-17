@@ -25,6 +25,8 @@ func estado_nome() -> String:
 	return {Protocol.MATCH_ESPERA: "esperando", Protocol.MATCH_CONTAGEM: "contagem", Protocol.MATCH_ONIBUS: "ônibus",
 			Protocol.MATCH_JOGO: "em jogo", Protocol.MATCH_FIM: "fim"}.get(estado, "?")
 var t := 0                          # ticks no estado atual
+var modo_lobby := false             # sala do matchmaking (--meta): espera curta por humanos e depois bots
+var _espera_desde := -1             # tick em que chegou o primeiro humano (modo lobby)
 var tormenta: Tormenta
 var onibus: OnibusBatalha
 var saltaram := 0                   # diagnóstico/testes
@@ -77,6 +79,18 @@ func update() -> void:
 				if server.forcar_inicio and n >= 1:
 					server.forcar_inicio = false
 					_mudar(Protocol.MATCH_CONTAGEM)
+			elif modo_lobby:
+				# matchmaking: espera curta por mais pessoas; sem ninguém novo, os bots completam
+				if n == 0:
+					_espera_desde = -1
+				elif _espera_desde < 0:
+					_espera_desde = server.tick
+				if n > 0:
+					var passou := server.tick - _espera_desde
+					var cheia: bool = n >= server.max_jogadores
+					var pendentes: bool = server.reservas_pendentes > 0 and passou < _ticks(float(config.get("espera_lobby_max_s", 60)))
+					if cheia or (passou >= _ticks(float(config.get("espera_lobby_s", 30))) and not pendentes):
+						_mudar(Protocol.MATCH_CONTAGEM)
 			elif n >= minimo or (n >= 1 and t >= _ticks(float(config.get("espera_maxima_s", 90)))):
 				_mudar(Protocol.MATCH_CONTAGEM)
 		Protocol.MATCH_CONTAGEM:
@@ -114,7 +128,10 @@ func match_dict() -> Dictionary:
 	var resta := 0
 	match estado:
 		Protocol.MATCH_ESPERA:
-			resta = maxi(0, _ticks(float(config.get("espera_maxima_s", 90))) - t)
+			if modo_lobby:
+				resta = 0 if _espera_desde < 0 else maxi(0, _ticks(float(config.get("espera_lobby_s", 30))) - (server.tick - _espera_desde))
+			else:
+				resta = maxi(0, _ticks(float(config.get("espera_maxima_s", 90))) - t)
 		Protocol.MATCH_CONTAGEM:
 			resta = maxi(0, _ticks(float(config.get("contagem_s", 10))) - t)
 		Protocol.MATCH_ONIBUS:
