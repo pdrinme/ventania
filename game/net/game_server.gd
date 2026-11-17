@@ -44,6 +44,8 @@ class Cliente:
 	var interact_steps := 0
 	var interact_chest := -1
 	var aiming := false
+	var bot: BotCerebro = null      # bot do servidor (sem conexão); null = humano
+	var stats := {}                 # métricas da partida (saques, curas, dano, Tormenta…)
 	# picareta (relógio = simulados)
 	var swing_start := -1.0
 	var swing_prev := -1.0
@@ -71,6 +73,13 @@ var loot: LootServer
 var combat: CombatServer
 var build: BuildServer
 var bonecos: Array = []      # [{"id", "pawn", "vit", "last_hit"}]
+var nav: NavGrade            # navegação dos bots (criada com o primeiro bot)
+var bot_raios := 0           # orçamento de raios de percepção dos bots neste tick
+var bot_planejamentos := 0   # orçamento de A* neste tick
+var tempo_bots_us := 0       # custo acumulado dos cérebros (diagnóstico)
+var tempo_tick_us := 0       # custo acumulado do tick inteiro (diagnóstico)
+var ticks_medidos := 0
+var _proximo_bot := 0
 var kit_inicial := true      # treino: reaparece com uma pistola e munição
 var _proximo_id := 1
 var _spawns := 0
@@ -133,6 +142,15 @@ func _physics_process(dt: float) -> void:
 		var de := peer.get_packet_peer()
 		_receber(de, peer.get_packet())
 	tick += 1
+	var t0 := Time.get_ticks_usec()
+	var cfg_bots := BotCerebro.config()
+	bot_raios = int(cfg_bots.get("raios_visao_por_tick", 24))
+	bot_planejamentos = 2
+	for c: Cliente in clientes.values():
+		if c.bot and c.pawn:
+			var tb := Time.get_ticks_usec()
+			c.fila.append(c.bot.pensar())
+			tempo_bots_us += Time.get_ticks_usec() - tb
 	for c: Cliente in clientes.values():
 		if c.pawn:
 			_simular(c, dt)
@@ -151,6 +169,8 @@ func _physics_process(dt: float) -> void:
 				send_to(c.peer_id, Protocol.pack_status(_status(c)), true)
 	if tick % Protocol.SNAPSHOT_EVERY == 0:
 		_enviar_snapshots()
+	tempo_tick_us += Time.get_ticks_usec() - t0
+	ticks_medidos += 1
 
 
 ## Cada entrada do cliente vira exatamente um passo, na mesma ordem: assim a
@@ -368,8 +388,8 @@ func _enviar_snapshots() -> void:
 
 
 func send_to(para: int, dados: PackedByteArray, confiavel: bool, canal := Protocol.CH_RELIABLE) -> void:
-	if peer == null:
-		return
+	if peer == null or para <= 0:
+		return                       # bots não têm conexão
 	peer.set_target_peer(para)
 	peer.set_transfer_channel(canal)
 	peer.transfer_mode = MultiplayerPeer.TRANSFER_MODE_RELIABLE if confiavel else MultiplayerPeer.TRANSFER_MODE_UNRELIABLE_ORDERED
@@ -395,6 +415,58 @@ static func _limpar_nome(n: String) -> String:
 			limpo += ch
 	limpo = limpo.substr(0, Protocol.MAX_NAME).strip_edges()
 	return limpo if not limpo.is_empty() else "Jogador"
+
+
+# ---------- bots (Etapa 6) ----------
+
+## Cria um bot do servidor. dificuldade: "facil", "medio" ou "dificil".
+func add_bot(dificuldade: String) -> Cliente:
+	if nav == null:
+		nav = NavGrade.new(world)
+		for p: Construcoes.Peca in build.estado.pecas.values():
+			nav.set_wall(p.tipo, p.cell, p.mask, true)
+	var cfg := BotCerebro.config()
+	var c := Cliente.new()
+	c.id = _proximo_id
+	_proximo_id = (_proximo_id % 60000) + 1
+	c.peer_id = -c.id
+	var nomes: Array = cfg["nomes"]
+	c.nome = "%s (%s)" % [nomes[_proximo_bot % nomes.size()], cfg["dificuldades"][dificuldade]["nome"]]
+	_proximo_bot += 1
+	c.pawn = Pawn.new()
+	c.pawn.entity_id = c.id
+	c.pawn.name = "bot_%d" % c.id
+	world.add_child(c.pawn)
+	c.bot = BotCerebro.new(self, c, dificuldade, c.id * 7919 + tick)
+	c.stats["dificuldade"] = dificuldade
+	clientes[c.peer_id] = c
+	_reaparecer(c)
+	broadcast(Protocol.pack_player_info(c.id, c.nome), true)
+	return c
+
+
+func remove_bot(c: Cliente) -> void:
+	clientes.erase(c.peer_id)
+	if c.pawn:
+		c.pawn.queue_free()
+	broadcast(Protocol.pack_player_left(c.id), true)
+
+
+func bots() -> Array:
+	return clientes.values().filter(func(c): return c.bot != null)
+
+
+## Bots que ouvem um tiro (alcance de audição).
+func bots_hear(atirador: Cliente) -> void:
+	var alcance := float(BotCerebro.config().get("audicao_tiro_m", 70))
+	var p := atirador.pawn.global_position
+	for c: Cliente in clientes.values():
+		if c.bot and c != atirador and not c.dead and c.pawn and c.pawn.global_position.distance_to(p) < alcance:
+			c.bot.on_heard(atirador.id, p)
+
+
+static func add_stat(c: Cliente, nome: String, n := 1) -> void:
+	c.stats[nome] = int(c.stats.get(nome, 0)) + n
 
 
 func client_by_id(id: int) -> Cliente:

@@ -199,6 +199,7 @@ func _subir_servidor_local() -> int:
 		cfg = PartidaBR.carregar_config()
 		cfg["min_jogadores"] = 1
 		cfg["espera_maxima_s"] = 3
+		cfg["bots"] = {"preencher_ate": int(SceneManager.params.get("bots", BotCerebro.config().get("preencher_ate", 16)))}
 	server = GameServer.new(mundo_srv, 0, "br" if br else "treino", cfg)
 	add_child(server)
 	for porta in PORTAS_LOCAIS:

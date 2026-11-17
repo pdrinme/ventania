@@ -70,7 +70,7 @@ func update() -> void:
 			if n >= minimo or (n >= 1 and t >= _ticks(float(config.get("espera_maxima_s", 90)))):
 				_mudar(Protocol.MATCH_CONTAGEM)
 		Protocol.MATCH_CONTAGEM:
-			if jogadores().is_empty():
+			if jogadores().is_empty() and not config.get("somente_bots", false):
 				_mudar(Protocol.MATCH_ESPERA)
 			elif t >= _ticks(float(config.get("contagem_s", 10))):
 				_iniciar()
@@ -130,6 +130,7 @@ func _iniciar() -> void:
 	tormenta = null
 	saltaram = 0
 	ejetados = 0
+	_preencher_bots()
 	var terra := func(x: float, z: float) -> bool: return mundo.ground_height(x, z) > 0.4
 	onibus = OnibusBatalha.sortear(semente, server.tick + Protocol.TICK_RATE, mundo.limit(), terra)
 	var k := 0
@@ -138,6 +139,8 @@ func _iniciar() -> void:
 		c.vit.reset()
 		c.dead = false
 		server.combat.cancel(c)
+		var dif = c.stats.get("dificuldade")
+		c.stats = {} if dif == null else {"dificuldade": dif}
 		c.pawn.queda = Pawn.NO_ONIBUS
 		c.pawn.velocity = Vector3.ZERO
 		c.pawn.global_position = _no_onibus(k)
@@ -211,6 +214,8 @@ func _reiniciar() -> void:
 	vencedor = 0
 	tormenta = null
 	onibus = null
+	for b in server.bots():
+		server.remove_bot(b)
 	for c: GameServer.Cliente in jogadores():
 		c.inv = Inventory.new()
 		c.vit.reset()
@@ -240,6 +245,17 @@ func on_join(c: GameServer.Cliente) -> void:
 func on_leave(c: GameServer.Cliente) -> void:
 	if vivos.has(c.id):
 		_eliminar_registro(c.id, 0)
+
+
+## Completa a partida com bots até `preencher_ate` (data/bots.json, ou "bots" na config).
+func _preencher_bots() -> void:
+	var cfg := BotCerebro.config()
+	var b_cfg: Dictionary = config.get("bots", {})
+	var alvo := int(b_cfg.get("preencher_ate", cfg.get("preencher_ate", 0)))
+	var mistura: Array = b_cfg.get("mistura", cfg["mistura"])
+	var humanos := jogadores().filter(func(c): return c.bot == null).size()
+	for k in maxi(0, alvo - humanos):
+		server.add_bot(mistura[k % mistura.size()])
 
 
 ## Chamado pelo CombatServer.eliminate. Retorna true se o jogador deve reaparecer (espera).
@@ -290,6 +306,7 @@ func _dano_tormenta() -> void:
 			break                   # o último que resta é o vencedor
 		c.dirty = true
 		server.send_to(c.peer_id, Protocol.pack_damaged(dano, c.pawn.global_position), true)
+		GameServer.add_stat(c, "dano_tormenta", dano)
 		if c.vit.take_storm_damage(dano):
 			server.combat.eliminate(c, c.id, "")
 
@@ -308,7 +325,16 @@ func _checar_vitoria() -> void:
 	if vencedor:
 		participantes[vencedor]["colocacao"] = 1
 		participantes[vencedor]["fim"] = server.tick
-	historico.append({"partida": partidas, "total": total_inicial, "vencedor": vencedor, "saltaram": saltaram, "ejetados": ejetados,
+	var metricas := {}
+	for c: GameServer.Cliente in server.clientes.values():
+		if participantes.has(c.id):
+			var m: Dictionary = c.stats.duplicate()
+			m["colocacao"] = participantes[c.id]["colocacao"]
+			m["eliminacoes"] = participantes[c.id]["eliminacoes"]
+			m["tempo_s"] = (int(participantes[c.id]["fim"]) - int(participantes[c.id]["inicio"])) / float(Protocol.TICK_RATE)
+			m["bot"] = c.bot != null
+			metricas[c.id] = m
+	historico.append({"partida": partidas, "total": total_inicial, "vencedor": vencedor, "saltaram": saltaram, "ejetados": ejetados, "metricas": metricas,
 			"fase_tormenta": tormenta.fase, "duracao_s": t / float(Protocol.TICK_RATE),
 			"colocacoes": participantes.duplicate(true)})
 	server.log_msg("partida %d terminou: vencedor %d (%d jogador[es])" % [partidas, vencedor, total_inicial])

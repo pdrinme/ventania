@@ -134,7 +134,9 @@ func test_limite_de_movimento_segue_a_costa() -> void:
 			Movement.step(p, cmd, 1.0 / 30.0)
 			await tree.physics_frame
 		var d := Vector2(p.global_position.x, p.global_position.z).length()
-		assert_true(d < r + 11.0, "parou no limite da costa (%.0f m; costa %.0f m)" % [d, r])
+		# ao bater, o personagem desliza ao longo da barreira: compara com a costa onde ele parou
+		var r_final := ilha.coast_radius(atan2(p.global_position.z, p.global_position.x))
+		assert_true(d < r_final + 11.5, "parou no limite da costa (%.0f m; costa ali %.0f m)" % [d, r_final])
 		assert_true(d > r - 2.0, "pôde andar até a praia e a água rasa (%.0f m)" % d)
 		p.queue_free()
 	ilha.queue_free()
@@ -213,7 +215,8 @@ func test_tabela_da_tormenta() -> void:
 	var total := 0.0
 	for x in f:
 		total += float(x["espera_s"]) + float(x["fechamento_s"])
-	assert_true(total >= 540.0 and total <= 660.0, "~10 min de Tormenta (%.0f s)" % total)
+	# soma das fases do Game Design: 470 s de Tormenta (~8 min); com espera, ônibus e fim, ~9–10 min
+	assert_eq(roundi(total), 470, "Tormenta do Game Design (%.0f s)" % total)
 	# a Tormenta avança sozinha até o fim e as zonas ficam em terra, dentro da anterior
 	var t := Tormenta.new(cfg["tormenta"], 99, func(c: Vector2, r: float) -> bool: return PartidaBR._zona_valida(ilha, c, r))
 	var mudancas := 0

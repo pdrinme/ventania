@@ -162,6 +162,12 @@ O item comanda as mãos, nunca o contrário. Os marcadores ficam nos modelos (`g
 - **`BuildMode`** (cliente): prévia, construção em sequência e edição. Só pede ao servidor; o `InputSampler` deixa de enviar Atirar/Mirar/Recarregar enquanto a construção está ativa.
 - **Limite:** 1200 peças de jogadores (`data/construcao.json`), medido em `perf_construcao.gd` (ROADMAP, Etapa 5).
 
+### 4.6 Bots (Etapa 6)
+- Um bot é um `GameServer.Cliente` com `bot: BotCerebro` e `peer_id <= 0` (o `send_to` ignora). A cada tick, antes da simulação, o cérebro coloca um `InputCmd` na fila; a partir daí o caminho é o mesmo dos humanos: `Movement.step`, `CombatServer.process`, inventário, `BuildServer.try_build`, ônibus e queda. Nada do mundo é alterado diretamente pela IA.
+- `BotCerebro`: utility scoring a 5 Hz (1 Hz longe de humanos), execução por tick. A percepção usa raios de visibilidade com orçamento global (`GameServer.bot_raios`, 24 por tick), e há ganchos de audição (`bots_hear`) e de dano (`on_damaged`).
+- `NavGrade`: 150 × 150 células de 4 m com arestas bloqueadas por paredes (térreo, exceto portas), relevo e obstáculos grandes do mapa (`Mapa.nav_obstacles`). O `BuildServer` a atualiza em cada criação, edição e destruição. O A* tem limite de 6000 expansões e 2 caminhos por tick no total.
+- Métricas por jogador em `Cliente.stats` (saques, curas, dano causado, dano da Tormenta, construções), gravadas no histórico da partida. O custo de CPU fica em `GameServer.tempo_bots_us` e `tempo_tick_us`.
+
 ## 5. Meta-servidor **[ADR-3]**
 
 - Python 3.11+ e **somente a biblioteca padrão**: `asyncio` (servidor HTTP próprio e enxuto), `sqlite3`, `hashlib` (PBKDF2), `hmac`, `secrets`, `json`, `unittest`.

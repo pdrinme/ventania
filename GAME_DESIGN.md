@@ -92,8 +92,8 @@ Eles ficam em arquivos de dados e serão ajustados com testes de jogo.
 
 - **Arquitetura:** IA por *utility scoring* sobre um conjunto pequeno de comportamentos (explorar, saquear, coletar materiais, ir para a zona, combater, curar, fugir). As decisões rodam a 5 Hz, e o movimento segue o tick.
 - **Percepção:** ouvem tiros e passos e veem jogadores por cone e raycast, ambos com orçamento de raycasts por tick.
-- **Navegação:** NavigationServer3D com navmesh pré-calculada. Atravessar construções vem depois (bots constroem rampas simples só no nível Difícil, numa fase posterior).
-- **Dificuldades:** variam no tempo de reação, no erro de mira, no uso de cobertura, na agressividade e no uso de cura e construção.
+- **Navegação:** grade de 4 m alinhada à grade de construção com A*: paredes são arestas bloqueadas (portas abertas), atualizadas na hora quando há construção ou destruição; desvio local e pulo quando trava. (Decisão da Etapa 6: substitui a navmesh, que custaria segundos para assar e teria de ser refeita a cada construção.) Bots do nível Difícil levantam uma parede quando levam tiro; rampas e subir andares ficam para depois.
+- **Dificuldades** (`data/bots.json`): Fácil (reação 0,9 s, erro de mira 6°), Médio (0,55 s, 3,2°, coleta material) e Difícil (0,3 s, 1,6°, coleta e constrói), variando também alcance e campo de visão, distância de combate e limite para curar. As partidas são completadas com bots até 16 jogadores (1 Fácil : 2 Médios : 1 Difícil).
 - **LOD de IA:** bots longe de qualquer humano tomam decisões com menos frequência.
 - **Testes:** partidas simuladas headless só com bots, verificando por exemplo que a partida termina, que os bots saem da Tormenta e que eles saqueiam e curam.
 

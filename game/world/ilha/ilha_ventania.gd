@@ -81,7 +81,8 @@ var _slots := {}
 var _ocupado: Array = []            # [Vector2 centro, raio]
 var _faixas: Array = []             # faixas de pedestres: [centro Vector2, direção Vector2, largura]
 var _lagos_terra: Array = []        # chão de terra/rocha (plantação, pedreira): [Vector2, raio(, rocha)]
-var _deficit_pois: Array = []       # [ângulo, metros] (garante POIs em terra)
+var _deficit_pois: Array = []
+var _coleta: Array = []       # [ângulo, metros] (garante POIs em terra)
 
 
 func _init() -> void:
@@ -157,6 +158,33 @@ func points_of_interest() -> Array:
 
 func roads() -> Array:
 	return _estradas
+
+
+## Árvores e rochas onde os bots podem coletar material com a picareta.
+func harvest_points() -> Array:
+	if _coleta.is_empty():
+		for pr in _props:
+			var nome: String = (pr[0] as String).get_file().get_basename()
+			if nome == "pinheiro_01" or nome == "arvore_redonda_01" or nome == "pedra_01":
+				_coleta.append((pr[1] as Transform3D).origin)
+	return _coleta
+
+
+## Obstáculos grandes para a navegação dos bots: [[centro Vector2, raio], ...]
+## (troncos de árvore e postes ficam para o desvio local).
+func nav_obstacles() -> Array:
+	var raios := {"pedra_01": 1.3, "conteiner_01": 3.0, "conteiner_02": 3.0, "conteiner_03": 3.0, "silo_01": 2.4,
+			"tenda_01": 1.4, "carrinho_01": 0.9, "tronco_01": 1.2}
+	var out := []
+	for pr in _props:
+		var nome: String = (pr[0] as String).get_file().get_basename()
+		if raios.has(nome):
+			var xf: Transform3D = pr[1]
+			var escala := xf.basis.get_scale().x
+			if nome == "pedra_01" and escala < 1.3:
+				continue
+			out.append([Vector2(xf.origin.x, xf.origin.z), float(raios[nome]) * escala])
+	return out
 
 
 # ---------------- litoral ----------------
@@ -239,11 +267,13 @@ func _altura_bruta(x: float, z: float) -> float:
 
 func _altura_pads(x: float, z: float) -> float:
 	var h := _altura_bruta(x, z)
+	# o platô some ao chegar na costa: nunca levanta o fundo do mar além do litoral
+	var costa := smoothstep(-1.0, 10.0, inland(x, z))
 	for p in _pads:
 		var d := Vector2(x, z).distance_to(p["pos"])
 		var r: float = p["raio"]
 		if d < r + 18.0:
-			h = lerpf(h, p["h"], smoothstep(r + 18.0, r, d))
+			h = lerpf(h, p["h"], smoothstep(r + 18.0, r, d) * costa)
 	return h
 
 

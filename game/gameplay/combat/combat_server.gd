@@ -206,6 +206,7 @@ func _aplicar_consumivel(c: GameServer.Cliente) -> void:
 	else:
 		c.vit.add_shield(int(d["escudo"]), int(d["limite"]))
 	s.count -= 1
+	GameServer.add_stat(c, "curas")
 	if s.count <= 0:
 		c.inv.remove_slot(c.inv.selected)
 
@@ -259,6 +260,7 @@ func pick_up(c: GameServer.Cliente, id: int, troca: int) -> int:
 	if r == Inventory.Err.OK:
 		c.fire_next = maxf(c.fire_next, float(c.simulados) + PASSOS_TROCA)
 		c.dirty = true
+		GameServer.add_stat(c, "saques")
 	return r
 
 
@@ -373,6 +375,7 @@ func _disparar(c: GameServer.Cliente, cmd: Protocol.InputCmd, s: Inventory.Slot,
 		reg["cabeca"] = reg["cabeca"] or melhor["head"]
 		danos[aid] = reg
 	server.broadcast_except(c.peer_id, Protocol.pack_shot(c.id, raio["origin"], fins), false)
+	server.bots_hear(c)
 	for reg in danos.values():
 		_aplicar_dano(c, reg["alvo"], reg["dano"], reg["cabeca"], reg["pos"], s.item)
 	for pid in danos_pecas:
@@ -397,6 +400,9 @@ func _aplicar_dano(atirador: GameServer.Cliente, alvo: Dictionary, dano: int, ca
 		return                          # espera/contagem/fim: sem dano entre jogadores
 	var vit: Vitals = alvo["cliente"].vit if alvo.has("cliente") else alvo["boneco"]["vit"]
 	var r := vit.take_damage(dano)
+	GameServer.add_stat(atirador, "dano", dano)
+	if alvo.has("cliente") and (alvo["cliente"] as GameServer.Cliente).bot:
+		(alvo["cliente"] as GameServer.Cliente).bot.on_damaged(atirador.id, atirador.pawn.global_position)
 	var flags := (Protocol.HIT_HEAD if cabeca else 0) | (Protocol.HIT_SHIELD if r["shield"] > 0 else 0) | (Protocol.HIT_KILL if r["killed"] else 0)
 	server.send_to(atirador.peer_id, Protocol.pack_hit(alvo["id"], dano, flags, pos), true)
 	if alvo.has("cliente"):

@@ -102,7 +102,21 @@ func _init() -> void:
 	var ca: GameServer.Cliente = server.client_by_id(a.client.my_id)
 	var cb: GameServer.Cliente = server.client_by_id(b.client.my_id)
 	# os dois lado a lado num campo aberto
+	# terreno livre: em terra, longe da costa, sem construções do mapa num raio de ~16 m
 	var base := Vector3(-100, 0, -40)
+	for tentativa in 200:
+		var q := Vector3(-160.0 + (tentativa % 20) * 16.0, 0, -160.0 + (tentativa / 20) * 32.0)
+		if mundo.ground_height(q.x, q.z) < 2.0 or mundo.inland(q.x, q.z) < 40.0:
+			continue
+		var cq := Vector3i(floori(q.x / 4.0), 0, floori(q.z / 4.0))
+		var livre := true
+		for p: Construcoes.Peca in server.build.estado.pecas.values():
+			if absi(p.cell.x - cq.x) <= 4 and absi(p.cell.z - cq.z) <= 4:
+				livre = false
+				break
+		if livre:
+			base = q
+			break
 	base.y = mundo.ground_height(base.x, base.z) + 0.2
 	for c in [ca, cb]:
 		c.pawn.global_position = base + (Vector3(0, 0, 0) if c == ca else Vector3(8, 0, 0))

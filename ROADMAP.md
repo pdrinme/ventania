@@ -272,6 +272,27 @@ Começou automaticamente depois da picareta e do inventário validados, como ped
 - o benchmark da ilha nos 3 perfis comparado com a v0.5.0.
 Ficam para a próxima rodada, antes da Etapa 6.
 
+**Atualização (v0.6.0):** os 8 unitários de `test_ilha_revisao.gd` rodaram.
+- Encontraram **1 erro real:** o platô da Pedreira Cinza invadia a Enseada do Norte e levantava o fundo do mar além do litoral. Corrigido: o platô some ao chegar na costa.
+- Mais 2 expectativas erradas do próprio teste:
+  - ao bater na barreira, o personagem desliza ao longo dela;
+  - a Tormenta do Game Design soma 470 s (~8 min), ~9–10 min com espera e ônibus; o balanceamento foi mantido.
+- Os 111 unitários passam, e a bateria completa foi executada junto com a Etapa 6 (abaixo).
+- **Benchmark da Ilha** depois da revisão (renderização por software; o FPS daqui não vale para o seu aparelho):
+
+| Perfil | Chamadas de desenho | Primitivas | v0.5.0 (antes) |
+|---|---|---|---|
+| Desempenho | 76 | 55 mil | 67 / 56 mil |
+| Equilibrado | 156 | 113 mil | 136 / 116 mil |
+| Qualidade | 182 | 131 mil | 165 / 139 mil |
+
+  As estradas, as calçadas e a ambientação somaram 9–20 chamadas de desenho por perfil, todas dentro do orçamento (150 / 300 / 600), e as primitivas caíram. Não é uma regressão que exija correção, mas fica registrada.
+- **Bateria completa:**
+  - a 1ª execução falhou em 3 grupos, todos por causa das mudanças novas:
+    - as partidas com clientes simulados passaram a ser completadas com bots (a configuração de teste agora pede 0 bots);
+    - o local fixo do teste de construção em rede caiu sobre uma casa da ilha nova (o teste agora procura terreno livre);
+  - corrigidos e reexecutados: partida BR no processo, partida no servidor dedicado (outro processo) e construção em rede, todos OK.
+
 ### Etapa 5 — Construção ✅ (v0.5.0; falta testar com pessoas e no seu hardware)
 Parede, piso, rampa e teto, com grade, edição, destruição, desabamento sem apoio e materiais, tudo sincronizado.
 
@@ -338,9 +359,56 @@ Parede, piso, rampa e teto, com grade, edição, destruição, desabamento sem a
 - O ponto de ligação é o sinal `GameServer.melee_hit`. *(Todos implementados na v0.5.0, acima.)*
 **Aceite:** testes de grade e conectividade, 2 clientes construindo e editando sem divergência, e o limite de peças medido.
 
-### Etapa 6 — Inteligência artificial ⬜
+### Etapa 6 — Inteligência artificial ✅ (v0.6.0)
 Navegação, exploração, saque, coleta, combate, cura, fuga da Tormenta e dificuldades, com LOD de IA.
 **Aceite:** a simulação headless com 23 bots termina a partida sem travar, há métricas por dificuldade, e o custo de CPU por bot fica medido.
+
+**Implementado:**
+- **Bots do servidor:** cada bot é um `GameServer.Cliente` sem conexão. O `BotCerebro` só gera `InputCmd` e tudo passa pelos mesmos sistemas dos humanos (movimento, combate com compensação, inventário, baús, construção, ônibus e queda), sem atalhos de física nem de regras. Para os clientes, eles são jogadores remotos comuns, com nome e dificuldade.
+- **Decisão por utility scoring** a 5 Hz entre combater, curar, fugir da Tormenta, abrir baú, saquear, coletar material e explorar. **LOD de IA:** bots a mais de 120 m de qualquer humano decidem a 1 Hz.
+- **Percepção:** cone de visão com raio de visibilidade (orçamento de 24 raios por tick para todos), audição de tiros (70 m) e reação ao levar dano.
+- **Navegação:** `NavGrade`, uma grade de 4 m alinhada à grade de construção, com A* de 8 vizinhos e orçamento de 2 caminhos por tick.
+  - As paredes são arestas bloqueadas, com portas abertas pelos ladrilhos; obstáculos grandes e degraus de relevo também bloqueiam.
+  - A grade é atualizada na hora quando peças são construídas, editadas ou destruídas.
+  - Em movimento: desvio local de árvores e postes, pulo quando trava e novo caminho quando não sai do lugar.
+  - **Desvio do Game Design:** não usa NavigationServer3D/navmesh. Assar uma navmesh de 600 m com centenas de peças custaria segundos no servidor fraco e precisaria ser refeita a cada construção.
+- **Ônibus:** cada bot escolhe um destino (POI ou baú), salta quando passa perto dele e direciona a queda.
+- **Combate:**
+  - escolhe a arma pela distância e mira com o erro da dificuldade (maior contra alvo em movimento);
+  - movimento lateral e semiautomáticas no ritmo certo;
+  - recarrega, usa a picareta sem arma e mira com o fuzil de precisão.
+- **Cura:** usa vida e escudo abaixo do limite da dificuldade, quando não há inimigo perto.
+- **Tormenta:** urgência cresce fora da zona que importa (a próxima, se já está fechando ou falta pouco).
+- **Dificuldades** (`data/bots.json`), por tempo de reação, erro de mira, alcance e campo de visão, distância de combate, limite de cura, coleta e construção:
+  - Fácil: reação 0,9 s, erro 6°;
+  - Médio: reação 0,55 s, erro 3,2°, coleta material;
+  - Difícil: reação 0,3 s, erro 1,6°, coleta, e levanta uma parede quando leva tiro.
+  Mistura padrão: 1 Fácil, 2 Médios e 1 Difícil.
+- **Partidas preenchidas com bots** até 16 jogadores (BR local e servidor dedicado; configurável). Eles são removidos entre partidas.
+
+**Aceite — executado** (`tests/integration/test_bots.gd`, 23 bots, nenhum humano, mapa real):
+
+| Tormenta | Duração | Resultado | Eliminações | Saques | Curas | CPU dos cérebros | Tick inteiro |
+|---|---|---|---|---|---|---|---|
+| Real (Game Design) | 335 s de jogo | vencedor, 23/23 saltaram | 19 | 122 | 40 | 0,021 ms/bot/tick | 4,6 ms (14% do orçamento) |
+| Encurtada (bateria) | 74 s de jogo | vencedor, 22 saltaram + 1 ejetado | 5 | 70 | 8 | 0,036 ms/bot/tick | 5,5 ms |
+
+Métricas por dificuldade, com a Tormenta real (médias por bot):
+
+| Dificuldade | Colocação | Eliminações | Saques | Curas | Dano causado | Dano da Tormenta | Tempo vivo | Paredes |
+|---|---|---|---|---|---|---|---|---|
+| Fácil (6) | 13,7 | 0,33 | 4,0 | 1,0 | 101 | 0 | 125 s | 0 |
+| Médio (12) | 12,9 | 0,92 | 4,9 | 1,1 | 131 | 12 | 144 s | 0 |
+| Difícil (5) | **7,8** | **1,20** | **7,8** | **4,2** | **240** | 17 | **230 s** | 19 |
+
+Os bots saem da Tormenta (quase nenhum dano dela com os tempos reais), saqueiam, curam e combatem, e o Difícil é claramente mais forte. A bateria completa (`tools/run_tests.sh`) roda a versão encurtada a cada execução.
+
+**Pendente / não validado:**
+- Jogar contra os bots com pessoas de verdade.
+- Bots não sobem andares por rampas internas, então ignoram loot e baús acima do térreo.
+- Não usam cobertura de propósito, além da parede do Difícil, e não constroem rampas.
+- Não fazem predição de alvo (miram onde o alvo está).
+- A grade considera só paredes do térreo.
 
 ### Etapa 7 — Multiplayer e servidores ⬜
 Servidor dedicado (export headless), salas, reconexão, validação e antimanipulação, relevância (interest management) e testes de banda e latência simulada.

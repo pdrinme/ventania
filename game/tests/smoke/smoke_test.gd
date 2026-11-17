@@ -395,7 +395,7 @@ func _construcao(tree: SceneTree, jogo) -> void:
 ## da partida (só picareta, longe da espera), Tormenta, HUD da partida e fim.
 func _jogar_br(tree: SceneTree) -> void:
 	await _ir(tree, "menu")
-	var ok: bool = await SceneManager.go("game", {"modo": "br_local"})
+	var ok: bool = await SceneManager.go("game", {"modo": "br_local", "bots": 0})
 	_checar(ok, "abrir Battle Royale local")
 	var jogo = tree.current_scene
 	for i in 200:

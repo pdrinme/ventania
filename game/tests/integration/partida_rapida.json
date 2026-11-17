@@ -1,10 +1,48 @@
 {
-  "_doc": "Partida BR encurtada para testes automáticos (mesmas regras, tempos menores).",
-  "min_jogadores": 6, "espera_maxima_s": 20, "contagem_s": 2, "fim_s": 3, "protecao_inicio_s": 16, "semente": 4242,
-  "tormenta": {"raio_inicial": 380, "margem_terra": 200, "fases": [
-    {"espera_s": 15, "fechamento_s": 12, "raio": 140, "dano": 5},
-    {"espera_s": 8, "fechamento_s": 10, "raio": 70, "dano": 8},
-    {"espera_s": 6, "fechamento_s": 8, "raio": 30, "dano": 15},
-    {"espera_s": 5, "fechamento_s": 8, "raio": 8, "dano": 25},
-    {"espera_s": 4, "fechamento_s": 6, "raio": 0, "dano": 40}]}
+ "_doc": "Partida BR encurtada para testes automáticos (mesmas regras, tempos menores). Sem bots: estes testes medem o fluxo com clientes simulados; os bots têm teste próprio (test_bots.gd).",
+ "min_jogadores": 6,
+ "espera_maxima_s": 20,
+ "contagem_s": 2,
+ "fim_s": 3,
+ "protecao_inicio_s": 16,
+ "semente": 4242,
+ "tormenta": {
+  "raio_inicial": 380,
+  "margem_terra": 200,
+  "fases": [
+   {
+    "espera_s": 15,
+    "fechamento_s": 12,
+    "raio": 140,
+    "dano": 5
+   },
+   {
+    "espera_s": 8,
+    "fechamento_s": 10,
+    "raio": 70,
+    "dano": 8
+   },
+   {
+    "espera_s": 6,
+    "fechamento_s": 8,
+    "raio": 30,
+    "dano": 15
+   },
+   {
+    "espera_s": 5,
+    "fechamento_s": 8,
+    "raio": 8,
+    "dano": 25
+   },
+   {
+    "espera_s": 4,
+    "fechamento_s": 6,
+    "raio": 0,
+    "dano": 40
+   }
+  ]
+ },
+ "bots": {
+  "preencher_ate": 0
+ }
 }

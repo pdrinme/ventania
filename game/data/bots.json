@@ -1,0 +1,16 @@
+{
+  "_doc": "Bots (Etapa 6). O servidor preenche a partida BR até 'preencher_ate' jogadores. Cada bot é um jogador do servidor (mesmas regras, entradas e física dos humanos). Dificuldade: reacao_s = tempo entre ver o inimigo e começar a atirar; erro_mira_graus = desvio aleatório; alcance_visao_m e campo_visao_graus = percepção (com raio de visibilidade); engaja_m = distância a partir da qual parte para o combate; cura_abaixo = vida+escudo para curar; constroi = levanta parede ao levar tiro; coleta = usa a picareta em árvores e pedras.",
+  "preencher_ate": 16,
+  "decisao_hz": 5,
+  "decisao_longe_hz": 1,
+  "lod_distancia_m": 120,
+  "raios_visao_por_tick": 24,
+  "audicao_tiro_m": 70,
+  "nomes": ["Brisa", "Vendaval", "Garoa", "Rajada", "Sereno", "Tufão", "Monção", "Neblina", "Trovoada", "Mistral", "Siroco", "Minuano", "Aragem", "Lufada", "Ciclone", "Zéfiro", "Bonança", "Corisco", "Chuvisco", "Granizo", "Orvalho", "Relâmpago", "Furacão"],
+  "dificuldades": {
+    "facil": {"nome": "Fácil", "reacao_s": 0.9, "erro_mira_graus": 6.0, "alcance_visao_m": 55, "campo_visao_graus": 100, "engaja_m": 30, "cura_abaixo": 70, "constroi": false, "coleta": false, "salto_cedo": 0.6},
+    "medio": {"nome": "Médio", "reacao_s": 0.55, "erro_mira_graus": 3.2, "alcance_visao_m": 75, "campo_visao_graus": 120, "engaja_m": 45, "cura_abaixo": 110, "constroi": false, "coleta": true, "salto_cedo": 0.45},
+    "dificil": {"nome": "Difícil", "reacao_s": 0.3, "erro_mira_graus": 1.6, "alcance_visao_m": 95, "campo_visao_graus": 140, "engaja_m": 65, "cura_abaixo": 140, "constroi": true, "coleta": true, "salto_cedo": 0.3}
+  },
+  "mistura": ["facil", "medio", "medio", "dificil"]
+}

@@ -80,6 +80,10 @@ passo "Etapa 5: 2 clientes construindo e editando sem divergência (+ 1 que entr
 FILTRO="CONSTRUCAO_REDE|FALHOU"
 rodar_godot timeout 300 "$GODOT" --headless --path game -s res://tests/integration/test_construcao_rede.gd; checar $? "construção em rede"
 
+passo "Etapa 6: partida só com 23 bots (simulação headless, métricas e CPU)"
+FILTRO="BOTS|FALHOU|partida [0-9]|CPU|facil|medio|dificil"
+rodar_godot timeout 900 "$GODOT" --headless --path game -s res://tests/integration/test_bots.gd -- 23 1; checar $? "bots"
+
 passo "Etapa 5: custo das construções (limite de peças)"
 "$GODOT" --headless --path game -s res://tests/perf/perf_construcao.gd -- 1200 2>&1 | grep PERF_CONSTRUCAO
 
