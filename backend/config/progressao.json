@@ -25,10 +25,28 @@
   },
   "faiscas_por_nivel": 50,
   "recompensas_nivel": {
-    "2": {"item": "emote_aceno"},
-    "5": {"faiscas": 100},
-    "10": {"faiscas": 200}
+    "2": {
+      "item": "emote_aceno"
+    },
+    "5": {
+      "faiscas": 100
+    },
+    "10": {
+      "faiscas": 200
+    }
   },
-  "itens_iniciais": ["traje_recruta", "picareta_padrao", "planador_padrao"],
-  "equipados_iniciais": {"traje": "traje_recruta", "picareta": "picareta_padrao", "planador": "planador_padrao"}
+  "itens_iniciais": [
+    "traje_recruta",
+    "picareta_padrao",
+    "planador_padrao"
+  ],
+  "equipados_iniciais": {
+    "traje": "traje_recruta",
+    "picareta": "picareta_padrao",
+    "planador": "planador_padrao"
+  },
+  "presentes": [
+    "traje_brisa"
+  ],
+  "_doc_presentes": "Itens dados a TODAS as contas (inclusive as que já existem), com origem 'presente'."
 }

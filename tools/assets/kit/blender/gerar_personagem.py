@@ -27,12 +27,6 @@ from mathutils import Matrix, Quaternion, Vector  # noqa: E402
 import kit_comum as k  # noqa: E402
 
 ASSET_ID = "recruta_base_01"
-PELE = "pele_2"
-CAMISA = "teal"
-CALCA = "jeans"
-LUVA = "cinza_tecido"
-BOTA = "couro"
-CABELO = "cabelo_castanho"
 
 # (nome, cabeça, cauda, pai) — coordenadas Blender: Z para cima, frente -Y, esquerda +X
 OSSOS = [
@@ -61,58 +55,103 @@ def _osso(obj, nome_osso):
     return obj
 
 
-def corpo():
+# Trajes: todos usam o MESMO esqueleto, as mesmas animações e as mesmas
+# proporções de colisão (os cosméticos não mudam a hitbox; ARCHITECTURE §8).
+TRAJES = {
+    "recruta_base_01": {
+        "pele": "pele_2", "camisa": "teal", "faixa": "amarelo_sol", "calca": "jeans", "luva": "cinza_tecido",
+        "bota": "couro", "cabelo": "cabelo_castanho", "cachecol": "coral", "feminino": False,
+    },
+    # Recruta Brisa (Etapa 9, primeiro traje para testar o inventário): mesma
+    # identidade (óculos de aviador na testa, cachecol, luvas e botas), com
+    # cabelo comprido de rabo de cavalo alto e franja, cílios, lábios coral,
+    # brincos e cintura/ombros um pouco mais finos.
+    "recruta_brisa_01": {
+        "pele": "pele_1", "camisa": "roxo", "faixa": "amarelo_sol", "calca": "verde_militar", "luva": "cinza_tecido",
+        "bota": "couro", "cabelo": "cabelo_castanho", "cachecol": "teal", "feminino": True,
+    },
+}
+
+
+def corpo(asset_id=ASSET_ID):
+    t = TRAJES[asset_id]
+    PELE, CAMISA, CALCA, LUVA, BOTA, CABELO = t["pele"], t["camisa"], t["calca"], t["luva"], t["bota"], t["cabelo"]
+    fem = t["feminino"]
     p = []
 
     def add(o, osso):
         p.append(_osso(o, osso))
 
     # tronco
-    add(k.caixa("pelve", (0.38, 0.25, 0.22), (0, 0, 0.95), CALCA, bevel=0.05), "Hips")
-    add(k.caixa("cinto", (0.40, 0.27, 0.05), (0, 0, 1.05), BOTA), "Hips")
+    add(k.caixa("pelve", (0.40 if fem else 0.38, 0.25, 0.22), (0, 0, 0.95), CALCA, bevel=0.05), "Hips")
+    add(k.caixa("cinto", (0.42 if fem else 0.40, 0.27, 0.05), (0, 0, 1.05), BOTA), "Hips")
     add(k.caixa("fivela", (0.08, 0.02, 0.05), (0, -0.14, 1.05), "dourado"), "Hips")
-    add(k.caixa("barriga", (0.36, 0.23, 0.16), (0, 0, 1.14), CAMISA, bevel=0.04), "Spine")
-    add(k.caixa("peito", (0.45, 0.28, 0.30), (0, 0, 1.30), CAMISA, bevel=0.06), "Chest")
-    add(k.caixa("faixa_peito", (0.46, 0.29, 0.045), (0, 0, 1.25), "amarelo_sol"), "Chest")
+    add(k.caixa("barriga", (0.31 if fem else 0.36, 0.21 if fem else 0.23, 0.16), (0, 0, 1.14), CAMISA, bevel=0.04), "Spine")
+    add(k.caixa("peito", (0.41 if fem else 0.45, 0.27 if fem else 0.28, 0.30), (0, 0, 1.30), CAMISA, bevel=0.07 if fem else 0.06), "Chest")
+    add(k.caixa("faixa_peito", (0.42 if fem else 0.46, 0.28 if fem else 0.29, 0.045), (0, 0, 1.25 if not fem else 1.19), t["faixa"]), "Chest")
     # cachecol (preso ao peito, não gira com o pescoço)
-    add(k.toro("cachecol", 0.105, 0.05, (0, 0, 1.45), "coral", seg=12, seg_menor=6), "Chest")
-    add(k.caixa("cachecol_ponta", (0.1, 0.045, 0.3), (0.09, 0.17, 1.31), "coral", rot=(-12, 0, 8)), "Chest")
-    add(k.cilindro("pescoco", 0.06, 0.12, (0, 0, 1.47), PELE, lados=8), "Neck")
+    add(k.toro("cachecol", 0.105 if not fem else 0.098, 0.05, (0, 0, 1.45), t["cachecol"], seg=12, seg_menor=6), "Chest")
+    add(k.caixa("cachecol_ponta", (0.1, 0.045, 0.3), (0.09, 0.17, 1.31), t["cachecol"], rot=(-12, 0, 8)), "Chest")
+    add(k.cilindro("pescoco", 0.055 if fem else 0.06, 0.12, (0, 0, 1.47), PELE, lados=8), "Neck")
 
     # cabeça
     add(k.esfera("cabeca", 0.2, (0, 0, 1.67), PELE, escala=(1.0, 0.95, 1.05)), "Head")
-    add(k.esfera("cabelo", 0.215, (0, 0.025, 1.72), CABELO, escala=(1.03, 1.0, 0.78)), "Head")
-    add(k.cilindro("topete", 0.075, 0.16, (0.04, -0.13, 1.86), CABELO, lados=6, rot=(-55, 0, -15), raio_topo=0.0), "Head")
+    if fem:
+        # cabelo: calota, laterais até o queixo, franja e rabo de cavalo alto
+        add(k.esfera("cabelo", 0.218, (0, 0.03, 1.72), CABELO, escala=(1.04, 1.0, 0.8)), "Head")
+        for s in (1, -1):
+            add(k.esfera("cabelo_lado", 0.1, (s * 0.165, 0.05, 1.6), CABELO, escala=(0.6, 0.95, 1.55), segmentos=10, aneis=6), "Head")
+        add(k.caixa("franja", (0.3, 0.07, 0.07), (0.02, -0.175, 1.8), CABELO, rot=(18, 0, -6), bevel=0.025), "Head")
+        add(k.esfera("prendedor", 0.045, (0, 0.185, 1.83), t["cachecol"], segmentos=8, aneis=6), "Head")
+        # rabo de cavalo: do prendedor (alto, atrás) caindo para baixo e para trás;
+        # +X inclina o topo do cilindro para a frente (-Y), então a base fica atrás
+        add(k.cilindro("rabo", 0.042, 0.3, (0, 0.255, 1.69), CABELO, lados=8, rot=(28, 0, 0), raio_topo=0.062), "Head")
+        add(k.esfera("rabo_ponta", 0.05, (0, 0.33, 1.545), CABELO, escala=(0.9, 0.9, 1.35), segmentos=8, aneis=6), "Head")
+    else:
+        add(k.esfera("cabelo", 0.215, (0, 0.025, 1.72), CABELO, escala=(1.03, 1.0, 0.78)), "Head")
+        add(k.cilindro("topete", 0.075, 0.16, (0.04, -0.13, 1.86), CABELO, lados=6, rot=(-55, 0, -15), raio_topo=0.0), "Head")
     for s in (1, -1):
-        add(k.esfera("olho", 0.034, (s * 0.075, -0.183, 1.665), "preto", escala=(0.8, 0.5, 1.25), segmentos=8, aneis=6), "Head")
-        add(k.esfera("brilho", 0.011, (s * 0.075 + 0.01, -0.199, 1.68), "branco", segmentos=6, aneis=4), "Head")
+        add(k.esfera("olho", 0.036 if fem else 0.034, (s * 0.075, -0.183, 1.665), "preto", escala=(0.8, 0.5, 1.3 if fem else 1.25), segmentos=8, aneis=6), "Head")
+        add(k.esfera("brilho", 0.012 if fem else 0.011, (s * 0.075 + 0.01, -0.2, 1.682), "branco", segmentos=6, aneis=4), "Head")
         add(k.esfera("orelha", 0.045, (s * 0.198, 0, 1.655), PELE, escala=(0.5, 1, 1.1), segmentos=8, aneis=6), "Head")
         add(k.cilindro("lente", 0.052, 0.04, (s * 0.075, -0.192, 1.785), "lente", lados=10, rot=(90, 0, 0)), "Head")
         add(k.toro("aro", 0.054, 0.013, (s * 0.075, -0.205, 1.785), "metal_escuro", rot=(90, 0, 0), seg=10, seg_menor=4), "Head")
-        add(k.caixa("sobrancelha", (0.06, 0.02, 0.018), (s * 0.075, -0.186, 1.715), CABELO, rot=(0, s * -8, 0)), "Head")
-    add(k.toro("faixa_oculos", 0.207, 0.018, (0, 0.0, 1.78), "preto", seg=14, seg_menor=4), "Head")
-    add(k.esfera("nariz", 0.03, (0, -0.2, 1.625), "pele_3", segmentos=8, aneis=6), "Head")
-    add(k.caixa("boca", (0.065, 0.012, 0.014), (0, -0.188, 1.57), "preto"), "Head")
+        if fem:
+            # cílios (pequenos traços inclinados para fora) e brincos
+            add(k.caixa("cilio", (0.025, 0.012, 0.01), (s * 0.115, -0.178, 1.7), "preto", rot=(0, s * -30, 0)), "Head")
+            add(k.caixa("sobrancelha", (0.055, 0.016, 0.014), (s * 0.075, -0.188, 1.72), CABELO, rot=(0, s * -12, 0)), "Head")
+            add(k.esfera("brinco", 0.018, (s * 0.205, -0.01, 1.6), "dourado", segmentos=6, aneis=4), "Head")
+        else:
+            add(k.caixa("sobrancelha", (0.06, 0.02, 0.018), (s * 0.075, -0.186, 1.715), CABELO, rot=(0, s * -8, 0)), "Head")
+    add(k.toro("faixa_oculos", 0.207 if not fem else 0.212, 0.018, (0, 0.0, 1.78), "preto", seg=14, seg_menor=4), "Head")
+    add(k.esfera("nariz", 0.026 if fem else 0.03, (0, -0.2, 1.625), "pele_2" if fem else "pele_3", segmentos=8, aneis=6), "Head")
+    if fem:
+        add(k.caixa("boca", (0.055, 0.014, 0.018), (0, -0.188, 1.572), "coral", bevel=0.005), "Head")
+    else:
+        add(k.caixa("boca", (0.065, 0.012, 0.014), (0, -0.188, 1.57), "preto"), "Head")
 
     # braços (T-pose ao longo de X)
+    braco = 0.06 if fem else 0.066
     for lado, s in (("Left", 1), ("Right", -1)):
-        add(k.esfera("ombro", 0.088, (s * 0.24, 0, 1.38), CAMISA, segmentos=10, aneis=6), f"{lado}UpperArm")
-        add(k.cilindro("braco", 0.066, 0.25, (s * 0.35, 0, 1.38), CAMISA, lados=8, rot=(0, 90, 0)), f"{lado}UpperArm")
-        add(k.esfera("cotovelo", 0.06, (s * 0.47, 0, 1.38), PELE, segmentos=8, aneis=6), f"{lado}LowerArm")
-        add(k.cilindro("antebraco", 0.058, 0.22, (s * 0.585, 0, 1.38), PELE, lados=8, rot=(0, 90, 0)), f"{lado}LowerArm")
-        add(k.cilindro("punho", 0.068, 0.06, (s * 0.69, 0, 1.38), LUVA, lados=8, rot=(0, 90, 0)), f"{lado}LowerArm")
-        add(k.esfera("mao", 0.078, (s * 0.785, 0, 1.38), LUVA, escala=(1.1, 0.8, 0.95), segmentos=10, aneis=6), f"{lado}Hand")
-        add(k.esfera("polegar", 0.032, (s * 0.76, -0.065, 1.395), LUVA, segmentos=6, aneis=4), f"{lado}Hand")
+        add(k.esfera("ombro", 0.08 if fem else 0.088, (s * 0.235, 0, 1.38), CAMISA, segmentos=10, aneis=6), f"{lado}UpperArm")
+        add(k.cilindro("braco", braco, 0.25, (s * 0.35, 0, 1.38), CAMISA, lados=8, rot=(0, 90, 0)), f"{lado}UpperArm")
+        add(k.esfera("cotovelo", braco - 0.006, (s * 0.47, 0, 1.38), PELE, segmentos=8, aneis=6), f"{lado}LowerArm")
+        add(k.cilindro("antebraco", braco - 0.008, 0.22, (s * 0.585, 0, 1.38), PELE, lados=8, rot=(0, 90, 0)), f"{lado}LowerArm")
+        add(k.cilindro("punho", 0.066 if fem else 0.068, 0.06, (s * 0.69, 0, 1.38), LUVA, lados=8, rot=(0, 90, 0)), f"{lado}LowerArm")
+        add(k.esfera("mao", 0.074 if fem else 0.078, (s * 0.785, 0, 1.38), LUVA, escala=(1.1, 0.8, 0.95), segmentos=10, aneis=6), f"{lado}Hand")
+        add(k.esfera("polegar", 0.03 if fem else 0.032, (s * 0.76, -0.062, 1.395), LUVA, segmentos=6, aneis=4), f"{lado}Hand")
 
         # pernas
-        add(k.cilindro("coxa", 0.098, 0.42, (s * 0.11, 0, 0.74), CALCA, lados=8), f"{lado}UpperLeg")
-        add(k.esfera("joelho", 0.088, (s * 0.11, 0, 0.53), CALCA, segmentos=8, aneis=6), f"{lado}LowerLeg")
-        add(k.cilindro("canela", 0.085, 0.3, (s * 0.11, 0, 0.36), CALCA, lados=8, raio_topo=0.09), f"{lado}LowerLeg")
-        add(k.cilindro("cano_bota", 0.1, 0.16, (s * 0.11, 0, 0.17), BOTA, lados=8), f"{lado}LowerLeg")
-        add(k.caixa("bota", (0.17, 0.3, 0.12), (s * 0.11, -0.05, 0.07), BOTA, bevel=0.04), f"{lado}Foot")
-        add(k.caixa("sola", (0.18, 0.31, 0.03), (s * 0.11, -0.05, 0.015), "preto"), f"{lado}Foot")
+        add(k.cilindro("coxa", 0.096 if fem else 0.098, 0.42, (s * 0.11, 0, 0.74), CALCA, lados=8), f"{lado}UpperLeg")
+        add(k.esfera("joelho", 0.084 if fem else 0.088, (s * 0.11, 0, 0.53), CALCA, segmentos=8, aneis=6), f"{lado}LowerLeg")
+        add(k.cilindro("canela", 0.08 if fem else 0.085, 0.3, (s * 0.11, 0, 0.36), CALCA, lados=8, raio_topo=0.086 if fem else 0.09), f"{lado}LowerLeg")
+        add(k.cilindro("cano_bota", 0.1, 0.2 if fem else 0.16, (s * 0.11, 0, 0.19 if fem else 0.17), BOTA, lados=8), f"{lado}LowerLeg")
+        if fem:
+            add(k.toro("dobra_bota", 0.1, 0.022, (s * 0.11, 0, 0.29), "couro", seg=10, seg_menor=4), f"{lado}LowerLeg")
+        add(k.caixa("bota", (0.16 if fem else 0.17, 0.29 if fem else 0.3, 0.12), (s * 0.11, -0.05, 0.07), BOTA, bevel=0.04), f"{lado}Foot")
+        add(k.caixa("sola", (0.17 if fem else 0.18, 0.3 if fem else 0.31, 0.03), (s * 0.11, -0.05, 0.015), "preto"), f"{lado}Foot")
 
-    return k.unir(p, ASSET_ID)
+    return k.unir(p, asset_id)
 
 
 def esqueleto():
@@ -347,18 +386,18 @@ def animar(arm):
         pb.location = (0.0, 0.0, 0.0)
 
 
-def recruta_base_01():
-    malha = corpo()
+def personagem(asset_id):
+    malha = corpo(asset_id)
     arm = esqueleto()
     malha.parent = arm
     mod = malha.modifiers.new("esqueleto", "ARMATURE")
     mod.object = arm
-    malha["traje"] = "padrao"
+    malha["traje"] = asset_id
     animar(arm)
     bpy.context.scene.frame_start, bpy.context.scene.frame_end = 1, 61
 
 
-GERADORES = {ASSET_ID: recruta_base_01}
+GERADORES = {i: (lambda i=i: personagem(i)) for i in TRAJES}
 
 
 def main():

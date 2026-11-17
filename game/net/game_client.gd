@@ -9,6 +9,7 @@ signal rejected(reason: String)
 signal disconnected
 signal snapshot_received(snap: Dictionary)
 signal player_info(id: int, name: String)
+signal player_outfit(id: int, outfit: String)    # v10: traje equipado de cada jogador
 signal player_left(id: int)
 signal status_received(st: Dictionary)
 signal shot_received(shot: Dictionary)
@@ -165,6 +166,7 @@ func _receber(dados: PackedByteArray) -> void:
 		Protocol.S_PLAYER_INFO:
 			var i := Protocol.unpack_player_info(dados)
 			player_info.emit(i["id"], i["name"])
+			player_outfit.emit(i["id"], i["outfit"])
 		Protocol.S_PLAYER_LEFT:
 			player_left.emit(Protocol.unpack_player_left(dados))
 		Protocol.S_STATUS:

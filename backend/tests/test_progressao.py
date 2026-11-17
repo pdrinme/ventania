@@ -41,9 +41,20 @@ class TestProgressao(Base):
     def test_perfil_inicial(self):
         pf = self.p.perfil(self.a)
         self.assertEqual((pf["level"], pf["xp_total"], pf["sparks"]), (1, 0, 0))
-        self.assertEqual({u["item"] for u in pf["unlocks"]}, {"traje_recruta", "picareta_padrao", "planador_padrao"})
+        self.assertEqual({u["item"] for u in pf["unlocks"]}, {"traje_recruta", "picareta_padrao", "planador_padrao", "traje_brisa"})
         self.assertEqual(pf["equipped"]["traje"], "traje_recruta")
-        self.assertTrue(all(u["source"] == "inicial" for u in pf["unlocks"]))
+        self.assertEqual({u["item"]: u["source"] for u in pf["unlocks"]}["traje_brisa"], "presente")
+
+    def test_presente_chega_em_conta_antiga_e_equipa(self):
+        self.p.garantir(self.a)
+        self.con.execute("DELETE FROM unlocks WHERE item_id = 'traje_brisa'")       # conta de antes do presente
+        tem = lambda: self.con.execute("SELECT 1 FROM unlocks WHERE account_id = ? AND item_id = 'traje_brisa'", (self.a,)).fetchone()
+        self.assertIsNone(tem())
+        pf = self.p.perfil(self.a)              # qualquer consulta ao perfil entrega o presente
+        self.assertIsNotNone(tem())
+        self.assertIn("traje_brisa", {u["item"] for u in pf["unlocks"]})
+        self.assertEqual(self.p.equipar(self.a, "traje", "traje_brisa")["equipped"]["traje"], "traje_brisa")
+        self.assertEqual(self.p.equipado(self.a, "traje"), "traje_brisa")
 
     def test_xp_da_partida_e_idempotencia(self):
         r = self.relatorio("m1", **{str(self.a): {"colocacao": 1, "venceu": True, "eliminacoes": 4, "tempo_s": 600, "baus": 3}})
@@ -155,6 +166,18 @@ class TestApiProgressao(unittest.TestCase):
             self.assertEqual(len(a.chamar("/v1/quests", token=tok)[1]["diaria"]["quests"]), 3)
             self.assertEqual(a.chamar("/v1/loadout", {"slot": "emote", "item": "emote_aceno"}, tok)[0], 403)
             self.assertEqual(a.eventos(tok)[-1]["type"], "progress")
+
+    def test_traje_equipado_vai_no_ticket_e_no_grupo(self):
+        from meta_server.partidas import verificar
+        with ServidorDeTeste(CFG) as s:
+            a = Api(s)
+            tok, conta = a.conta("Ana")
+            self.assertEqual(a.chamar("/v1/loadout", {"slot": "traje", "item": "traje_brisa"}, tok)[0], 200)
+            self.assertEqual(a.chamar("/v1/party", token=tok)[1]["members"][0]["traje"], "traje_brisa")
+            a.heartbeat(24800)
+            a.chamar("/v1/match/queue", {}, tok)
+            ev = [e for e in a.eventos(tok) if e["type"] == "match_found"][-1]["data"]
+            self.assertEqual(verificar("segredo-de-teste", ev["ticket"])["traje"], "traje_brisa")
 
 
 if __name__ == "__main__":

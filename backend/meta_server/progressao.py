@@ -46,9 +46,9 @@ def validar(cfg: dict) -> None:
     for item in cat.values():
         if item.get("categoria") not in CATEGORIAS:
             raise ValueError(f"item {item.get('id')}: categoria inválida {item.get('categoria')}")
-    for i in p["itens_iniciais"]:
+    for i in p["itens_iniciais"] + p.get("presentes", []):
         if i not in cat:
-            raise ValueError(f"item inicial {i} não está no catálogo")
+            raise ValueError(f"item inicial/presente {i} não está no catálogo")
     for slot, i in p["equipados_iniciais"].items():
         if i not in p["itens_iniciais"] or cat[i]["categoria"] != slot:
             raise ValueError(f"equipado inicial inválido: {slot}={i}")
@@ -99,17 +99,27 @@ class Progressao:
 
     # ---------- perfil ----------
     def garantir(self, conta: int) -> None:
-        """Cria o perfil com os itens iniciais (idempotente)."""
-        if self.con.execute("SELECT 1 FROM profiles WHERE account_id = ?", (conta,)).fetchone():
-            return
+        """Cria o perfil com os itens iniciais e entrega os presentes (idempotente)."""
         p = self.cfg["progressao"]
         agora = int(self.agora())
+        if self.con.execute("SELECT 1 FROM profiles WHERE account_id = ?", (conta,)).fetchone():
+            faltam = [i for i in p.get("presentes", []) if not self.con.execute(
+                "SELECT 1 FROM unlocks WHERE account_id = ? AND item_id = ?", (conta, i)).fetchone()]
+            for item in faltam:
+                self.con.execute("INSERT OR IGNORE INTO unlocks VALUES (?, ?, 'presente', ?)", (conta, item, agora))
+            return
         with self._tx():
             self.con.execute("INSERT OR IGNORE INTO profiles (account_id) VALUES (?)", (conta,))
             for item in p["itens_iniciais"]:
                 self.con.execute("INSERT OR IGNORE INTO unlocks VALUES (?, ?, 'inicial', ?)", (conta, item, agora))
+            for item in p.get("presentes", []):
+                self.con.execute("INSERT OR IGNORE INTO unlocks VALUES (?, ?, 'presente', ?)", (conta, item, agora))
             for slot, item in p["equipados_iniciais"].items():
                 self.con.execute("INSERT OR IGNORE INTO loadout VALUES (?, ?, ?)", (conta, slot, item))
+
+    def equipado(self, conta: int, slot: str) -> str:
+        r = self.con.execute("SELECT item_id FROM loadout WHERE account_id = ? AND slot = ?", (conta, slot)).fetchone()
+        return r["item_id"] if r else self.cfg["progressao"]["equipados_iniciais"].get(slot, "")
 
     def perfil(self, conta: int) -> dict:
         self.garantir(conta)

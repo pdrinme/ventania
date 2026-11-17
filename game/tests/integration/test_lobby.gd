@@ -28,6 +28,7 @@ class Jogador:
 	var eventos: Array = []
 	var client: GameClient
 	var nomes := {}
+	var trajes := {}
 	var partida := {}
 
 	func _ready() -> void:
@@ -62,6 +63,7 @@ class Jogador:
 		add_child(client)
 		client.ticket = m.get("ticket", "")
 		client.player_info.connect(func(id, n): nomes[id] = n)
+		client.player_outfit.connect(func(id, t): trajes[id] = t)
 		client.match_state.connect(func(x): partida = x)
 		client.connect_to("127.0.0.1", int(m["port"]), "NomeQualquer")
 
@@ -109,6 +111,9 @@ func _init() -> void:
 			break
 		await create_timer(0.5).timeout
 	_checar(salas.size() == 2, "as 2 salas do servidor dedicado se anunciaram (%d)" % salas.size())
+	# inventário: a Ana veste a Recruta Brisa (presente de todas as contas)
+	r = await a.chamar(HTTPClient.METHOD_POST, "/v1/loadout", {"slot": "traje", "item": "traje_brisa"})
+	_checar(r["ok"] and r["data"]["equipped"]["traje"] == "traje_brisa", "Ana equipou a Recruta Brisa")
 	# fila -> partida encontrada
 	r = await a.chamar(HTTPClient.METHOD_POST, "/v1/match/queue", {})
 	var ma := await a.puxar("match_found")
@@ -136,6 +141,8 @@ func _init() -> void:
 	_checar(a.client.connected and b.client.connected, "os dois entraram na sala com o ticket")
 	var nomes: Array = a.nomes.values()
 	_checar(("Ana" + sufixo) in nomes and ("Bia" + sufixo) in nomes and not "NomeQualquer" in nomes, "nomes vêm da conta: %s" % str(nomes))
+	_checar(b.trajes.get(a.client.my_id, "") == "traje_brisa" and b.trajes.get(b.client.my_id, "x") == "traje_recruta",
+			"na partida, a Bia vê a Ana de Recruta Brisa (e ela mesma de Recruta)")
 	var g: Dictionary = (await a.chamar(HTTPClient.METHOD_GET, "/v1/party"))["data"]
 	_checar(g["state"] == "partida", "grupo em partida no meta-servidor")
 	# a partida começa (2 humanos) e os bots completam

@@ -507,6 +507,13 @@ Inventário persistente, nível, XP, missões, recompensas, Faíscas (com ledger
   - Perfil com Coleção (equipar), Desbloqueios, Faíscas (extrato) e Partidas;
   - a tela de resultado mostra o XP detalhado que o meta-servidor concedeu.
 - ✅ **Estatísticas novas no servidor de partida:** baús, coleta e construções (as dos bots também).
+- ✅ **v0.9.1 — primeiro traje: Recruta Brisa** (variante feminina do personagem principal, para testar o inventário):
+  - gerado por script no mesmo pipeline (`gerar_personagem.py`, tabela `TRAJES`), com o mesmo esqueleto, as mesmas animações e a mesma hitbox;
+  - rabo de cavalo ao vento, franja, cílios, brincos, blusa roxa, cachecol verde-água e calça verde-militar;
+  - 3.500 triângulos, 1 material;
+  - presente para todas as contas, inclusive as antigas (`presentes` em `progressao.json`), equipável no Perfil → Coleção;
+  - o traje equipado vai no ticket assinado e chega aos outros pelo `S_PLAYER_INFO` (protocolo v10); o lobby mostra o traje de cada integrante;
+  - sem ticket, o servidor usa o traje padrão; a partida local veste o traje da conta; os bots variam entre os dois trajes.
 - ✅ **Testes:**
   - 10 novos no meta-servidor (26 no total): idempotência, limites, níveis, ledger, missões e troca de dia, equipar, segredo e configuração inválida;
   - `test_lobby.gd` agora vai até o fim da partida e confere o XP no evento, no perfil e no histórico (22 verificações).

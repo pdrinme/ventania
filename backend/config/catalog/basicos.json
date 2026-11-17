@@ -1,9 +1,40 @@
 {
   "_doc": "Itens básicos (Etapa 9): o que toda conta tem e as primeiras recompensas de nível. Os cosméticos de verdade chegam na Etapa 13; todos os itens aqui usam visuais que já existem no jogo.",
   "itens": [
-    {"id": "traje_recruta", "nome": "Recruta", "categoria": "traje", "raridade": "comum", "descricao": "O visual de quem acabou de chegar à Ilha Ventania."},
-    {"id": "picareta_padrao", "nome": "Picareta de Campo", "categoria": "picareta", "raridade": "comum", "descricao": "Firme, simples e confiável."},
-    {"id": "planador_padrao", "nome": "Asa-Delta Básica", "categoria": "planador", "raridade": "comum", "descricao": "Para descer do Ônibus de Batalha com estilo (pouco)."},
-    {"id": "emote_aceno", "nome": "Aceno", "categoria": "emote", "raridade": "incomum", "descricao": "Um tchauzinho amigável. Recompensa do nível 2."}
+    {
+      "id": "traje_recruta",
+      "nome": "Recruta",
+      "categoria": "traje",
+      "raridade": "comum",
+      "descricao": "O visual de quem acabou de chegar à Ilha Ventania."
+    },
+    {
+      "id": "traje_brisa",
+      "nome": "Recruta Brisa",
+      "categoria": "traje",
+      "raridade": "incomum",
+      "descricao": "Rabo de cavalo ao vento, óculos de aviadora e cachecol verde-água. Presente de boas-vindas para testar o Armário."
+    },
+    {
+      "id": "picareta_padrao",
+      "nome": "Picareta de Campo",
+      "categoria": "picareta",
+      "raridade": "comum",
+      "descricao": "Firme, simples e confiável."
+    },
+    {
+      "id": "planador_padrao",
+      "nome": "Asa-Delta Básica",
+      "categoria": "planador",
+      "raridade": "comum",
+      "descricao": "Para descer do Ônibus de Batalha com estilo (pouco)."
+    },
+    {
+      "id": "emote_aceno",
+      "nome": "Aceno",
+      "categoria": "emote",
+      "raridade": "incomum",
+      "descricao": "Um tchauzinho amigável. Recompensa do nível 2."
+    }
   ]
 }

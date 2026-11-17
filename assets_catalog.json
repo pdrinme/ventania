@@ -307,6 +307,22 @@
       "atualizado_em": "2026-11-16"
     },
     {
+      "id": "recruta_brisa_01",
+      "nome": "Recruta Brisa (traje)",
+      "categoria": "personagens",
+      "origem": "original",
+      "autor": "Projeto Ventania",
+      "licenca": "Original",
+      "url_origem": "",
+      "atribuicao": "",
+      "arquivo_fonte": "assets_src/personagens/recruta_brisa_01.blend",
+      "arquivo_exportado": "game/assets/personagens/recruta_brisa_01.glb",
+      "estado": "importado",
+      "referencias": [],
+      "notas": "Traje feminino do personagem-base: mesmo esqueleto, animações e hitbox (Etapa 9)",
+      "atualizado_em": "2026-11-17"
+    },
+    {
       "id": "rajada_01",
       "nome": "Rajada (fuzil)",
       "categoria": "armas",

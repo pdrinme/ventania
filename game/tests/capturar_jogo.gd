@@ -9,6 +9,10 @@ func _init() -> void:
 	await process_frame
 	root.theme = VentaniaTheme.build(root.get_node("Settings").is_mobile)
 	var br := "--br" in OS.get_cmdline_user_args()
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--traje="):
+			# como se a conta tivesse esse traje equipado (a partida local veste o equipado)
+			root.get_node("Meta").profile = {"equipped": {"traje": a.trim_prefix("--traje=")}}
 	await root.get_node("SceneManager").go("game", {"modo": "br_local" if br else "local", "bots": 0})
 	var jogo := current_scene
 	for i in 120:

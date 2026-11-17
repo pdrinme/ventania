@@ -35,6 +35,8 @@ class App:
         self.segredo = segredo_dos_servidores(con, self.cfg)
         self.partidas = Partidas(self.social, self.contas, self.segredo, self.cfg.ticket_ttl_s)
         self.progressao = Progressao(con, self.contas, self.eventos)
+        self.partidas.traje_de = lambda c: self.progressao.equipado(c, "traje")
+        self.social.traje_de = lambda c: self.progressao.equipado(c, "traje")
         r = self.router = Router()
         r.add("GET", "/v1/health", self.health)
         r.add("GET", "/v1/compat", self.compat)
@@ -71,7 +73,7 @@ class App:
         r.add("GET", "/v1/quests", self._a(lambda c, d: self.progressao.missoes(c)))
         r.add("GET", "/v1/ledger", self._a(lambda c, d: {"entries": self.progressao.ledger(c)}))
         r.add("GET", "/v1/history", self._a(lambda c, d: {"matches": self.progressao.historico(c)}))
-        r.add("POST", "/v1/loadout", self._a(lambda c, d: self.progressao.equipar(c, str(d.get("slot", "")), str(d.get("item", "")))))
+        r.add("POST", "/v1/loadout", self._a(self._equipar))
         r.add("POST", "/v1/servers/report", self.relatorio)
 
     # ---------- utilidades ----------
@@ -163,6 +165,13 @@ class App:
         evs = await self.eventos.esperar(conta, since, espera)
         self.social.tocar(conta)
         return Response(200, {"events": evs, "seq": self.eventos.ultimo(conta)})
+
+    def _equipar(self, conta: int, d: dict) -> dict:
+        r = self.progressao.equipar(conta, str(d.get("slot", "")), str(d.get("item", "")))
+        g = self.social.grupo_de.get(conta)
+        if g:
+            self.social._avisar_grupo(g)      # o grupo vê o traje novo no lobby
+        return r
 
     def relatorio(self, req: Request) -> Response:
         """Relatório de fim de partida do servidor de partida (autenticado pelo segredo)."""

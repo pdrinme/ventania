@@ -150,6 +150,7 @@ func _ready() -> void:
 	client.player_info.connect(func(id, nome):
 		_nomes[id] = nome
 		match_hud.set_names(_nomes))
+	client.player_outfit.connect(_on_traje)
 	client.match_state.connect(_on_match)
 	client.storm.connect(_on_storm)
 	client.bus.connect(_on_bus)
@@ -210,6 +211,8 @@ func _subir_servidor_local() -> int:
 		cfg["espera_maxima_s"] = 3
 		cfg["bots"] = {"preencher_ate": int(SceneManager.params.get("bots", BotCerebro.config().get("preencher_ate", 16)))}
 	server = GameServer.new(mundo_srv, 0, "br" if br else "treino", cfg)
+	# partida local: o servidor é deste processo; veste o traje equipado na conta (se houver)
+	server.traje_sem_ticket = str(Meta.profile.get("equipped", {}).get("traje", ""))
 	add_child(server)
 	for porta in PORTAS_LOCAIS:
 		if server.start(porta, "127.0.0.1") == OK:
@@ -284,6 +287,7 @@ func _on_welcome(info: Dictionary) -> void:
 	mundo.add_child(pawn)
 	pawn.global_position = mundo.spawn_point(0)
 	visual = PawnVisual.new()
+	visual.traje = _trajes.get(info["id"], "")
 	pawn.add_child(visual)
 	camera.alvo = pawn
 	match_hud.jogador = pawn
@@ -348,6 +352,7 @@ func _reconciliar(e: Protocol.EntityState, ack: int) -> void:
 func _amostra_remoto(e: Protocol.EntityState, tick: int) -> void:
 	if not _remotos.has(e.id):
 		var v := PawnVisual.new()
+		v.traje = _trajes.get(e.id, "")
 		v.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 		mundo.add_child(v)
 		var nome := Label3D.new()
@@ -385,6 +390,34 @@ func _mostrar_nome(boneco: bool, pos: Vector3) -> bool:
 		return false
 	var olho := camera.global_position if camera else pos
 	return olho.distance_to(pos) <= NOME_DISTANCIA_M
+
+
+var _trajes := {}            # id -> traje equipado (S_PLAYER_INFO)
+
+
+## Traje de um jogador (inclusive o próprio): troca o visual se já existir.
+func _on_traje(id: int, traje: String) -> void:
+	if _trajes.get(id, "") == traje:
+		return
+	_trajes[id] = traje
+	if pawn and id == pawn.entity_id and visual:
+		var novo := PawnVisual.new()
+		novo.traje = traje
+		visual.queue_free()
+		visual = novo
+		pawn.add_child(visual)
+	elif _remotos.has(id):
+		var r: Dictionary = _remotos[id]
+		var antigo: PawnVisual = r["visual"]
+		var novo := PawnVisual.new()
+		novo.traje = traje
+		novo.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+		mundo.add_child(novo)
+		novo.global_transform = antigo.global_transform
+		var rotulo: Node = r["rotulo"]
+		rotulo.reparent(novo, false)
+		antigo.queue_free()
+		r["visual"] = novo
 
 
 func _remover_remoto(id: int) -> void:

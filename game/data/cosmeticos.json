@@ -1,0 +1,9 @@
+{
+  "_doc": "Visuais dos cosméticos no cliente (ARCHITECTURE §8): id do item (catálogo do meta-servidor) -> recurso. Se o cliente não tiver um id (versão antiga), usa o padrão. Todos os trajes usam o esqueleto padrão e a mesma hitbox.",
+  "traje_padrao": "traje_recruta",
+  "trajes": {
+    "traje_recruta": "res://assets/personagens/recruta_base_01.glb",
+    "traje_brisa": "res://assets/personagens/recruta_brisa_01.glb"
+  },
+  "trajes_dos_bots": ["traje_recruta", "traje_brisa"]
+}

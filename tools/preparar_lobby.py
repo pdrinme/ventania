@@ -32,6 +32,7 @@ conv = [e for e in ev if e["type"] == "invite"][-1]["data"]["id"]
 chamar("/v1/party/respond", {"invite": conv, "accept": True}, bia["token"])
 chamar("/v1/party/promote", {"id": bia["account"]["id"]}, ana["token"])
 chamar("/v1/party/promote", {"id": ana["account"]["id"]}, bia["token"])
+chamar("/v1/loadout", {"slot": "traje", "item": "traje_brisa"}, ana["token"])        # Ana veste a Brisa
 print("pronto")
 
 # Etapa 9: duas partidas para a Ana (como se o servidor de partida tivesse relatado)

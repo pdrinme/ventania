@@ -38,3 +38,19 @@ func test_desempacotar_lixo_nao_quebra() -> void:
 		Protocol.unpack_build(d)
 		Protocol.unpack_edit(d)
 	assert_true(true)
+
+
+func test_player_info_leva_o_traje() -> void:
+	var i := Protocol.unpack_player_info(Protocol.pack_player_info(7, "Brisa", "traje_brisa"))
+	assert_eq(i["name"], "Brisa")
+	assert_eq(i["outfit"], "traje_brisa")
+	assert_eq(Protocol.unpack_player_info(Protocol.pack_player_info(7, "Ana"))["outfit"], "")
+
+
+func test_cosmeticos_com_padrao() -> void:
+	assert_eq(Cosmeticos.outfit_scene("traje_brisa"), "res://assets/personagens/recruta_brisa_01.glb")
+	assert_eq(Cosmeticos.outfit_scene("nao_existe"), "res://assets/personagens/recruta_base_01.glb")
+	assert_eq(Cosmeticos.outfit_scene(""), "res://assets/personagens/recruta_base_01.glb")
+	assert_true(Cosmeticos.valid_id("traje_brisa"))
+	assert_false(Cosmeticos.valid_id("../hack"))
+	assert_true(ResourceLoader.exists(Cosmeticos.outfit_scene("traje_brisa")), "o traje existe no jogo")

@@ -20,6 +20,7 @@ var _alvo := 52
 var _cam: Camera3D
 var _vp3d: SubViewport
 var _bonecos: Array[Node3D] = []
+var _trajes_slot: Array[String] = ["", "", "", ""]
 var _placas: Array[Control] = []
 var _vagas: Array[Button] = []
 var _status_txt: Label
@@ -335,6 +336,13 @@ func _atualizar() -> void:
 		(_placas[i].find_child("Nome", true, false) as Label).text = nome
 		_placas[i].find_child("Coroa", true, false).visible = i < ordem.size() and bool(ordem[i].get("leader", false)) and ordem.size() > 1
 		_vagas[i].visible = not tem and _online() and i > 0 and i < 4
+		if tem:
+			var traje := ""
+			if i < ordem.size():
+				traje = str(ordem[i].get("traje", ""))
+			elif i == 0 and Meta.logged_in():
+				traje = str(Meta.profile.get("equipped", {}).get("traje", ""))
+			_vestir(i, traje)
 	# botão jogar e busca
 	var estado: String = Meta.party.get("state", "lobby") if _online() else "lobby"
 	_busca.visible = estado == "fila"
@@ -1059,6 +1067,27 @@ func _aviso(texto: String, acao_txt := "", acao := Callable(), segundos := 4.0, 
 
 # ---------------------------------------------------------------- 3D
 
+## Troca o modelo do slot do grupo pelo traje (mesmo esqueleto e animações).
+func _vestir(i: int, traje: String) -> void:
+	var base := _bonecos[i]
+	if base.has_node("Modelo") and _trajes_slot[i] == traje:
+		return
+	_trajes_slot[i] = traje
+	if base.has_node("Modelo"):
+		var velho := base.get_node("Modelo")
+		base.remove_child(velho)
+		velho.queue_free()
+	var rec := (load(Cosmeticos.outfit_scene(traje)) as PackedScene).instantiate() as Node3D
+	rec.name = "Modelo"
+	rec.rotation_degrees.y = -12.0 + (8.0 if i % 2 == 1 else -8.0) * float(i > 0)
+	base.add_child(rec)
+	var aps := rec.find_children("*", "AnimationPlayer", true, false)
+	if not aps.is_empty():
+		var ap := aps[0] as AnimationPlayer
+		ap.play("idle")
+		ap.seek(i * 0.37, true)
+
+
 func _mundo_3d() -> void:
 	var vp_cont := SubViewportContainer.new()
 	vp_cont.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1090,7 +1119,6 @@ func _mundo_3d() -> void:
 	contra.light_energy = 0.6
 	contra.light_color = Color("7fe3ff")
 	_vp3d.add_child(contra)
-	var cena: PackedScene = load("res://assets/personagens/recruta_base_01.glb")
 	for i in POS_GRUPO.size():
 		var base := Node3D.new()
 		base.position = POS_GRUPO[i]
@@ -1109,15 +1137,8 @@ func _mundo_3d() -> void:
 		disco.mesh = cil
 		disco.position.y = -0.07
 		base.add_child(disco)
-		var rec := cena.instantiate() as Node3D
-		rec.rotation_degrees.y = -12.0 + (8.0 if i % 2 == 1 else -8.0) * float(i > 0)
-		base.add_child(rec)
-		var aps := rec.find_children("*", "AnimationPlayer", true, false)
-		if not aps.is_empty():
-			var ap := aps[0] as AnimationPlayer
-			ap.play("idle")
-			ap.seek(i * 0.37, true)
 		_bonecos.append(base)
+		_vestir(i, "")
 	_cam = Camera3D.new()
 	_cam.fov = 34
 	_vp3d.add_child(_cam)

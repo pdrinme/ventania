@@ -9,7 +9,7 @@ extends Node3D
 ##     recuo, alcançar baú) e alvos das mãos nos marcadores do item.
 ##  4. TwoBoneIK3D (braço direito e esquerdo): mãos presas aos alvos.
 
-const MODELO := "res://assets/personagens/recruta_base_01.glb"
+const MODELO := "res://assets/personagens/recruta_base_01.glb"   # traje padrão (ver Cosmeticos)
 const DURACAO_TROCA := 0.22
 const DURACAO_GUARDAR := 0.12      # guarda o item atual antes de sacar o próximo
 const DURACAO_RECUO := 0.18
@@ -36,10 +36,11 @@ var _anim_estado := "idle"
 var com_arma := false
 var queda := 0                    # Pawn.QUEDA_LIVRE / PLANADOR / NO_ONIBUS
 var _planador: Node3D
+var traje := ""                   # id do traje equipado (defina antes de entrar na árvore)
 
 
 func _ready() -> void:
-	_modelo = (load(MODELO) as PackedScene).instantiate() as Node3D
+	_modelo = (load(Cosmeticos.outfit_scene(traje)) as PackedScene).instantiate() as Node3D
 	_modelo.rotation.y = PI   # o modelo olha para +Z; o jogo usa -Z como frente
 	add_child(_modelo)
 	_sk = _modelo.find_children("*", "Skeleton3D", true, false)[0]

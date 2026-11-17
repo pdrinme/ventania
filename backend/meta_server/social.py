@@ -77,6 +77,7 @@ class Social:
         self.grupo_de: dict[int, Grupo] = {}
         self.convites: dict[str, dict] = {}    # id -> {de, para, grupo, expira}
         self.ao_mudar_grupo = None             # callback (grupo) — o matchmaking cancela a fila
+        self.traje_de = lambda conta: ""       # App liga à progressão (lobby mostra o traje de cada um)
 
     # ---------- presença ----------
     def tocar(self, conta: int) -> None:
@@ -188,7 +189,7 @@ class Social:
 
     def grupo_dict(self, g: Grupo) -> dict:
         return {"id": g.id, "leader": g.lider, "mode": g.modo, "state": g.estado,
-                "members": [{**self.contas.publica(m), "leader": m == g.lider} for m in g.membros],
+                "members": [{**self.contas.publica(m), "leader": m == g.lider, "traje": self.traje_de(m)} for m in g.membros],
                 "queue_s": int(time.monotonic() - g.fila_desde) if g.estado == "fila" else 0,
                 "match": g.partida}
 

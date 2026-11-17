@@ -110,6 +110,12 @@
       "notas": "Esqueleto padrão humanoide (nomes Godot), animações idle e acenar"
     },
     {
+      "id": "recruta_brisa_01",
+      "nome": "Recruta Brisa (traje)",
+      "categoria": "personagens",
+      "notas": "Traje feminino do personagem-base: mesmo esqueleto, animações e hitbox (Etapa 9)"
+    },
+    {
       "id": "rajada_01",
       "nome": "Rajada (fuzil)",
       "categoria": "armas",
