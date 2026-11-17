@@ -1,0 +1,69 @@
+{
+  "_doc": "Itens vendidos na loja (Etapa 11). Preço em Faíscas pela raridade (backend/config/shop/precos.json), a menos que o item tenha 'preco'.",
+  "itens": [
+    {
+      "id": "traje_coral",
+      "nome": "Recruta Coral",
+      "categoria": "traje",
+      "raridade": "incomum",
+      "descricao": "Coral de recife e cachecol de sol. Para quem chega chegando.",
+      "loja": true
+    },
+    {
+      "id": "traje_floresta",
+      "nome": "Recruta Floresta",
+      "categoria": "traje",
+      "raridade": "incomum",
+      "descricao": "Verde de mata fechada; some no meio das árvores (só que não: é cosmético).",
+      "loja": true
+    },
+    {
+      "id": "traje_oceano",
+      "nome": "Brisa Oceano",
+      "categoria": "traje",
+      "raridade": "incomum",
+      "descricao": "Azul de maré cheia e cachecol coral.",
+      "loja": true
+    },
+    {
+      "id": "traje_pordosol",
+      "nome": "Brisa Pôr-do-Sol",
+      "categoria": "traje",
+      "raridade": "raro",
+      "descricao": "Laranja e roxo do fim de tarde no Mirante.",
+      "loja": true
+    },
+    {
+      "id": "traje_neve",
+      "nome": "Recruta Neve",
+      "categoria": "traje",
+      "raridade": "raro",
+      "descricao": "Branco de inverno com luvas azul-céu.",
+      "loja": true
+    },
+    {
+      "id": "traje_cacto",
+      "nome": "Brisa Cacto",
+      "categoria": "traje",
+      "raridade": "raro",
+      "descricao": "Verde de cacto com flor rosa no cachecol.",
+      "loja": true
+    },
+    {
+      "id": "traje_vulcao",
+      "nome": "Recruta Vulcão",
+      "categoria": "traje",
+      "raridade": "epico",
+      "descricao": "Vermelho de lava e preto de rocha.",
+      "loja": true
+    },
+    {
+      "id": "traje_relampago",
+      "nome": "Brisa Relâmpago",
+      "categoria": "traje",
+      "raridade": "lendario",
+      "descricao": "Azul de tempestade riscado de amarelo-relâmpago.",
+      "loja": true
+    }
+  ]
+}

@@ -217,6 +217,14 @@ O item comanda as mãos, nunca o contrário. Os marcadores ficam nos modelos (`g
 - Os desafios da temporada reaproveitam `quest_progress`, com período = id da temporada.
 - `/v1/season` devolve o passe pronto para a interface.
 
+### 5.4 Loja (Etapa 11)
+- `loja.py`:
+  - rotação calculada, sem nada guardado: Destaques pela segunda-feira e Diária numa corrente determinística dos últimos 30 dias, para "não repetir ontem";
+  - compra usa `Progressao._tx/_creditar/_desbloquear` (mesmo extrato e mesmo histórico de desbloqueios), com a chave `loja:<conta>:<chave do cliente>`.
+- `tools/admin_loja.py` usa as mesmas funções do servidor (prever = exatamente o que o servidor vai mostrar).
+
+## 6. Identidade, sessões e segurança
+
 - **Conta:** nome de usuário e senha (PBKDF2-SHA256 com salt e 200k iterações). O token de sessão é aleatório e fica guardado no cliente. Não há e-mail nem dados pessoais.
 - **Ticket de partida:** quando o matchmaking fecha uma partida, o meta-servidor emite tickets assinados com HMAC (contendo jogador, partida, expiração e cosméticos equipados). O servidor de partida valida o ticket sem confiar no cliente.
 - **Resultado da partida:** o servidor de partida envia ao meta-servidor um relatório assinado com um segredo compartilhado (colocação, eliminações, tempo vivo, eventos de missão). **Só o meta-servidor** concede XP, moeda e recompensas, e cada relatório é aplicado uma única vez (idempotência por `match_id`).

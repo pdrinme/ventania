@@ -47,6 +47,17 @@ func _init() -> void:
 	menu._abrir_passe()
 	await _esperar(50)
 	_foto(pasta, "passe")
+	menu._fechar_modal()
+	menu._abrir_loja()
+	await _esperar(50)
+	_foto(pasta, "loja")
+	var lj = await meta.get_shop()
+	var item: Dictionary = lj["data"]["secoes"][0]["itens"][0]
+	menu._previa_item(item)
+	await _esperar(60)
+	_foto(pasta, "previa")
+	var r2 = await meta.buy(item["id"], int(item["preco"]), "captura-compra-1")
+	print("compra ", r2["ok"], " ", r2["error"])
 	quit()
 
 

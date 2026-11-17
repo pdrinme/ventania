@@ -556,8 +556,38 @@ Temporadas via JSON, níveis, interface de progressão, recompensas gratuitas, d
 - ✅ Tela de espera: "Procurando jogadores (N) · Sem mais ninguém, os bots completam a partida em 0:25".
 - ✅ Testado de ponta a ponta: a sala espera, ninguém chega, os bots completam e a partida começa.
 
-### Etapa 11 — Loja rotativa ⬜
+### Etapa 11 — Loja rotativa ✅
 Catálogo, categorias, preços, pré-visualização, compra atômica, temporizador, rotação (agenda e sorteio determinístico) e uma ferramenta de administração do catálogo.
+
+- ✅ **Itens à venda:** 8 trajes gerados no pipeline (mesmo esqueleto e hitbox), separados dos do passe:
+  - Recruta Coral, Recruta Floresta e Brisa Oceano (incomum, 300 Faíscas);
+  - Brisa Pôr-do-Sol, Recruta Neve e Brisa Cacto (raro, 600);
+  - Recruta Vulcão (épico, 900);
+  - Brisa Relâmpago (lendário, 1.500).
+  - Os preços por raridade ficam em `backend/config/shop/loja.json`, e um item pode ter preço próprio.
+- ✅ **Seções:** Destaques (2 itens, trocam toda segunda-feira) e Diária (4 itens, trocam à meia-noite UTC), com temporizador.
+- ✅ **Rotação:**
+  - a agenda explícita (`agenda.json`) manda quando houver entrada;
+  - sem agenda, sorteio determinístico com semente pela data, igual em qualquer servidor;
+  - a Diária não repete os Destaques da semana e traz primeiro o que não apareceu ontem;
+  - itens do passe só voltam se `itens_do_passe_voltam` estiver ligado.
+- ✅ **Compra atômica** (`/v1/shop/buy`):
+  - confere se o item está na loja agora, se o preço é o que o jogador viu, se ele já tem o item e o saldo;
+  - debita no extrato e desbloqueia (origem "loja") numa única transação;
+  - chave de idempotência do cliente: repetir o pedido depois de uma queda de rede não cobra duas vezes;
+  - só com Faíscas, sem dinheiro real.
+- ✅ **Ferramenta de administração** (`tools/admin_loja.py`):
+  - `listar` (catálogo com origem e preço), `validar`, `prever --dias N` (a rotação dos próximos dias);
+  - `agendar` e `desagendar`;
+  - `conceder` (Faíscas pelo extrato, para testes e eventos).
+  - A configuração da loja também é validada ao subir o servidor.
+- ✅ **Interface:**
+  - botão Loja no lobby: saldo, seções com o tempo até a troca e cartões na cor da raridade com preço ou "JÁ É SEU";
+  - pré-visualização com o traje em 3D girando, descrição, compra com confirmação em dois toques e "Equipar agora";
+  - topo compacto (só ícones) no celular e em telas estreitas.
+- ✅ **Testes:**
+  - 8 novos no meta-servidor (43 no total): rotação determinística, agenda, compra sem saldo, compra repetida não cobra, preço errado, item fora da loja ou do passe, compras simultâneas não passam do saldo, configuração e ferramenta;
+  - `test_lobby.gd` confere a loja pela API.
 
 ### Etapa 12 — Polimento e distribuição ⬜
 UI final, áudio, animações, otimizações, tratamento de erros, testes multiplayer, exportações para Android, Windows e Linux, e o guia de instalação e de hospedagem para os amigos.

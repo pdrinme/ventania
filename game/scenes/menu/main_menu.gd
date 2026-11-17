@@ -43,6 +43,7 @@ var _prog_barra: ProgressBar
 var _prog_faiscas: Label
 var _missoes_btn: Button
 var _passe_btn: Button
+var _loja_btn: Button
 const CORES_RARIDADE := {"comum": Color("9aa3b5"), "incomum": Color("5ee08a"), "raro": Color("4fa8ff"),
 		"epico": Color("b56bff"), "lendario": Color("ffb43c"), "mitico": Color("ff7ad9")}
 
@@ -108,7 +109,7 @@ func _montar_topo() -> void:
 	topo.offset_left = 32
 	topo.offset_right = -32
 	topo.offset_top = 20
-	topo.add_theme_constant_override("separation", 14)
+	topo.add_theme_constant_override("separation", 10)
 	add_child(topo)
 	var logo := Label.new()
 	logo.theme_type_variation = "Titulo"
@@ -120,6 +121,9 @@ func _montar_topo() -> void:
 	vazio.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	topo.add_child(vazio)
 	_montar_progresso(topo)
+	_loja_btn = _botao_icone("loja", "Loja", "BotaoFantasma")
+	_loja_btn.pressed.connect(_abrir_loja)
+	topo.add_child(_loja_btn)
 	_passe_btn = _botao_icone("passe", "Passe", "BotaoFantasma")
 	_passe_btn.pressed.connect(_abrir_passe)
 	topo.add_child(_passe_btn)
@@ -129,7 +133,8 @@ func _montar_topo() -> void:
 	_conta_btn = _botao_icone("pessoa", "Entrar", "BotaoFantasma")
 	_conta_btn.pressed.connect(_on_conta)
 	topo.add_child(_conta_btn)
-	_amigos_btn = _botao_icone("amigos", "Amigos", "BotaoFantasma")
+	_amigos_btn = _botao_icone("amigos", "", "BotaoFantasma")
+	_amigos_btn.tooltip_text = "Amigos"
 	_amigos_btn.pressed.connect(_abrir_amigos)
 	topo.add_child(_amigos_btn)
 	_amigos_badge = Label.new()
@@ -261,6 +266,11 @@ func _montar_rodape() -> void:
 
 
 func _botao_icone(icone: String, texto: String, variacao: String) -> Button:
+	# tela estreita ou celular: os botões do topo ficam só com o ícone (texto na dica)
+	if not texto.is_empty() and variacao == "BotaoFantasma" and _compacto() and icone in ["loja", "passe", "missoes"]:
+		var bi := _botao_icone(icone, "", variacao)
+		bi.tooltip_text = texto
+		return bi
 	var b := Button.new()
 	b.theme_type_variation = variacao
 	b.text = texto
@@ -309,11 +319,14 @@ func _atualizar() -> void:
 			_status_bola.color = VentaniaTheme.CINZA
 	_status_txt.text += "   v%s" % Version.GAME
 	_status_bola.get_parent().get_node("Tentar").visible = Meta.state in ["offline", "incompatible"]
-	_conta_btn.text = "      " + (Meta.account["username"] if Meta.logged_in() else "Entrar")
+	if not _conta_btn.text.is_empty():
+		_conta_btn.text = "      " + (Meta.account["username"] if Meta.logged_in() else "Entrar")
+	_conta_btn.tooltip_text = Meta.account["username"] if Meta.logged_in() else "Entrar"
 	var pf := Meta.profile
 	_prog_chip.visible = _online() and not pf.is_empty()
 	_missoes_btn.visible = _online()
 	_passe_btn.visible = _online()
+	_loja_btn.visible = _online()
 	if not pf.is_empty():
 		_prog_nivel.text = "NV %d" % int(pf["level"])
 		_prog_barra.max_value = maxf(1.0, float(pf["xp_next"]))
@@ -367,6 +380,10 @@ func _atualizar() -> void:
 		if m["online"] and not Meta.is_leader() and membros.size() > 1:
 			_jogar.text = "O LÍDER COMEÇA"
 			_jogar.disabled = true
+
+
+func _compacto() -> bool:
+	return Settings.is_mobile or get_viewport_rect().size.x < 1200
 
 
 static func _milhar(n: int) -> String:
@@ -684,7 +701,7 @@ func _abrir_privada() -> void:
 func _montar_progresso(topo: HBoxContainer) -> void:
 	_prog_chip = Button.new()
 	_prog_chip.theme_type_variation = "BotaoFantasma"
-	_prog_chip.custom_minimum_size = Vector2(300, _alvo)
+	_prog_chip.custom_minimum_size = Vector2(262, _alvo)
 	_prog_chip.pressed.connect(_abrir_perfil)
 	_prog_chip.focus_entered.connect(func(): Audio.play_ui("foco"))
 	var h := HBoxContainer.new()
@@ -707,7 +724,7 @@ func _montar_progresso(topo: HBoxContainer) -> void:
 	h.add_child(_prog_nivel)
 	_prog_barra = ProgressBar.new()
 	_prog_barra.show_percentage = false
-	_prog_barra.custom_minimum_size = Vector2(110, 12)
+	_prog_barra.custom_minimum_size = Vector2(70, 12)
 	_prog_barra.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_prog_barra.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_prog_barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -777,6 +794,212 @@ func _linha_missao(q: Dictionary) -> Control:
 	rec.text = "+%d XP  ·  +%d Faíscas" % [q["xp"], q["faiscas"]]
 	h.add_child(rec)
 	return p
+
+
+# ---------------------------------------------------------------- loja (Etapa 11)
+
+func _abrir_loja() -> void:
+	var col := _modal("Loja", 1100)
+	var carregando := Label.new()
+	carregando.theme_type_variation = "Pequeno"
+	carregando.text = "Carregando…"
+	col.add_child(carregando)
+	var r := await Meta.get_shop()
+	if not is_instance_valid(carregando):
+		return
+	carregando.queue_free()
+	if not r["ok"]:
+		_aviso(r["error"])
+		return
+	var saldo := HBoxContainer.new()
+	saldo.add_theme_constant_override("separation", 8)
+	col.add_child(saldo)
+	var fa := IconeUI.criar("faisca", 26, VentaniaTheme.AMARELO)
+	fa.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	saldo.add_child(fa)
+	var sl := Label.new()
+	sl.theme_type_variation = "Subtitulo"
+	sl.text = "%s Faíscas" % _milhar(int(r["data"]["faiscas"]))
+	saldo.add_child(sl)
+	var dica := Label.new()
+	dica.theme_type_variation = "Pequeno"
+	dica.text = "   Faíscas vêm do passe, das missões e dos níveis. Sem dinheiro real."
+	dica.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	saldo.add_child(dica)
+	for sec: Dictionary in r["data"]["secoes"]:
+		var cab := Label.new()
+		cab.theme_type_variation = "Rotulo"
+		var h := int(sec["troca_em_s"]) / 3600
+		cab.text = "%s  ·  TROCA EM %s" % [str(sec["nome"]).to_upper(), ("%d h %02d min" % [h, (int(sec["troca_em_s"]) % 3600) / 60]) if h < 48 else ("%d dias" % (h / 24))]
+		col.add_child(cab)
+		var linha := HBoxContainer.new()
+		linha.add_theme_constant_override("separation", 12)
+		col.add_child(linha)
+		for it: Dictionary in sec["itens"]:
+			linha.add_child(_cartao_loja(it, sec["id"] == "destaques"))
+
+
+func _cartao_loja(it: Dictionary, destaque: bool) -> Control:
+	var cor: Color = CORES_RARIDADE.get(it["raridade"], VentaniaTheme.CINZA)
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(250 if destaque else 190, 210 if destaque else 190)
+	var sb := VentaniaTheme._caixa(cor.darkened(0.5), 18, VentaniaTheme.TINTA, 3, 5)
+	b.add_theme_stylebox_override("normal", sb)
+	var sb_h := VentaniaTheme._caixa(cor.darkened(0.35), 18, VentaniaTheme.AMARELO, 3, 6)
+	b.add_theme_stylebox_override("hover", sb_h)
+	b.add_theme_stylebox_override("focus", sb_h)
+	b.add_theme_stylebox_override("pressed", sb)
+	var v := VBoxContainer.new()
+	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	v.offset_left = 10
+	v.offset_right = -10
+	v.offset_top = 10
+	v.offset_bottom = -10
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(v)
+	var icone := IconeUI.criar("pessoa", 64 if destaque else 52, cor.lightened(0.25))
+	icone.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	v.add_child(icone)
+	var nome := Label.new()
+	nome.text = str(it["nome"])
+	nome.add_theme_font_override("font", VentaniaTheme.FONTE_FORTE)
+	nome.add_theme_font_size_override("font_size", 20 if destaque else 17)
+	nome.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	nome.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(nome)
+	var rar := Label.new()
+	rar.text = "TRAJE · %s" % _raridade(it["raridade"])
+	rar.add_theme_font_size_override("font_size", 12)
+	rar.add_theme_color_override("font_color", cor.lightened(0.3))
+	rar.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(rar)
+	var preco := Label.new()
+	preco.add_theme_font_override("font", VentaniaTheme.FONTE_FORTE)
+	preco.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if it["tem"]:
+		preco.text = "JÁ É SEU"
+		preco.add_theme_color_override("font_color", VentaniaTheme.VERDE)
+	else:
+		preco.text = "%s Faíscas" % _milhar(int(it["preco"]))
+		preco.add_theme_color_override("font_color", VentaniaTheme.AMARELO)
+	v.add_child(preco)
+	b.pressed.connect(func():
+		Audio.play_ui("clique")
+		_previa_item(it))
+	return b
+
+
+static func _raridade(r: String) -> String:
+	return {"comum": "COMUM", "incomum": "INCOMUM", "raro": "RARO", "epico": "ÉPICO", "lendario": "LENDÁRIO", "mitico": "MÍTICO"}.get(r, r.to_upper())
+
+
+## Pré-visualização: o traje em 3D, girando, com descrição e compra.
+func _previa_item(it: Dictionary) -> void:
+	var col := _modal(str(it["nome"]), 760)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 18)
+	col.add_child(h)
+	var vpc := SubViewportContainer.new()
+	vpc.custom_minimum_size = Vector2(300, 360)
+	vpc.stretch = true
+	h.add_child(vpc)
+	var vp := SubViewport.new()
+	vp.own_world_3d = true
+	vp.transparent_bg = true
+	vp.msaa_3d = Viewport.MSAA_2X
+	vpc.add_child(vp)
+	var env := Environment.new()
+	env.background_mode = Environment.BG_CLEAR_COLOR
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = Color("c8d2ff")
+	env.ambient_light_energy = 0.55
+	var we := WorldEnvironment.new()
+	we.environment = env
+	vp.add_child(we)
+	var sol := DirectionalLight3D.new()
+	sol.rotation_degrees = Vector3(-35, -30, 0)
+	vp.add_child(sol)
+	var giro := Node3D.new()
+	vp.add_child(giro)
+	var m := (load(Cosmeticos.outfit_scene(it["id"])) as PackedScene).instantiate() as Node3D
+	giro.add_child(m)
+	var aps := m.find_children("*", "AnimationPlayer", true, false)
+	if not aps.is_empty():
+		(aps[0] as AnimationPlayer).play("idle")
+	var cam := Camera3D.new()
+	cam.fov = 30
+	vp.add_child(cam)
+	cam.look_at_from_position(Vector3(0, 1.2, 4.6), Vector3(0, 0.95, 0))
+	var tw := giro.create_tween().set_loops()
+	tw.tween_property(giro, "rotation:y", TAU, 6.0).from(0.0)
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.add_child(info)
+	var rar := Label.new()
+	rar.theme_type_variation = "Rotulo"
+	rar.text = "TRAJE · %s" % _raridade(it["raridade"])
+	rar.add_theme_color_override("font_color", CORES_RARIDADE.get(it["raridade"], VentaniaTheme.CINZA).lightened(0.3))
+	info.add_child(rar)
+	var desc := Label.new()
+	desc.text = str(it.get("descricao", ""))
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.add_child(desc)
+	var nota := Label.new()
+	nota.theme_type_variation = "Pequeno"
+	nota.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	nota.text = "Só aparência: o mesmo tamanho e a mesma hitbox de qualquer traje."
+	info.add_child(nota)
+	var erro := Label.new()
+	erro.add_theme_color_override("font_color", VentaniaTheme.CORAL)
+	erro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	erro.visible = false
+	info.add_child(erro)
+	var comprar := Button.new()
+	comprar.theme_type_variation = "BotaoPrimario"
+	comprar.add_theme_font_size_override("font_size", 24)
+	comprar.custom_minimum_size.y = _alvo + 10
+	info.add_child(comprar)
+	if it["tem"]:
+		comprar.text = "EQUIPAR"
+		comprar.pressed.connect(func():
+			await Meta.equip("traje", it["id"])
+			_fechar_modal()
+			_aviso("%s equipado!" % it["nome"]))
+	else:
+		comprar.text = "COMPRAR · %s" % _milhar(int(it["preco"]))
+		var confirmando := [false]
+		var chave := "%d-%d-%s" % [Time.get_unix_time_from_system() * 1000, randi(), it["id"]]
+		comprar.pressed.connect(func():
+			if not confirmando[0]:
+				confirmando[0] = true
+				comprar.text = "CONFIRMAR: %s FAÍSCAS" % _milhar(int(it["preco"]))
+				return
+			comprar.disabled = true
+			erro.visible = false
+			var r := await Meta.buy(it["id"], int(it["preco"]), chave)
+			if not is_instance_valid(comprar):
+				return
+			if r["ok"]:
+				Audio.play_ui("clique")
+				comprar.disabled = false
+				comprar.text = "EQUIPAR AGORA"
+				it["tem"] = true
+				for c in comprar.pressed.get_connections():
+					comprar.pressed.disconnect(c["callable"])
+				comprar.pressed.connect(func():
+					await Meta.equip("traje", it["id"])
+					_fechar_modal()
+					_aviso("%s equipado!" % it["nome"]))
+				_aviso("Comprado: %s!" % it["nome"])
+			else:
+				comprar.disabled = false
+				confirmando[0] = false
+				comprar.text = "COMPRAR · %s" % _milhar(int(it["preco"]))
+				erro.text = r["error"]
+				erro.visible = true)
+	comprar.grab_focus.call_deferred()
 
 
 # ---------------------------------------------------------------- passe (Etapa 10)

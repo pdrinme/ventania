@@ -201,6 +201,20 @@ func get_quests() -> Dictionary:
 	return await request_json(HTTPClient.METHOD_GET, "/v1/quests")
 
 
+func get_shop() -> Dictionary:
+	return await request_json(HTTPClient.METHOD_GET, "/v1/shop")
+
+
+## Compra com Faíscas (o servidor confere tudo). A chave evita cobrança dupla se
+## o pedido for repetido depois de uma falha de rede.
+func buy(item: String, preco: int, chave: String) -> Dictionary:
+	var r := await request_json(HTTPClient.METHOD_POST, "/v1/shop/buy", {"item": item, "preco": preco, "chave": chave}, 10.0)
+	if r["ok"]:
+		profile = r["data"]["perfil"]
+		profile_changed.emit(profile)
+	return r
+
+
 func get_season() -> Dictionary:
 	return await request_json(HTTPClient.METHOD_GET, "/v1/season")
 

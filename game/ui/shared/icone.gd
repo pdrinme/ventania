@@ -84,6 +84,10 @@ func _draw() -> void:
 				var a := TAU * i / 10.0 - PI / 2
 				pts.append(c + Vector2(0, -s * 0.08) + Vector2(cos(a), sin(a)) * s * (0.17 if i % 2 == 0 else 0.07))
 			draw_colored_polygon(pts, Color("15161c"))
+		"loja":
+			# sacola de compras
+			draw_rect(Rect2(c + Vector2(-s * 0.34, -s * 0.14), Vector2(s * 0.68, s * 0.52)), cor)
+			draw_arc(c + Vector2(0, -s * 0.14), s * 0.17, PI, TAU, 14, cor, e, true)
 		"sair":
 			draw_rect(Rect2(c + Vector2(-s * 0.38, -s * 0.36), Vector2(s * 0.4, s * 0.72)), cor, false, e)
 			draw_line(c + Vector2(-s * 0.05, 0), c + Vector2(s * 0.4, 0), cor, e, true)

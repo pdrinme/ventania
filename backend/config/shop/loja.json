@@ -1,0 +1,9 @@
+{
+  "_doc": "Loja rotativa (Etapa 11). Rotação controlada pelo servidor: a agenda (agenda.json) manda quando houver entrada para o período; sem agenda, sorteio determinístico com semente pela data, sem repetir itens recentes. Só compra com Faíscas (sem dinheiro real).",
+  "precos": {"comum": 200, "incomum": 300, "raro": 600, "epico": 900, "lendario": 1500},
+  "secoes": [
+    {"id": "destaques", "nome": "Destaques", "periodo": "semanal", "quantidade": 2},
+    {"id": "diaria", "nome": "Diária", "periodo": "diario", "quantidade": 4, "sem_repetir_dias": 1}
+  ],
+  "itens_do_passe_voltam": false
+}

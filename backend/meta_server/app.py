@@ -8,6 +8,7 @@ from .config import Config
 from .contas import Contas
 from .http import HttpError, Request, Response, Router
 from .partidas import Partidas
+from .loja import Loja
 from .progressao import Progressao
 from .social import Eventos, Social
 
@@ -35,6 +36,7 @@ class App:
         self.segredo = segredo_dos_servidores(con, self.cfg)
         self.partidas = Partidas(self.social, self.contas, self.segredo, self.cfg.ticket_ttl_s)
         self.progressao = Progressao(con, self.contas, self.eventos)
+        self.loja = Loja(self.progressao)
         self.partidas.traje_de = lambda c: self.progressao.equipado(c, "traje")
         self.social.traje_de = lambda c: self.progressao.equipado(c, "traje")
         r = self.router = Router()
@@ -72,6 +74,8 @@ class App:
         r.add("GET", "/v1/profile", self._a(lambda c, d: self.progressao.perfil(c)))
         r.add("GET", "/v1/quests", self._a(lambda c, d: self.progressao.missoes(c)))
         r.add("GET", "/v1/season", self._a(lambda c, d: self.progressao.passe(c)))
+        r.add("GET", "/v1/shop", self._a(lambda c, d: self.loja.loja(c)))
+        r.add("POST", "/v1/shop/buy", self._a(lambda c, d: self.loja.comprar(c, str(d.get("item", "")), d.get("preco"), d.get("chave", ""))))
         r.add("GET", "/v1/ledger", self._a(lambda c, d: {"entries": self.progressao.ledger(c)}))
         r.add("GET", "/v1/history", self._a(lambda c, d: {"matches": self.progressao.historico(c)}))
         r.add("POST", "/v1/loadout", self._a(self._equipar))

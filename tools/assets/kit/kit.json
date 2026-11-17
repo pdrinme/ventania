@@ -140,6 +140,54 @@
       "notas": "Variação de cor de traje (mesmo esqueleto, animações e hitbox); recompensa do passe da Temporada 1 (Etapa 10)"
     },
     {
+      "id": "recruta_coral_01",
+      "nome": "Recruta Coral (traje)",
+      "categoria": "personagens",
+      "notas": "Traje da loja (Etapa 11): variação de cor no mesmo esqueleto, animações e hitbox"
+    },
+    {
+      "id": "recruta_floresta_01",
+      "nome": "Recruta Floresta (traje)",
+      "categoria": "personagens",
+      "notas": "Traje da loja (Etapa 11): variação de cor no mesmo esqueleto, animações e hitbox"
+    },
+    {
+      "id": "brisa_oceano_01",
+      "nome": "Brisa Oceano (traje)",
+      "categoria": "personagens",
+      "notas": "Traje da loja (Etapa 11): variação de cor no mesmo esqueleto, animações e hitbox"
+    },
+    {
+      "id": "brisa_pordosol_01",
+      "nome": "Brisa Pôr-do-Sol (traje)",
+      "categoria": "personagens",
+      "notas": "Traje da loja (Etapa 11): variação de cor no mesmo esqueleto, animações e hitbox"
+    },
+    {
+      "id": "recruta_neve_01",
+      "nome": "Recruta Neve (traje)",
+      "categoria": "personagens",
+      "notas": "Traje da loja (Etapa 11): variação de cor no mesmo esqueleto, animações e hitbox"
+    },
+    {
+      "id": "brisa_cacto_01",
+      "nome": "Brisa Cacto (traje)",
+      "categoria": "personagens",
+      "notas": "Traje da loja (Etapa 11): variação de cor no mesmo esqueleto, animações e hitbox"
+    },
+    {
+      "id": "recruta_vulcao_01",
+      "nome": "Recruta Vulcão (traje)",
+      "categoria": "personagens",
+      "notas": "Traje da loja (Etapa 11): variação de cor no mesmo esqueleto, animações e hitbox"
+    },
+    {
+      "id": "brisa_relampago_01",
+      "nome": "Brisa Relâmpago (traje)",
+      "categoria": "personagens",
+      "notas": "Traje da loja (Etapa 11): variação de cor no mesmo esqueleto, animações e hitbox"
+    },
+    {
       "id": "rajada_01",
       "nome": "Rajada (fuzil)",
       "categoria": "armas",

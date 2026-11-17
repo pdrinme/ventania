@@ -7,7 +7,15 @@
     "traje_tormenta": "res://assets/personagens/recruta_tormenta_01.glb",
     "traje_aurora": "res://assets/personagens/brisa_aurora_01.glb",
     "traje_ourodesol": "res://assets/personagens/recruta_ourodesol_01.glb",
-    "traje_meianoite": "res://assets/personagens/brisa_meianoite_01.glb"
+    "traje_meianoite": "res://assets/personagens/brisa_meianoite_01.glb",
+    "traje_coral": "res://assets/personagens/recruta_coral_01.glb",
+    "traje_floresta": "res://assets/personagens/recruta_floresta_01.glb",
+    "traje_oceano": "res://assets/personagens/brisa_oceano_01.glb",
+    "traje_pordosol": "res://assets/personagens/brisa_pordosol_01.glb",
+    "traje_neve": "res://assets/personagens/recruta_neve_01.glb",
+    "traje_cacto": "res://assets/personagens/brisa_cacto_01.glb",
+    "traje_vulcao": "res://assets/personagens/recruta_vulcao_01.glb",
+    "traje_relampago": "res://assets/personagens/brisa_relampago_01.glb"
   },
   "trajes_dos_bots": [
     "traje_recruta",

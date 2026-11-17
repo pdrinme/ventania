@@ -201,6 +201,11 @@ func _init() -> void:
 	var passe: Dictionary = (await a.chamar(HTTPClient.METHOD_GET, "/v1/season"))["data"]
 	_checar(pa.get("passe") is Dictionary and int(passe.get("xp", 0)) == int(pa.get("xp_total", -1)),
 			"o XP da partida também subiu o passe (%s XP no passe)" % str(passe.get("xp")))
+	var loja: Dictionary = (await a.chamar(HTTPClient.METHOD_GET, "/v1/shop"))["data"]
+	_checar(loja.get("secoes", []).size() == 2 and loja["secoes"][1]["itens"].size() == 4, "loja: Destaques e Diária com itens")
+	var caro: Dictionary = loja["secoes"][1]["itens"][0]
+	var compra := await a.chamar(HTTPClient.METHOD_POST, "/v1/shop/buy", {"item": caro["id"], "preco": caro["preco"], "chave": "teste-e2e-1"})
+	_checar(not compra["ok"] and compra["status"] == 409, "sem Faíscas suficientes, a compra é recusada (%s)" % compra["error"])
 	var hist: Array = (await a.chamar(HTTPClient.METHOD_GET, "/v1/history"))["data"]["matches"]
 	_checar(hist.size() == 1 and int(hist[0]["placement"]) == int(pa.get("colocacao", -1)), "histórico da partida gravado (colocação %s)" % str(pa.get("colocacao")))
 	# o Caio pode ter recebido XP da partida da própria sala privada, nunca da partida da Ana

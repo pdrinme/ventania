@@ -1,0 +1,4 @@
+{
+  "_doc": "Agenda explícita da loja. Cada entrada fixa os itens de uma seção num período: 'data' é o dia (diária) ou a segunda-feira da semana (destaques), em UTC. Use: python3 tools/admin_loja.py agendar --data 2026-11-23 --secao destaques --itens traje_vulcao,traje_relampago",
+  "entradas": []
+}
