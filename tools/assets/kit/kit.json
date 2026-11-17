@@ -354,6 +354,42 @@
       "nome": "Planador de descida",
       "categoria": "cenario",
       "notas": "Revisão da Etapa 4"
+    },
+    {
+      "id": "escada_madeira_01",
+      "nome": "Escada de madeira (casas)",
+      "categoria": "cenario",
+      "notas": "Escada em U com degraus de madeira, patamar e balaústres; colisão pelo meio dos pisos"
+    },
+    {
+      "id": "escada_concreto_01",
+      "nome": "Escada de concreto (lojas e prédios)",
+      "categoria": "cenario",
+      "notas": "Escada em U de concreto com borda escura e corrimão de metal"
+    },
+    {
+      "id": "escada_metal_01",
+      "nome": "Escada de metal (galpões)",
+      "categoria": "cenario",
+      "notas": "Escada em U de chapas vazadas com borda amarela"
+    },
+    {
+      "id": "escada_madeira_topo_01",
+      "nome": "Guarda-corpo do vão da escada (madeira)",
+      "categoria": "cenario",
+      "notas": "Só no último andar"
+    },
+    {
+      "id": "escada_concreto_topo_01",
+      "nome": "Guarda-corpo do vão da escada (concreto)",
+      "categoria": "cenario",
+      "notas": "Só no último andar"
+    },
+    {
+      "id": "escada_metal_topo_01",
+      "nome": "Guarda-corpo do vão da escada (metal)",
+      "categoria": "cenario",
+      "notas": "Só no último andar"
     }
   ]
 }

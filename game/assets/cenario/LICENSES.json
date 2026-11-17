@@ -166,5 +166,53 @@
     "source": "original",
     "license": "Original",
     "attribution": ""
+  },
+  {
+    "file": "escada_madeira_01.glb",
+    "asset_id": "escada_madeira_01",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "escada_concreto_01.glb",
+    "asset_id": "escada_concreto_01",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "escada_metal_01.glb",
+    "asset_id": "escada_metal_01",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "escada_madeira_topo_01.glb",
+    "asset_id": "escada_madeira_topo_01",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "escada_concreto_topo_01.glb",
+    "asset_id": "escada_concreto_topo_01",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "escada_metal_topo_01.glb",
+    "asset_id": "escada_metal_topo_01",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
   }
 ]

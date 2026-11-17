@@ -68,6 +68,11 @@ func points_of_interest() -> Array:
 	return []
 
 
+## Escadas dos edifícios: [{"pos": Vector3, "rot": graus}] (navegação dos bots).
+func stairs() -> Array:
+	return []
+
+
 ## Região (ponto de interesse) que contém o ponto (x, z), ou {}.
 func region_at(_x: float, _z: float) -> Dictionary:
 	return {}

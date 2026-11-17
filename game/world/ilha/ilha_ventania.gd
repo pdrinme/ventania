@@ -84,6 +84,7 @@ var _slots := {}
 var _ocupado: Array = []            # [Vector2 centro, raio]
 var _ocupado_poi := {}              # id do POI -> áreas ocupadas pelas construções dele
 var _pois_cache: Array = []
+var _escadas: Array = []            # {"pos": centro do cômodo no piso de baixo, "rot": graus, "estilo"}
 var _limites := {}                  # id do POI -> PackedVector2Array (contorno da região)
 var _faixas: Array = []             # faixas de pedestres: [centro Vector2, direção Vector2, largura]
 var _lagos_terra: Array = []        # chão de terra/rocha (plantação, pedreira): [Vector2, raio(, rocha)]
@@ -206,6 +207,12 @@ func region_bounds(id: String) -> PackedVector2Array:
 		out.append(c + Vector2.from_angle(k * TAU / n) * r)
 	_limites[id] = out
 	return out
+
+
+## Escadas dos edifícios (para a navegação dos bots): [{"pos": Vector3 (centro do
+## cômodo, piso de baixo), "rot": graus em Y}]. Geometria em gerar_interiores.py.
+func stairs() -> Array:
+	return _escadas
 
 
 ## Região (POI) em que um ponto do mundo está, ou {} fora de todas.
@@ -752,7 +759,8 @@ func _prop_chao(nome: String, q: Vector2, rot_y := 0.0, escala := 1.0, material 
 
 
 ## Edifício em grade de 4 m. origem = canto (-x, -z) no nível do chão (alinhado à
-## grade); w × d cômodos, `andares` níveis (rampa interna no cômodo (0, d-1)).
+## grade); w × d cômodos, `andares` níveis (escada em U com degraus no cômodo
+## (0, d-1), ou (w-1, d-1) espelhada se a porta cair nele).
 ## porta: "n", "s", "l", "o" (lado da rua). estilo:
 ##   casa   — telhado em pirâmide, janelas na frente e nas laterais
 ##   loja   — vitrine larga na frente, terraço plano
@@ -762,9 +770,16 @@ func _casa(origem: Vector3, w: int, d: int, andares: int, mat: String, porta := 
 	var o := Vector3(snappedf(origem.x, CELULA), snappedf(origem.y, CELULA), snappedf(origem.z, CELULA))
 	var centro := o + Vector3(w * CELULA * 0.5, 0, d * CELULA * 0.5)
 	_ocupado.append([Vector2(centro.x, centro.z), maxf(w, d) * CELULA * 0.75])
-	var rampa_cel := Vector2i(0, d - 1)
 	var porta_i := w / 2
 	var porta_j := d / 2
+	# escada em U no cômodo (0, d-1), chegando ao cômodo vizinho +x; se a porta
+	# cair nesse cômodo, a escada vai espelhada para (w-1, d-1), chegando por -x
+	var rampa_cel := Vector2i(0, d - 1)
+	var escada_rot := 0.0
+	if (porta == "o" and porta_j == d - 1) or (porta == "s" and porta_i == 0):
+		rampa_cel = Vector2i(w - 1, d - 1)
+		escada_rot = 180.0
+	var escada: String = {"madeira": "escada_madeira_01", "pedra": "escada_concreto_01", "metal": "escada_metal_01"}[mat]
 	for nivel in andares:
 		var y := o.y + nivel * CELULA
 		for i in w:
@@ -773,7 +788,14 @@ func _casa(origem: Vector3, w: int, d: int, andares: int, mat: String, porta := 
 				if not (nivel > 0 and Vector2i(i, j) == rampa_cel):
 					_peca("piso_" + mat, c)
 		if nivel > 0:
-			_peca("rampa_" + mat, o + Vector3(rampa_cel.x * CELULA + 2.0, (nivel - 1) * CELULA, rampa_cel.y * CELULA + 2.0))
+			# escada de verdade (degraus), não rampa: do andar nivel-1 até este
+			var base := o + Vector3(rampa_cel.x * CELULA + 2.0, (nivel - 1) * CELULA, rampa_cel.y * CELULA + 2.0)
+			_prop(escada, base, escada_rot, 1.0, {"madeira": ImpactMaterial.MADEIRA, "pedra": ImpactMaterial.PEDRA, "metal": ImpactMaterial.METAL}[mat])
+			_escadas.append({"pos": base, "rot": escada_rot, "estilo": estilo})
+			if nivel == andares - 1:
+				# guarda-corpo em volta do vão no último andar (nos de baixo, o vão é a
+				# entrada do lance seguinte)
+				_prop(escada.replace("_01", "_topo_01"), base, escada_rot, 1.0, ImpactMaterial.METAL if mat == "metal" else ImpactMaterial.MADEIRA)
 		for i in w:
 			var x := o.x + i * CELULA + 2.0
 			_peca("parede_" + mat, Vector3(x, y, o.z), 0.0, _mascara(estilo, porta == "n", nivel, i == porta_i, i))
