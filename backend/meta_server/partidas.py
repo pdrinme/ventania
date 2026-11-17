@@ -85,7 +85,7 @@ class Partidas:
         self.ticket_ttl_s = ticket_ttl_s
         self.salas: dict[str, Sala] = {}
         self.fila: list = []                     # grupos, por ordem de chegada
-        self.traje_de = lambda conta: ""         # App liga à progressão (cosmético vai no ticket)
+        self.equipados_de = lambda conta: {}     # App liga à progressão (cosméticos vão no ticket)
         social.ao_mudar_grupo = self._grupo_mudou
 
     # ---------- servidores ----------
@@ -125,8 +125,12 @@ class Partidas:
     # ---------- tickets ----------
     def ticket(self, conta: int, sala: Sala) -> str:
         return assinar(self.segredo, {"acc": conta, "name": self.contas.nome(conta), "port": sala.port,
-                                      "priv": bool(sala.codigo), "traje": self.traje_de(conta),
+                                      "priv": bool(sala.codigo), **self._cosmeticos(conta),
                                       "exp": int(time.time()) + self.ticket_ttl_s, "n": secrets.token_hex(4)})
+
+    def _cosmeticos(self, conta: int) -> dict:
+        e = self.equipados_de(conta)
+        return {"traje": e.get("traje", ""), "pic": e.get("picareta", ""), "plan": e.get("planador", "")}
 
     def _enviar_para_sala(self, g, sala: Sala) -> None:
         agora = time.monotonic()

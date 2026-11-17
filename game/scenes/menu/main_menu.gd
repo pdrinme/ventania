@@ -1520,6 +1520,7 @@ func _vestir(i: int, traje: String) -> void:
 	rec.name = "Modelo"
 	rec.rotation_degrees.y = -12.0 + (8.0 if i % 2 == 1 else -8.0) * float(i > 0)
 	base.add_child(rec)
+	TrajeFx.attach(rec, traje)
 	var aps := rec.find_children("*", "AnimationPlayer", true, false)
 	if not aps.is_empty():
 		var ap := aps[0] as AnimationPlayer

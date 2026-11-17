@@ -72,7 +72,7 @@ Rode as ferramentas na pasta do pacote:
 |---|---|
 | `python3 ferramentas/admin_loja.py listar` | itens do catálogo, preços e origem (loja, passe, inicial) |
 | `python3 ferramentas/admin_loja.py prever --dias 7` | o que a loja vai mostrar nos próximos dias |
-| `python3 ferramentas/admin_loja.py agendar --data 2026-11-23 --secao destaques --itens traje_vulcao,traje_relampago` | fixar itens num período (reinicie depois) |
+| `python3 ferramentas/admin_loja.py agendar --data 2026-11-23 --secao destaques --itens traje_capitao_mare,picareta_ancora` | fixar itens num período (reinicie depois) |
 | `python3 ferramentas/admin_loja.py conceder --conta Ana --faiscas 500 --motivo "evento"` | dar Faíscas (fica no extrato com o motivo) |
 | `python3 ferramentas/validar_temporada.py` | conferir as temporadas do passe e a estimativa de horas |
 

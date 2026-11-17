@@ -1,69 +1,64 @@
 {
-  "_doc": "Itens vendidos na loja (Etapa 11). Preço em Faíscas pela raridade (backend/config/shop/precos.json), a menos que o item tenha 'preco'.",
+  "_doc": "Itens vendidos na loja (Etapa 11; personagens originais desde a revisão de skins). Preço em Faíscas pela raridade (backend/config/shop/loja.json), a menos que o item tenha 'preco'. Cada item tem visual no jogo (game/data/cosmeticos.json) e imagem gerada do modelo real (game/assets/ui/loja/).",
   "itens": [
     {
-      "id": "traje_coral",
-      "nome": "Recruta Coral",
-      "categoria": "traje",
-      "raridade": "incomum",
-      "descricao": "Coral de recife e cachecol de sol. Para quem chega chegando.",
-      "loja": true
-    },
-    {
-      "id": "traje_floresta",
-      "nome": "Recruta Floresta",
-      "categoria": "traje",
-      "raridade": "incomum",
-      "descricao": "Verde de mata fechada; some no meio das árvores (só que não: é cosmético).",
-      "loja": true
-    },
-    {
-      "id": "traje_oceano",
-      "nome": "Brisa Oceano",
-      "categoria": "traje",
-      "raridade": "incomum",
-      "descricao": "Azul de maré cheia e cachecol coral.",
-      "loja": true
-    },
-    {
-      "id": "traje_pordosol",
-      "nome": "Brisa Pôr-do-Sol",
-      "categoria": "traje",
-      "raridade": "raro",
-      "descricao": "Laranja e roxo do fim de tarde no Mirante.",
-      "loja": true
-    },
-    {
-      "id": "traje_neve",
-      "nome": "Recruta Neve",
-      "categoria": "traje",
-      "raridade": "raro",
-      "descricao": "Branco de inverno com luvas azul-céu.",
-      "loja": true
-    },
-    {
-      "id": "traje_cacto",
-      "nome": "Brisa Cacto",
-      "categoria": "traje",
-      "raridade": "raro",
-      "descricao": "Verde de cacto com flor rosa no cachecol.",
-      "loja": true
-    },
-    {
-      "id": "traje_vulcao",
-      "nome": "Recruta Vulcão",
-      "categoria": "traje",
-      "raridade": "epico",
-      "descricao": "Vermelho de lava e preto de rocha.",
-      "loja": true
-    },
-    {
-      "id": "traje_relampago",
-      "nome": "Brisa Relâmpago",
+      "id": "traje_capitao_mare",
+      "nome": "Capitão Maré",
       "categoria": "traje",
       "raridade": "lendario",
-      "descricao": "Azul de tempestade riscado de amarelo-relâmpago.",
-      "loja": true
+      "loja": true,
+      "conjunto": "capitao_mare",
+      "descricao": "Onde deveria haver uma cabeça, há um aquário: peixinhos, bolhas e um castelinho. O resto é robô de metal, rebite e sanfona."
+    },
+    {
+      "id": "picareta_ancora",
+      "nome": "Âncora de Coleta",
+      "categoria": "picareta",
+      "raridade": "epico",
+      "loja": true,
+      "conjunto": "capitao_mare",
+      "descricao": "Uma âncora de verdade, de cepo e unhas, que serve de picareta. Mesma força de qualquer picareta: só o estilo muda."
+    },
+    {
+      "id": "planador_arraia",
+      "nome": "Arraia",
+      "categoria": "planador",
+      "raridade": "raro",
+      "loja": true,
+      "conjunto": "capitao_mare",
+      "descricao": "Desça do ônibus nas costas de uma arraia de bolinhas."
+    },
+    {
+      "id": "traje_entregador",
+      "nome": "Entregador",
+      "categoria": "traje",
+      "raridade": "raro",
+      "loja": true,
+      "descricao": "Capacete fechado, mochila térmica gigante e tênis de corrida. Chega antes da Tormenta."
+    },
+    {
+      "id": "traje_escafandro",
+      "nome": "Escafandro",
+      "categoria": "traje",
+      "raridade": "epico",
+      "loja": true,
+      "descricao": "Capacete de latão com três vigias, peitoral rebitado e botas de chumbo. Pesado no visual, leve no gameplay."
+    },
+    {
+      "id": "traje_faz_tudo",
+      "nome": "Faz-Tudo",
+      "categoria": "traje",
+      "raridade": "raro",
+      "loja": true,
+      "descricao": "Robô de manutenção com cara de monitor, giroflex na antena, chave inglesa numa mão e garra na outra."
+    },
+    {
+      "id": "traje_espantalho",
+      "nome": "Espantalho",
+      "categoria": "traje",
+      "raridade": "incomum",
+      "loja": true,
+      "descricao": "Saco de estopa costurado, chapéu de palha e um corvo que não sai do ombro."
     }
   ]
 }

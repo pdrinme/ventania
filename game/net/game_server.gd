@@ -55,7 +55,9 @@ class Cliente:
 	var bot: BotCerebro = null      # bot do servidor (sem conexão); null = humano
 	var token := 0                  # ficha de sessão (reconexão)
 	var conta := 0                  # conta do meta-servidor (ticket); 0 = sem conta
-	var traje := ""                 # traje equipado (do ticket; sem ticket = padrão)
+	var traje := ""                 # cosméticos equipados (do ticket; sem ticket = padrão). Só aparência.
+	var picareta := ""
+	var planador := ""
 	var desconectado_tick := -1     # >= 0: caiu e está esperando reconectar
 	var bytes_env := 0              # banda (só a carga útil dos pacotes, sem o cabeçalho do ENet)
 	var bytes_rec := 0
@@ -109,7 +111,7 @@ var ticket_obrigatorio := true   # false: aceita também quem entra direto pelo 
 var porta := 0
 signal match_report(d: Dictionary)   # fim de partida (Etapa 9): o MetaLink envia ao meta-servidor
 var privada := false         # sala privada (meta-servidor): só começa quando o dono mandar
-var traje_sem_ticket := ""   # traje de quem entra sem ticket: vazio (padrão); a partida local usa o equipado
+var cosmeticos_sem_ticket := {"traje": "", "picareta": "", "planador": ""}   # sem ticket: padrão; a partida local usa o equipado
 var forcar_inicio := false   # sala privada: o dono mandou começar
 var reservas_pendentes := 0  # matchmaking: jogadores com vaga reservada que ainda não chegaram
 var reconexoes := 0
@@ -272,7 +274,7 @@ func _receber(de: int, dados: PackedByteArray) -> bool:
 				return true
 			var nome := _limpar_nome(h["name"])
 			var conta := 0
-			var traje_ticket := traje_sem_ticket
+			var cos := cosmeticos_sem_ticket.duplicate()
 			if not segredo_tickets.is_empty() and (ticket_obrigatorio or not h["ticket"].is_empty()):
 				var t := Ticket.verify(segredo_tickets, h["ticket"], porta)
 				if t.is_empty():
@@ -281,7 +283,7 @@ func _receber(de: int, dados: PackedByteArray) -> bool:
 					return true
 				conta = int(t["acc"])
 				nome = _limpar_nome(str(t["name"]))
-				traje_ticket = str(t.get("traje", ""))
+				cos = {"traje": str(t.get("traje", "")), "picareta": str(t.get("pic", "")), "planador": str(t.get("plan", ""))}
 				if t.get("priv", false):
 					privada = true          # já sabe antes do próximo heartbeat
 				for o: Cliente in clientes.values():
@@ -297,7 +299,10 @@ func _receber(de: int, dados: PackedByteArray) -> bool:
 				send_to(de, Protocol.pack_reject("Sala cheia (%d jogadores).%s" % [max_jogadores, dica]), true)
 				_desligar(de)
 				return true
-			_entrar(de, nome, traje_ticket if Cosmeticos.valid_id(traje_ticket) else "")
+			for chave in cos:
+				if not Cosmeticos.valid_id(str(cos[chave])):
+					cos[chave] = ""
+			_entrar(de, nome, cos)
 			if clientes.has(de):
 				clientes[de].conta = conta
 		Protocol.C_INPUT:
@@ -360,13 +365,15 @@ func _receber(de: int, dados: PackedByteArray) -> bool:
 	return true
 
 
-func _entrar(de: int, nome: String, traje := "") -> void:
+func _entrar(de: int, nome: String, cos := {}) -> void:
 	var c := Cliente.new()
 	c.peer_id = de
 	c.id = _proximo_id
 	_proximo_id = (_proximo_id % 60000) + 1
 	c.nome = nome
-	c.traje = traje
+	c.traje = cos.get("traje", "")
+	c.picareta = cos.get("picareta", "")
+	c.planador = cos.get("planador", "")
 	c.token = (_rng_nomes.randi() << 31) ^ _rng_nomes.randi() ^ (Time.get_ticks_usec() << 8)
 	c.token = absi(c.token) | 1
 	c.pawn = Pawn.new()
@@ -389,9 +396,9 @@ func _estado_completo(de: int, c: Cliente) -> void:
 	for outro: Cliente in clientes.values():
 		if outro.pawn == null:
 			continue                    # conexão que ainda não se apresentou (sem nome)
-		send_to(de, Protocol.pack_player_info(outro.id, outro.nome, outro.traje), true)
+		send_to(de, Protocol.pack_player_info(outro.id, outro.nome, outro.traje, outro.picareta, outro.planador), true)
 		if outro.peer_id != de:
-			send_to(outro.peer_id, Protocol.pack_player_info(c.id, c.nome, c.traje), true)
+			send_to(outro.peer_id, Protocol.pack_player_info(c.id, c.nome, c.traje, c.picareta, c.planador), true)
 	for i in bonecos.size():
 		send_to(de, Protocol.pack_player_info(bonecos[i]["id"], "Boneco %d" % (i + 1)), true)
 	for m in loot.full_state():
@@ -671,7 +678,7 @@ func add_bot(dificuldade: String) -> Cliente:
 	var trajes := Cosmeticos.bot_outfits()
 	c.traje = trajes[_rng_nomes.randi() % trajes.size()]
 	_reaparecer(c)
-	broadcast(Protocol.pack_player_info(c.id, c.nome, c.traje), true)
+	broadcast(Protocol.pack_player_info(c.id, c.nome, c.traje, c.picareta, c.planador), true)
 	return c
 
 

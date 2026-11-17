@@ -41,14 +41,26 @@ func test_desempacotar_lixo_nao_quebra() -> void:
 
 
 func test_player_info_leva_o_traje() -> void:
-	var i := Protocol.unpack_player_info(Protocol.pack_player_info(7, "Brisa", "traje_brisa"))
+	var i := Protocol.unpack_player_info(Protocol.pack_player_info(7, "Brisa", "traje_capitao_mare", "picareta_ancora", "planador_arraia"))
 	assert_eq(i["name"], "Brisa")
-	assert_eq(i["outfit"], "traje_brisa")
+	assert_eq(i["outfit"], "traje_capitao_mare")
+	assert_eq(i["pickaxe"], "picareta_ancora")
+	assert_eq(i["glider"], "planador_arraia")
 	assert_eq(Protocol.unpack_player_info(Protocol.pack_player_info(7, "Ana"))["outfit"], "")
 
 
 func test_cosmeticos_com_padrao() -> void:
 	assert_eq(Cosmeticos.outfit_scene("traje_brisa"), "res://assets/personagens/recruta_brisa_01.glb")
+	assert_eq(Cosmeticos.pickaxe_scene("picareta_ancora"), "res://assets/armas/ancora_01.glb")
+	assert_eq(Cosmeticos.pickaxe_scene(""), "res://assets/armas/picareta_01.glb")
+	assert_eq(Cosmeticos.glider_scene("planador_arraia"), "res://assets/cenario/planador_arraia_01.glb")
+	assert_eq(Cosmeticos.glider_scene("nao_existe"), "res://assets/cenario/planador_01.glb")
+	for t in Cosmeticos.config()["trajes"]:
+		assert_true(ResourceLoader.exists(Cosmeticos.outfit_scene(t)), "traje %s existe" % t)
+	for t in Cosmeticos.config()["picaretas"]:
+		assert_true(ResourceLoader.exists(Cosmeticos.pickaxe_scene(t)), "picareta %s existe" % t)
+	for t in Cosmeticos.config()["planadores"]:
+		assert_true(ResourceLoader.exists(Cosmeticos.glider_scene(t)), "planador %s existe" % t)
 	assert_eq(Cosmeticos.outfit_scene("nao_existe"), "res://assets/personagens/recruta_base_01.glb")
 	assert_eq(Cosmeticos.outfit_scene(""), "res://assets/personagens/recruta_base_01.glb")
 	assert_true(Cosmeticos.valid_id("traje_brisa"))

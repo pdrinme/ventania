@@ -116,76 +116,88 @@
       "notas": "Traje feminino do personagem-base: mesmo esqueleto, animações e hitbox (Etapa 9)"
     },
     {
-      "id": "recruta_tormenta_01",
-      "nome": "Recruta Tormenta (traje)",
+      "id": "capitao_mare_01",
+      "nome": "Capitão Maré (traje)",
       "categoria": "personagens",
-      "notas": "Variação de cor de traje (mesmo esqueleto, animações e hitbox); recompensa do passe da Temporada 1 (Etapa 10)"
+      "notas": "Skin original: aquário no lugar da cabeça (vidro, água, cascalho, algas, castelinho) e corpo de robô de metal; usa M_vidro_ventania e M_agua_ventania"
     },
     {
-      "id": "brisa_aurora_01",
-      "nome": "Brisa Aurora (traje)",
+      "id": "entregador_01",
+      "nome": "Entregador (traje)",
       "categoria": "personagens",
-      "notas": "Variação de cor de traje (mesmo esqueleto, animações e hitbox); recompensa do passe da Temporada 1 (Etapa 10)"
+      "notas": "Skin original: capacete de moto, mochila térmica, jaqueta com faixas refletivas"
     },
     {
-      "id": "recruta_ourodesol_01",
-      "nome": "Recruta Ouro-de-Sol (traje)",
+      "id": "escafandro_01",
+      "nome": "Escafandro (traje)",
       "categoria": "personagens",
-      "notas": "Variação de cor de traje (mesmo esqueleto, animações e hitbox); recompensa do passe da Temporada 1 (Etapa 10)"
+      "notas": "Skin original: mergulhador antigo com capacete de latão de três vigias"
     },
     {
-      "id": "brisa_meianoite_01",
-      "nome": "Brisa Meia-Noite (traje)",
+      "id": "faz_tudo_01",
+      "nome": "Faz-Tudo (traje)",
       "categoria": "personagens",
-      "notas": "Variação de cor de traje (mesmo esqueleto, animações e hitbox); recompensa do passe da Temporada 1 (Etapa 10)"
+      "notas": "Skin original: robô de manutenção com cabeça de monitor, giroflex, chave inglesa e esteiras"
     },
     {
-      "id": "recruta_coral_01",
-      "nome": "Recruta Coral (traje)",
+      "id": "espantalho_01",
+      "nome": "Espantalho (traje)",
       "categoria": "personagens",
-      "notas": "Traje da loja (Etapa 11): variação de cor no mesmo esqueleto, animações e hitbox"
+      "notas": "Skin original: saco de estopa, chapéu de palha, palha nas mangas e um corvo no ombro"
     },
     {
-      "id": "recruta_floresta_01",
-      "nome": "Recruta Floresta (traje)",
+      "id": "explorador_01",
+      "nome": "Explorador das Nuvens (traje)",
       "categoria": "personagens",
-      "notas": "Traje da loja (Etapa 11): variação de cor no mesmo esqueleto, animações e hitbox"
+      "notas": "Skin original: gorro de aviador, óculos, gola de pelúcia, cachecol ao vento e mochila-hélice"
     },
     {
-      "id": "brisa_oceano_01",
-      "nome": "Brisa Oceano (traje)",
+      "id": "botanico_01",
+      "nome": "Botânico (traje)",
       "categoria": "personagens",
-      "notas": "Traje da loja (Etapa 11): variação de cor no mesmo esqueleto, animações e hitbox"
+      "notas": "Skin original: criatura-planta de madeira com coroa de folhas, flor, cogumelos e raízes"
     },
     {
-      "id": "brisa_pordosol_01",
-      "nome": "Brisa Pôr-do-Sol (traje)",
+      "id": "astronomo_01",
+      "nome": "Astrônomo (traje)",
       "categoria": "personagens",
-      "notas": "Traje da loja (Etapa 11): variação de cor no mesmo esqueleto, animações e hitbox"
+      "notas": "Skin original: cabeça de planeta com anel e lua, sobretudo estrelado e telescópio"
     },
     {
-      "id": "recruta_neve_01",
-      "nome": "Recruta Neve (traje)",
+      "id": "guardiao_01",
+      "nome": "Guardião da Tempestade (traje)",
       "categoria": "personagens",
-      "notas": "Traje da loja (Etapa 11): variação de cor no mesmo esqueleto, animações e hitbox"
+      "notas": "Skin original: armadura com ombreiras de nuvem, crista de raio e viseira em T"
     },
     {
-      "id": "brisa_cacto_01",
-      "nome": "Brisa Cacto (traje)",
-      "categoria": "personagens",
-      "notas": "Traje da loja (Etapa 11): variação de cor no mesmo esqueleto, animações e hitbox"
+      "id": "peixe_laranja_01",
+      "nome": "Peixinho laranja (aquário)",
+      "categoria": "mochilas_acessorios",
+      "notas": "Nada no aquário do Capitão Maré (TrajeFx)"
     },
     {
-      "id": "recruta_vulcao_01",
-      "nome": "Recruta Vulcão (traje)",
-      "categoria": "personagens",
-      "notas": "Traje da loja (Etapa 11): variação de cor no mesmo esqueleto, animações e hitbox"
+      "id": "peixe_amarelo_01",
+      "nome": "Peixinho amarelo (aquário)",
+      "categoria": "mochilas_acessorios",
+      "notas": "Nada no aquário do Capitão Maré (TrajeFx)"
     },
     {
-      "id": "brisa_relampago_01",
-      "nome": "Brisa Relâmpago (traje)",
-      "categoria": "personagens",
-      "notas": "Traje da loja (Etapa 11): variação de cor no mesmo esqueleto, animações e hitbox"
+      "id": "ancora_01",
+      "nome": "Picareta-âncora",
+      "categoria": "armas",
+      "notas": "Picareta cosmética do Capitão Maré: mesmos marcadores da picareta padrão"
+    },
+    {
+      "id": "planador_arraia_01",
+      "nome": "Planador Arraia",
+      "categoria": "cenario",
+      "notas": "Planador cosmético do Capitão Maré"
+    },
+    {
+      "id": "planador_folha_01",
+      "nome": "Planador Folha",
+      "categoria": "cenario",
+      "notas": "Planador cosmético do Botânico"
     },
     {
       "id": "rajada_01",

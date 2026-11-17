@@ -36,7 +36,7 @@
     },
     {
       "nivel": 8,
-      "item": "traje_tormenta"
+      "item": "traje_explorador"
     },
     {
       "nivel": 9,
@@ -76,7 +76,7 @@
     },
     {
       "nivel": 18,
-      "item": "traje_aurora"
+      "item": "traje_botanico"
     },
     {
       "nivel": 19,
@@ -104,7 +104,7 @@
     },
     {
       "nivel": 25,
-      "faiscas": 150
+      "item": "planador_folha"
     },
     {
       "nivel": 26,
@@ -124,7 +124,7 @@
     },
     {
       "nivel": 30,
-      "item": "traje_ourodesol"
+      "item": "traje_astronomo"
     },
     {
       "nivel": 31,
@@ -204,7 +204,7 @@
     },
     {
       "nivel": 50,
-      "item": "traje_meianoite"
+      "item": "traje_guardiao"
     }
   ],
   "desafios": [

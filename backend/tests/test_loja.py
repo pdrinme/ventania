@@ -48,10 +48,10 @@ class TestLoja(Base):
     def test_agenda_manda(self):
         cfg = copy.deepcopy(self.loja.cfg)
         segunda = self.loja._hoje() - datetime.timedelta(days=self.loja._hoje().weekday())
-        cfg["agenda"] = [{"data": segunda.isoformat(), "secao": "destaques", "itens": ["traje_vulcao", "traje_relampago"]}]
+        cfg["agenda"] = [{"data": segunda.isoformat(), "secao": "destaques", "itens": ["traje_capitao_mare", "picareta_ancora"]}]
         loja = Loja(self.p, cfg)
-        self.assertEqual(loja.vitrine()["destaques"][0], ["traje_vulcao", "traje_relampago"])
-        cfg["agenda"][0]["itens"] = ["traje_meianoite"]           # item do passe não pode
+        self.assertEqual(loja.vitrine()["destaques"][0], ["traje_capitao_mare", "picareta_ancora"])
+        cfg["agenda"][0]["itens"] = ["traje_guardiao"]            # item do passe não pode
         self.assertTrue(validar_loja(cfg, self.p.cfg["catalogo"], self.p.cfg["temporadas"]))
 
     def test_compra_atomica_e_idempotente(self):
@@ -82,7 +82,7 @@ class TestLoja(Base):
         with self.assertRaises(HttpError):
             self.loja.comprar(self.a, fora, None, "chave-fora")
         with self.assertRaises(HttpError):
-            self.loja.comprar(self.a, "traje_meianoite", None, "chave-passe")     # do passe
+            self.loja.comprar(self.a, "traje_guardiao", None, "chave-passe")      # do passe
         item = sorted(a_venda)[0]
         with self.assertRaises(HttpError) as e:
             self.loja.comprar(self.a, item, 1, "chave-preco")                    # preço diferente

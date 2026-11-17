@@ -37,7 +37,7 @@ class App:
         self.partidas = Partidas(self.social, self.contas, self.segredo, self.cfg.ticket_ttl_s)
         self.progressao = Progressao(con, self.contas, self.eventos)
         self.loja = Loja(self.progressao)
-        self.partidas.traje_de = lambda c: self.progressao.equipado(c, "traje")
+        self.partidas.equipados_de = lambda c: {s: self.progressao.equipado(c, s) for s in ("traje", "picareta", "planador")}
         self.social.traje_de = lambda c: self.progressao.equipado(c, "traje")
         r = self.router = Router()
         r.add("GET", "/v1/health", self.health)

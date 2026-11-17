@@ -16,6 +16,9 @@ const LIMITE_SOMBRA_M := 0.5
 ## compartilhado do projeto. Um material para o kit inteiro = menos trocas de estado na GPU.
 const MATERIAIS_COMPARTILHADOS := {
 	"M_paleta_ventania": "res://assets/texturas_materiais/M_paleta_ventania.tres",
+	# transparentes do aquário (Capitão Maré): o vidro desenha depois da água (render_priority)
+	"M_vidro_ventania": "res://assets/texturas_materiais/M_vidro_ventania.tres",
+	"M_agua_ventania": "res://assets/texturas_materiais/M_agua_ventania.tres",
 }
 
 var _malhas := 0

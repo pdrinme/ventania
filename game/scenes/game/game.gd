@@ -212,7 +212,8 @@ func _subir_servidor_local() -> int:
 		cfg["bots"] = {"preencher_ate": int(SceneManager.params.get("bots", BotCerebro.config().get("preencher_ate", 16)))}
 	server = GameServer.new(mundo_srv, 0, "br" if br else "treino", cfg)
 	# partida local: o servidor é deste processo; veste o traje equipado na conta (se houver)
-	server.traje_sem_ticket = str(Meta.profile.get("equipped", {}).get("traje", ""))
+	var eq: Dictionary = Meta.profile.get("equipped", {})
+	server.cosmeticos_sem_ticket = {"traje": str(eq.get("traje", "")), "picareta": str(eq.get("picareta", "")), "planador": str(eq.get("planador", ""))}
 	add_child(server)
 	for porta in PORTAS_LOCAIS:
 		if server.start(porta, "127.0.0.1") == OK:
@@ -286,8 +287,7 @@ func _on_welcome(info: Dictionary) -> void:
 	pawn.entity_id = info["id"]
 	mundo.add_child(pawn)
 	pawn.global_position = mundo.spawn_point(0)
-	visual = PawnVisual.new()
-	visual.traje = _trajes.get(info["id"], "")
+	visual = _novo_visual(info["id"])
 	pawn.add_child(visual)
 	camera.alvo = pawn
 	match_hud.jogador = pawn
@@ -351,8 +351,7 @@ func _reconciliar(e: Protocol.EntityState, ack: int) -> void:
 
 func _amostra_remoto(e: Protocol.EntityState, tick: int) -> void:
 	if not _remotos.has(e.id):
-		var v := PawnVisual.new()
-		v.traje = _trajes.get(e.id, "")
+		var v := _novo_visual(e.id)
 		v.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 		mundo.add_child(v)
 		var nome := Label3D.new()
@@ -392,25 +391,32 @@ func _mostrar_nome(boneco: bool, pos: Vector3) -> bool:
 	return olho.distance_to(pos) <= NOME_DISTANCIA_M
 
 
-var _trajes := {}            # id -> traje equipado (S_PLAYER_INFO)
+var _cosmeticos := {}        # id -> {"traje", "picareta", "planador"} (S_PLAYER_INFO). Só aparência.
 
 
-## Traje de um jogador (inclusive o próprio): troca o visual se já existir.
-func _on_traje(id: int, traje: String) -> void:
-	if _trajes.get(id, "") == traje:
+func _novo_visual(id: int) -> PawnVisual:
+	var c: Dictionary = _cosmeticos.get(id, {})
+	var v := PawnVisual.new()
+	v.traje = c.get("traje", "")
+	v.picareta_id = c.get("picareta", "")
+	v.planador_id = c.get("planador", "")
+	return v
+
+
+## Cosméticos de um jogador (inclusive o próprio): troca o visual se já existir.
+func _on_traje(id: int, cos: Dictionary) -> void:
+	if _cosmeticos.get(id, {}) == cos:
 		return
-	_trajes[id] = traje
+	_cosmeticos[id] = cos
 	if pawn and id == pawn.entity_id and visual:
-		var novo := PawnVisual.new()
-		novo.traje = traje
+		var novo := _novo_visual(id)
 		visual.queue_free()
 		visual = novo
 		pawn.add_child(visual)
 	elif _remotos.has(id):
 		var r: Dictionary = _remotos[id]
 		var antigo: PawnVisual = r["visual"]
-		var novo := PawnVisual.new()
-		novo.traje = traje
+		var novo := _novo_visual(id)
 		novo.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 		mundo.add_child(novo)
 		novo.global_transform = antigo.global_transform

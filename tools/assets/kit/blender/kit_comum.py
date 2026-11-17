@@ -46,6 +46,28 @@ def material():
     return m
 
 
+def material_especial(nome, rgba):
+    """Material extra exportado SÓ PELO NOME (sem textura): a Godot troca pelo
+    material compartilhado de mesmo nome (game/pipeline/post_import.gd), ex.:
+    M_vidro_ventania, M_agua_ventania. A cor aqui serve só para ver no Blender."""
+    m = bpy.data.materials.get(nome)
+    if m:
+        return m
+    m = bpy.data.materials.new(nome)
+    m.use_nodes = True
+    bsdf = m.node_tree.nodes.get("Principled BSDF")
+    bsdf.inputs["Base Color"].default_value = rgba
+    bsdf.inputs["Alpha"].default_value = rgba[3]
+    return m
+
+
+def usar_material(obj, mat):
+    """Troca o material da peça (antes de unir) por um material especial."""
+    obj.data.materials.clear()
+    obj.data.materials.append(mat)
+    return obj
+
+
 def uv_cor(nome_cor):
     """Centro da célula da cor no atlas (V invertido: linha 0 no topo da imagem)."""
     i = _INDICE[nome_cor]

@@ -88,8 +88,8 @@ def validar_temporada(t: dict, cfg: dict, outras=(), visuais: dict | None = None
                 erros.append(f"nível {r['nivel']}: item '{r['item']}' repetido no passe")
             elif r["item"] in cfg["progressao"]["itens_iniciais"] + cfg["progressao"].get("presentes", []):
                 erros.append(f"nível {r['nivel']}: '{r['item']}' já é de todo mundo (inicial/presente)")
-            elif visuais is not None and item["categoria"] == "traje" and r["item"] not in visuais.get("trajes", {}):
-                erros.append(f"nível {r['nivel']}: traje '{r['item']}' não tem visual no jogo (game/data/cosmeticos.json)")
+            elif visuais is not None and not tem_visual(item, visuais):
+                erros.append(f"nível {r['nivel']}: {item['categoria']} '{r['item']}' não tem visual no jogo (game/data/cosmeticos.json)")
             vistos.add(r["item"])
     ids = set()
     for d in t.get("desafios", []):
@@ -97,6 +97,15 @@ def validar_temporada(t: dict, cfg: dict, outras=(), visuais: dict | None = None
             erros.append(f"desafio inválido: {d.get('id')}")
         ids.add(d.get("id"))
     return erros
+
+
+TABELA_VISUAL = {"traje": "trajes", "picareta": "picaretas", "planador": "planadores"}
+
+
+def tem_visual(item: dict, visuais: dict) -> bool:
+    """O jogo tem o modelo desse cosmético? (categorias sem modelo próprio, como emote, passam)."""
+    tabela = TABELA_VISUAL.get(item["categoria"])
+    return tabela is None or item["id"] in visuais.get(tabela, {})
 
 
 def estimar_horas(t: dict, cfg: dict) -> dict:

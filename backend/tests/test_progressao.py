@@ -179,7 +179,8 @@ class TestApiProgressao(unittest.TestCase):
             a.heartbeat(24800)
             a.chamar("/v1/match/queue", {}, tok)
             ev = [e for e in a.eventos(tok) if e["type"] == "match_found"][-1]["data"]
-            self.assertEqual(verificar("segredo-de-teste", ev["ticket"])["traje"], "traje_brisa")
+            t = verificar("segredo-de-teste", ev["ticket"])
+            self.assertEqual((t["traje"], t["pic"], t["plan"]), ("traje_brisa", "picareta_padrao", "planador_padrao"))
 
 
 if __name__ == "__main__":

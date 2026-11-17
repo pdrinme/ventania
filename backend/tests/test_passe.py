@@ -26,7 +26,7 @@ class TestPasse(Base):
 
     def test_xp_sobe_o_passe_e_entrega_o_traje(self):
         xp_por = self.p.temporada()["xp_por_nivel"]
-        # várias partidas grandes até passar do nível 8 (Recruta Tormenta)
+        # várias partidas grandes até passar do nível 8 (Explorador das Nuvens)
         i = 0
         while self.p.passe(self.a)["nivel"] < 9 and i < 60:
             self.relatorio(f"p{i}", **{str(self.a): {"colocacao": 1, "venceu": True, "eliminacoes": 15, "tempo_s": 1200,
@@ -35,8 +35,8 @@ class TestPasse(Base):
         pa = self.p.passe(self.a)
         self.assertGreaterEqual(pa["nivel"], 9)
         self.assertEqual(pa["xp"] // xp_por + 1, pa["nivel"])
-        tormenta = [u for u in self.p.perfil(self.a)["unlocks"] if u["item"] == "traje_tormenta"]
-        self.assertEqual(tormenta[0]["source"], "passe:t1:8")
+        explorador = [u for u in self.p.perfil(self.a)["unlocks"] if u["item"] == "traje_explorador"]
+        self.assertEqual(explorador[0]["source"], "passe:t1:8")
         self.assertTrue(pa["niveis"][7]["obtido"])
         self.assertFalse(pa["niveis"][49]["obtido"])
         # a Faísca de cada nível entrou uma vez só no extrato
@@ -67,7 +67,8 @@ class TestValidacao(unittest.TestCase):
         self.t = copy.deepcopy(self.cfg["temporadas"][0])
 
     def erros(self, t, outras=()):
-        return validar_temporada(t, self.cfg, outras, {"trajes": {"traje_tormenta": 1, "traje_aurora": 1, "traje_ourodesol": 1, "traje_meianoite": 1}})
+        return validar_temporada(t, self.cfg, outras, {"trajes": {"traje_explorador": 1, "traje_botanico": 1, "traje_astronomo": 1, "traje_guardiao": 1},
+                                                       "planadores": {"planador_folha": 1}})
 
     def test_publicada_e_valida_e_dentro_da_meta_de_horas(self):
         self.assertEqual(self.erros(self.t), [])
@@ -78,11 +79,11 @@ class TestValidacao(unittest.TestCase):
         self.assertTrue(any("1..N" in e for e in self.erros(t)))
         t = copy.deepcopy(self.t); t["recompensas"][7] = {"nivel": 8, "item": "nao_existe"}
         self.assertTrue(any("catálogo" in e for e in self.erros(t)))
-        t = copy.deepcopy(self.t); t["recompensas"][9] = {"nivel": 10, "item": "traje_tormenta"}
+        t = copy.deepcopy(self.t); t["recompensas"][9] = {"nivel": 10, "item": "traje_explorador"}
         self.assertTrue(any("repetido" in e for e in self.erros(t)))
         t = copy.deepcopy(self.t); t["recompensas"][9] = {"nivel": 10, "item": "traje_brisa"}
         self.assertTrue(any("todo mundo" in e for e in self.erros(t)))
-        t = copy.deepcopy(self.t); t["recompensas"][2] = {"nivel": 3, "faiscas": 10, "item": "traje_aurora"}
+        t = copy.deepcopy(self.t); t["recompensas"][2] = {"nivel": 3, "faiscas": 10, "item": "traje_botanico"}
         self.assertTrue(any("exatamente uma" in e for e in self.erros(t)))
         t = copy.deepcopy(self.t); t["fim"] = t["inicio"]
         self.assertTrue(any("depois" in e for e in self.erros(t)))

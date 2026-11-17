@@ -70,40 +70,6 @@ TRAJES = {
         "pele": "pele_1", "camisa": "roxo", "faixa": "amarelo_sol", "calca": "verde_militar", "luva": "cinza_tecido",
         "bota": "couro", "cabelo": "cabelo_castanho", "cachecol": "teal", "feminino": True,
     },
-    # Variações de cor (Etapa 10, recompensas do passe da Temporada 1)
-    "recruta_tormenta_01": {
-        "pele": "pele_3", "camisa": "azul_tormenta", "faixa": "roxo", "calca": "preto", "luva": "metal_escuro",
-        "bota": "preto", "cabelo": "cabelo_preto", "cachecol": "roxo", "feminino": False,
-    },
-    "brisa_aurora_01": {
-        "pele": "pele_2", "camisa": "rosa", "faixa": "branco", "calca": "jeans", "luva": "branco",
-        "bota": "couro", "cabelo": "cabelo_castanho", "cachecol": "teal", "feminino": True,
-    },
-    "recruta_ourodesol_01": {
-        "pele": "pele_1", "camisa": "amarelo_sol", "faixa": "laranja", "calca": "madeira_escura", "luva": "dourado",
-        "bota": "madeira_escura", "cabelo": "cabelo_castanho", "cachecol": "laranja", "feminino": False,
-    },
-    # Trajes da loja (Etapa 11)
-    "recruta_coral_01": {"pele": "pele_2", "camisa": "coral", "faixa": "branco", "calca": "jeans", "luva": "cinza_tecido",
-                         "bota": "couro", "cabelo": "cabelo_castanho", "cachecol": "amarelo_sol", "feminino": False},
-    "recruta_floresta_01": {"pele": "pele_3", "camisa": "folha_media", "faixa": "madeira_clara", "calca": "terra", "luva": "couro",
-                            "bota": "madeira_escura", "cabelo": "cabelo_preto", "cachecol": "laranja", "feminino": False},
-    "brisa_oceano_01": {"pele": "pele_1", "camisa": "agua", "faixa": "branco", "calca": "teal_escuro", "luva": "branco",
-                        "bota": "couro", "cabelo": "cabelo_castanho", "cachecol": "coral", "feminino": True},
-    "brisa_pordosol_01": {"pele": "pele_3", "camisa": "laranja", "faixa": "rosa", "calca": "roxo", "luva": "rosa",
-                          "bota": "couro", "cabelo": "cabelo_preto", "cachecol": "rosa", "feminino": True},
-    "recruta_neve_01": {"pele": "pele_1", "camisa": "branco", "faixa": "azul_ceu", "calca": "cinza_tecido", "luva": "azul_ceu",
-                        "bota": "metal_claro", "cabelo": "cabelo_castanho", "cachecol": "azul_ceu", "feminino": False},
-    "brisa_cacto_01": {"pele": "pele_2", "camisa": "folha_escura", "faixa": "rosa", "calca": "areia", "luva": "folha_clara",
-                       "bota": "madeira_media", "cabelo": "cabelo_castanho", "cachecol": "rosa", "feminino": True},
-    "recruta_vulcao_01": {"pele": "pele_4", "camisa": "vermelho", "faixa": "laranja", "calca": "preto", "luva": "preto",
-                          "bota": "preto", "cabelo": "cabelo_preto", "cachecol": "amarelo_sol", "feminino": False},
-    "brisa_relampago_01": {"pele": "pele_2", "camisa": "azul_tormenta", "faixa": "amarelo_sol", "calca": "preto", "luva": "amarelo_sol",
-                           "bota": "preto", "cabelo": "cabelo_preto", "cachecol": "amarelo_sol", "feminino": True},
-    "brisa_meianoite_01": {
-        "pele": "pele_4", "camisa": "preto", "faixa": "roxo", "calca": "preto", "luva": "roxo",
-        "bota": "preto", "cabelo": "cabelo_preto", "cachecol": "azul_tormenta", "feminino": True,
-    },
 }
 
 

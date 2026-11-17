@@ -1,0 +1,43 @@
+{
+  "_doc": "Itens do passe de batalha da Temporada 1 (personagens originais).",
+  "itens": [
+    {
+      "id": "traje_explorador",
+      "nome": "Explorador das Nuvens",
+      "categoria": "traje",
+      "raridade": "raro",
+      "conjunto": "explorador",
+      "descricao": "Gorro de aviador, óculos enormes, gola de pelúcia e uma mochila-hélice. Passe da Temporada 1, nível 8."
+    },
+    {
+      "id": "traje_botanico",
+      "nome": "Botânico",
+      "categoria": "traje",
+      "raridade": "epico",
+      "conjunto": "botanico",
+      "descricao": "Madeira, musgo, cogumelos e uma flor de vento na cabeça. Passe da Temporada 1, nível 18."
+    },
+    {
+      "id": "planador_folha",
+      "nome": "Folha ao Vento",
+      "categoria": "planador",
+      "raridade": "raro",
+      "conjunto": "botanico",
+      "descricao": "Uma folha gigante com nervuras. Passe da Temporada 1, nível 25."
+    },
+    {
+      "id": "traje_astronomo",
+      "nome": "Astrônomo",
+      "categoria": "traje",
+      "raridade": "epico",
+      "descricao": "A cabeça é um planetinha com anel e lua; nas costas, um telescópio de latão. Passe da Temporada 1, nível 30."
+    },
+    {
+      "id": "traje_guardiao",
+      "nome": "Guardião da Tempestade",
+      "categoria": "traje",
+      "raridade": "lendario",
+      "descricao": "Armadura de nuvem carregada, viseira acesa e crista de raio. Passe da Temporada 1, nível 50."
+    }
+  ]
+}

@@ -35,34 +35,6 @@
       "categoria": "emote",
       "raridade": "incomum",
       "descricao": "Um tchauzinho amigável. Recompensa do nível 2."
-    },
-    {
-      "id": "traje_tormenta",
-      "nome": "Recruta Tormenta",
-      "categoria": "traje",
-      "raridade": "raro",
-      "descricao": "Azul de céu carregado e cachecol roxo. Passe da Temporada 1, nível 8."
-    },
-    {
-      "id": "traje_aurora",
-      "nome": "Brisa Aurora",
-      "categoria": "traje",
-      "raridade": "raro",
-      "descricao": "Rosa de amanhecer e luvas brancas. Passe da Temporada 1, nível 18."
-    },
-    {
-      "id": "traje_ourodesol",
-      "nome": "Recruta Ouro-de-Sol",
-      "categoria": "traje",
-      "raridade": "epico",
-      "descricao": "Brilha mais que o meio-dia na Pedreira. Passe da Temporada 1, nível 30."
-    },
-    {
-      "id": "traje_meianoite",
-      "nome": "Brisa Meia-Noite",
-      "categoria": "traje",
-      "raridade": "lendario",
-      "descricao": "Preto e roxo de quem atravessa a Tormenta sem piscar. Passe da Temporada 1, nível 50."
     }
   ]
 }

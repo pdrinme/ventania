@@ -4,18 +4,15 @@
   "trajes": {
     "traje_recruta": "res://assets/personagens/recruta_base_01.glb",
     "traje_brisa": "res://assets/personagens/recruta_brisa_01.glb",
-    "traje_tormenta": "res://assets/personagens/recruta_tormenta_01.glb",
-    "traje_aurora": "res://assets/personagens/brisa_aurora_01.glb",
-    "traje_ourodesol": "res://assets/personagens/recruta_ourodesol_01.glb",
-    "traje_meianoite": "res://assets/personagens/brisa_meianoite_01.glb",
-    "traje_coral": "res://assets/personagens/recruta_coral_01.glb",
-    "traje_floresta": "res://assets/personagens/recruta_floresta_01.glb",
-    "traje_oceano": "res://assets/personagens/brisa_oceano_01.glb",
-    "traje_pordosol": "res://assets/personagens/brisa_pordosol_01.glb",
-    "traje_neve": "res://assets/personagens/recruta_neve_01.glb",
-    "traje_cacto": "res://assets/personagens/brisa_cacto_01.glb",
-    "traje_vulcao": "res://assets/personagens/recruta_vulcao_01.glb",
-    "traje_relampago": "res://assets/personagens/brisa_relampago_01.glb"
+    "traje_capitao_mare": "res://assets/personagens/capitao_mare_01.glb",
+    "traje_entregador": "res://assets/personagens/entregador_01.glb",
+    "traje_escafandro": "res://assets/personagens/escafandro_01.glb",
+    "traje_faz_tudo": "res://assets/personagens/faz_tudo_01.glb",
+    "traje_espantalho": "res://assets/personagens/espantalho_01.glb",
+    "traje_explorador": "res://assets/personagens/explorador_01.glb",
+    "traje_botanico": "res://assets/personagens/botanico_01.glb",
+    "traje_astronomo": "res://assets/personagens/astronomo_01.glb",
+    "traje_guardiao": "res://assets/personagens/guardiao_01.glb"
   },
   "trajes_dos_bots": [
     "traje_recruta",
@@ -23,10 +20,17 @@
   ],
   "picareta_padrao": "picareta_padrao",
   "picaretas": {
-    "picareta_padrao": "res://assets/armas/picareta_01.glb"
+    "picareta_padrao": "res://assets/armas/picareta_01.glb",
+    "picareta_ancora": "res://assets/armas/ancora_01.glb"
   },
   "planador_padrao": "planador_padrao",
   "planadores": {
-    "planador_padrao": "res://assets/cenario/planador_01.glb"
-  }
+    "planador_padrao": "res://assets/cenario/planador_01.glb",
+    "planador_arraia": "res://assets/cenario/planador_arraia_01.glb",
+    "planador_folha": "res://assets/cenario/planador_folha_01.glb"
+  },
+  "efeitos": {
+    "traje_capitao_mare": "aquario"
+  },
+  "_doc_efeitos": "Efeitos cosméticos por traje (TrajeFx): 'aquario' = peixes nadando, bolhas e água que reage ao movimento. Só aparência."
 }

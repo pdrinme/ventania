@@ -4,7 +4,7 @@ Uso (na raiz do repositório):
   python3 tools/admin_loja.py listar                    # catálogo: itens, raridade, preço, origem
   python3 tools/admin_loja.py validar                   # catálogo + loja + agenda + temporadas
   python3 tools/admin_loja.py prever --dias 14          # rotação dos próximos dias (Destaques e Diária)
-  python3 tools/admin_loja.py agendar --data 2026-11-23 --secao destaques --itens traje_vulcao,traje_relampago
+  python3 tools/admin_loja.py agendar --data 2026-11-23 --secao destaques --itens traje_capitao_mare,picareta_ancora
   python3 tools/admin_loja.py desagendar --data 2026-11-23 --secao destaques
   python3 tools/admin_loja.py conceder --conta Ana --faiscas 1000 --motivo "teste da loja" [--db backend/data/meta.sqlite3]
 

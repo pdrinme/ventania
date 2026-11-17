@@ -63,7 +63,7 @@ class Jogador:
 		add_child(client)
 		client.ticket = m.get("ticket", "")
 		client.player_info.connect(func(id, n): nomes[id] = n)
-		client.player_outfit.connect(func(id, t): trajes[id] = t)
+		client.player_outfit.connect(func(id, c): trajes[id] = c)
 		client.match_state.connect(func(x): partida = x)
 		client.connect_to("127.0.0.1", int(m["port"]), "NomeQualquer")
 
@@ -141,8 +141,11 @@ func _init() -> void:
 	_checar(a.client.connected and b.client.connected, "os dois entraram na sala com o ticket")
 	var nomes: Array = a.nomes.values()
 	_checar(("Ana" + sufixo) in nomes and ("Bia" + sufixo) in nomes and not "NomeQualquer" in nomes, "nomes vêm da conta: %s" % str(nomes))
-	_checar(b.trajes.get(a.client.my_id, "") == "traje_brisa" and b.trajes.get(b.client.my_id, "x") == "traje_recruta",
+	var cos_ana: Dictionary = b.trajes.get(a.client.my_id, {})
+	_checar(cos_ana.get("traje", "") == "traje_brisa" and b.trajes.get(b.client.my_id, {}).get("traje", "x") == "traje_recruta",
 			"na partida, a Bia vê a Ana de Recruta Brisa (e ela mesma de Recruta)")
+	_checar(cos_ana.get("picareta", "") == "picareta_padrao" and cos_ana.get("planador", "") == "planador_padrao",
+			"picareta e planador equipados também chegam aos outros (%s)" % str(cos_ana))
 	var g: Dictionary = (await a.chamar(HTTPClient.METHOD_GET, "/v1/party"))["data"]
 	_checar(g["state"] == "partida", "grupo em partida no meta-servidor")
 	# matchmaking: a sala espera um pouco por mais pessoas (8 s nos testes) e depois os bots completam

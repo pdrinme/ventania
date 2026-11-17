@@ -31,6 +31,13 @@ def carregar_loja(pasta: str | None = None) -> dict:
 def validar_loja(loja: dict, catalogo: dict, temporadas=()) -> list:
     erros = []
     elegiveis = {i for i, it in catalogo.items() if it.get("loja")}
+    from .progressao import COSMETICOS_JOGO, _ler, tem_visual
+    import os
+    if os.path.exists(COSMETICOS_JOGO):
+        visuais = _ler(COSMETICOS_JOGO)
+        for i in sorted(elegiveis):
+            if not tem_visual(catalogo[i], visuais):
+                erros.append(f"item {i} está à venda mas não tem visual no jogo (game/data/cosmeticos.json)")
     for i in elegiveis:
         if catalogo[i]["raridade"] not in loja["precos"] and "preco" not in catalogo[i]:
             erros.append(f"item {i}: sem preço para a raridade {catalogo[i]['raridade']}")

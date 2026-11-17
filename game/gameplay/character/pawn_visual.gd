@@ -45,12 +45,15 @@ var _w_preparar := 0.0
 var _inclinacao := Basis()        # orientação procedural do corpo no ar (deitado, mergulho, curvas)
 var _t_ar := 0.0
 var traje := ""                   # id do traje equipado (defina antes de entrar na árvore)
+var picareta_id := ""             # picareta cosmética (mesmos marcadores; gameplay igual)
+var fx: TrajeFx                   # efeito do traje (ex.: aquário), se houver
 
 
 func _ready() -> void:
 	_modelo = (load(Cosmeticos.outfit_scene(traje)) as PackedScene).instantiate() as Node3D
 	_modelo.rotation.y = PI   # o modelo olha para +Z; o jogo usa -Z como frente
 	add_child(_modelo)
+	fx = TrajeFx.attach(_modelo, traje)
 	_sk = _modelo.find_children("*", "Skeleton3D", true, false)[0]
 	_ap = _modelo.find_children("*", "AnimationPlayer", true, false)[0]
 	_montar_arvore()
@@ -253,6 +256,8 @@ func _trocar_modelo(indice: int) -> void:
 	var caminho := ""
 	if com_arma:
 		caminho = "res://assets/armas/%s.glb" % ItemDB.weapon(id)["modelo"]
+	elif id == Inventory.PICKAXE_ID:
+		caminho = Cosmeticos.pickaxe_scene(picareta_id)        # picareta cosmética: só o visual muda
 	elif ItemDB.is_tool_item(id):
 		caminho = "res://assets/armas/%s.glb" % ItemDB.tool_def(id)["modelo"]
 	elif ItemDB.is_consumable(id):
@@ -365,6 +370,8 @@ func _process(delta: float) -> void:
 			_flash.visible = false
 	_anim_estado = _estado(h)
 	_entrada(delta)
+	if fx:
+		fx.velocidade = Basis(Vector3.UP, rotation.y).inverse() * _vel
 
 
 ## Pose de entrada a partir do que vem pela rede (estado de queda e velocidade).

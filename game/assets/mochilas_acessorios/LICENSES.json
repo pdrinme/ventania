@@ -1,1 +1,18 @@
-[]
+[
+  {
+    "file": "peixe_laranja_01.glb",
+    "asset_id": "peixe_laranja_01",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  },
+  {
+    "file": "peixe_amarelo_01.glb",
+    "asset_id": "peixe_amarelo_01",
+    "author": "Projeto Ventania",
+    "source": "original",
+    "license": "Original",
+    "attribution": ""
+  }
+]

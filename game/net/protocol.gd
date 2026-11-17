@@ -4,7 +4,7 @@ extends RefCounted
 ## Cliente envia ENTRADAS (não posições); servidor envia SNAPSHOTS do estado.
 ## Ver ARCHITECTURE §4.
 
-const GAME_PROTOCOL := 10
+const GAME_PROTOCOL := 11
 const DEFAULT_PORT := 24800
 const TICK_RATE := 30            # simulação (Hz)
 const SNAPSHOT_EVERY := 2        # snapshot a cada N ticks (15 Hz)
@@ -289,22 +289,25 @@ static func unpack_reject(data: PackedByteArray) -> String:
 	return b.get_utf8_string() if data.size() > 5 else "recusado"
 
 
-## v10: + traje equipado (id do item; vazio = padrão).
-static func pack_player_info(id: int, name: String, outfit := "") -> PackedByteArray:
+## v10: + traje equipado; v11: + picareta e planador (ids do catálogo; vazio = padrão).
+static func pack_player_info(id: int, name: String, outfit := "", pickaxe := "", glider := "") -> PackedByteArray:
 	var b := _buf()
 	b.put_u8(S_PLAYER_INFO)
 	b.put_u16(id)
 	b.put_utf8_string(name)
 	b.put_utf8_string(outfit.substr(0, 32))
+	b.put_utf8_string(pickaxe.substr(0, 32))
+	b.put_utf8_string(glider.substr(0, 32))
 	return b.data_array
 
 
 static func unpack_player_info(data: PackedByteArray) -> Dictionary:
 	var b := _reader(data)
 	b.seek(1)
-	var r := {"id": b.get_u16(), "name": b.get_utf8_string(), "outfit": ""}
-	if b.get_position() + 4 <= data.size():
-		r["outfit"] = b.get_utf8_string()
+	var r := {"id": b.get_u16(), "name": b.get_utf8_string(), "outfit": "", "pickaxe": "", "glider": ""}
+	for campo in ["outfit", "pickaxe", "glider"]:
+		if b.get_position() + 4 <= data.size():
+			r[campo] = b.get_utf8_string()
 	return r
 
 
