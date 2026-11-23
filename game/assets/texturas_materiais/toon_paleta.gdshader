@@ -5,7 +5,11 @@
 // - Brilho de borda (rim) leve no lado iluminado, para destacar a silhueta.
 // - Construções (Etapa 5, MultiMesh com dados por instância): INSTANCE_CUSTOM.x = dano
 //   0..1 (escurece e abre rachaduras progressivas), .y = obra 0..1 (tom azulado de
-//   "em construção"). Fora de MultiMesh com dados, os dois valem 0 e nada muda.
+//   "em construção"). .z = pintura (índice/16 na tabela TINTAS: paredes pastel e
+//   telhados coloridos das casas do mapa) e .w = "torto" (envergadura suave das peças
+//   do mapa, contínua no espaço do mundo: as emendas entre peças continuam fechadas;
+//   no máximo ~12 cm, a colisão continua valendo). Fora de MultiMesh com dados, tudo
+//   vale 0 e nada muda.
 shader_type spatial;
 render_mode specular_disabled;
 
@@ -22,10 +26,23 @@ uniform float forca_variacao : hint_range(0.0, 0.3) = 0.07;
 varying vec3 p_local;
 varying vec2 estado_peca;
 varying float ao_vertice;
+varying float tinta;
+
+const vec3 TINTAS[9] = vec3[](vec3(1.0), vec3(0.45, 0.82, 0.68), vec3(1.0, 0.66, 0.50), vec3(1.0, 0.85, 0.42),
+		vec3(0.72, 0.62, 0.96), vec3(0.50, 0.74, 1.0), vec3(0.88, 0.34, 0.28), vec3(0.16, 0.56, 0.62), vec3(0.44, 0.36, 0.78));
 
 void vertex() {
 	p_local = VERTEX;
 	estado_peca = INSTANCE_CUSTOM.xy;
+	tinta = INSTANCE_CUSTOM.z * 16.0;
+	if (INSTANCE_CUSTOM.w > 0.5) {
+		// envergadura "de desenho": função suave da posição no mundo (sem emendas)
+		vec3 w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+		vec3 off = vec3(sin(w.y * 0.31 + w.z * 0.09 + 1.3) * sin(w.x * 0.045 + w.z * 0.061 + 0.4),
+				sin(w.x * 0.07 + w.z * 0.05) * 0.25,
+				sin(w.y * 0.27 + w.x * 0.11 + 2.1) * cos(w.z * 0.052 - w.x * 0.037)) * 0.12;
+		VERTEX += transpose(mat3(MODEL_MATRIX)) * off;
+	}
 	// sem cor de vértice o atributo chega como preto (GLES3): a AO exportada nunca é
 	// menor que 0,35, então preto puro = "sem dado" (não escurece)
 	ao_vertice = (COLOR.r + COLOR.g + COLOR.b) < 0.03 ? 1.0 : COLOR.r;
@@ -81,6 +98,13 @@ void fragment() {
 		float rachadura = (1.0 - smoothstep(largura * 0.4, largura, b)) * max(aparece, step(0.6, dano));
 		cor *= 1.0 - dano * 0.30;
 		cor = mix(cor, vec3(0.13, 0.10, 0.09), rachadura * 0.9);
+	}
+	int t = int(round(tinta));
+	if (t > 0 && t < 9) {
+		// pinta as partes claras (tábuas, blocos); molduras e frestas escuras ficam
+		float l = dot(cor, vec3(0.3, 0.59, 0.11));
+		float pintar = smoothstep(0.3, 0.48, l);
+		cor = mix(cor, TINTAS[t] * (0.7 + 0.3 * l), pintar * 0.88);
 	}
 	float obra = estado_peca.y;
 	if (obra > 0.01) {

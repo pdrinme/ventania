@@ -174,3 +174,16 @@ func _aplicar_ambiente(n: Node) -> void:
 		env.fog_depth_end = dist
 		env.fog_depth_curve = 1.0
 		env.fog_density = 1.0
+		# acabamento por nível de detalhe: tonemap suave (médio/alto) e brilho leve
+		# nas partes claras (só alto). Baixo: nada, o mais barato possível.
+		var detalhe: String = store.get_value("graphics", "detail")
+		env.tonemap_mode = Environment.TONE_MAPPER_LINEAR if detalhe == "baixo" else Environment.TONE_MAPPER_FILMIC
+		env.tonemap_exposure = 1.0 if detalhe == "baixo" else 1.05
+		env.tonemap_white = 1.4
+		env.glow_enabled = detalhe == "alto"
+		env.glow_intensity = 0.35
+		env.glow_bloom = 0.04
+		env.glow_hdr_threshold = 1.1
+		env.adjustment_enabled = detalhe != "baixo"
+		env.adjustment_saturation = 1.08
+		env.adjustment_contrast = 1.04

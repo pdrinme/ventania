@@ -79,6 +79,9 @@ var _spawns: Array = []
 var _rng := RandomNumberGenerator.new()
 var _inst: KitInstancer
 var _props: Array = []              # [caminho, Transform3D, material]
+var _giradores: Array = []           # [caminho, Transform3D, velocidade] (partes que giram; só no cliente)
+var _tinta_parede := 0               # pintura das paredes da casa em montagem (ver toon_paleta TINTAS)
+var _tinta_telhado := 0
 var _pecas: Array = []              # construções do mapa: {"tipo","cell","rot","material","mask"} (Etapa 5)
 var _slots := {}
 var _ocupado: Array = []            # [Vector2 centro, raio]
@@ -115,6 +118,7 @@ func _init() -> void:
 	for p in _pads:
 		if p.get("cabana", false):
 			_cabana(p)
+	_marcos()
 	_natureza_loot()
 	_escolher_loot()
 	_vegetacao()
@@ -232,7 +236,7 @@ func harvest_points() -> Array:
 	if _coleta.is_empty():
 		for pr in _props:
 			var nome: String = (pr[0] as String).get_file().get_basename()
-			if nome == "pinheiro_01" or nome == "arvore_redonda_01" or nome == "pedra_01":
+			if nome.begins_with("pinheiro") or nome.begins_with("arvore") or nome == "pedra_01" or nome == "pedra_02":
 				_coleta.append((pr[1] as Transform3D).origin)
 	return _coleta
 
@@ -241,7 +245,8 @@ func harvest_points() -> Array:
 ## para contêineres, [centro, meias medidas Vector2, ângulo] (retângulo)
 ## (troncos de árvore e postes ficam para o desvio local).
 func nav_obstacles() -> Array:
-	var raios := {"pedra_01": 1.3, "conteiner_01": 3.0, "conteiner_02": 3.0, "conteiner_03": 3.0, "silo_01": 2.4,
+	var raios := {"pedra_01": 1.3, "pedra_02": 1.2, "cata_vento_gigante_01": 1.0, "farol_torto_01": 2.2,
+			"girassol_gigante_01": 0.8, "cogumelos_gigantes_01": 1.6, "pedras_equilibradas_01": 2.4, "conteiner_01": 3.0, "conteiner_02": 3.0, "conteiner_03": 3.0, "silo_01": 2.4,
 			"tenda_01": 1.4, "carrinho_01": 0.9, "tronco_01": 1.2}
 	var out := []
 	for pr in _props:
@@ -249,7 +254,7 @@ func nav_obstacles() -> Array:
 		if raios.has(nome):
 			var xf: Transform3D = pr[1]
 			var escala := xf.basis.get_scale().x
-			if nome == "pedra_01" and escala < 1.3:
+			if nome.begins_with("pedra") and escala < 1.3:
 				continue
 			if nome.begins_with("conteiner"):
 				# retângulo de verdade (6 × 2,4 m): os corredores de 2,6 m entre as fileiras
@@ -498,6 +503,13 @@ func _ready() -> void:
 	var grupos := _inst.build()
 	if com_ambiente:
 		_malhas_estradas()
+		for g in _giradores:
+			var cena := (load(g[0]) as PackedScene).instantiate() as Node3D
+			var giro := Girador.new()
+			giro.transform = g[1]
+			giro.velocidade = g[2]
+			giro.add_child(cena)
+			add_child(giro)
 	for dados_bau in _baus:
 		var bau := (load("res://assets/baus_coletaveis/bau_ventania_01.glb") as PackedScene).instantiate() as Node3D
 		bau.position = dados_bau[0]
@@ -512,13 +524,26 @@ func _ready() -> void:
 
 func _ambiente() -> void:
 	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
+	# céu em degradê (azul forte no alto, quase branco no horizonte) com sol suave
+	var ceu := ProceduralSkyMaterial.new()
+	ceu.sky_top_color = Color("4f9fe8")
+	ceu.sky_horizon_color = Color("c9ecff")
+	ceu.sky_curve = 0.12
+	ceu.ground_horizon_color = Color("c9ecff")
+	ceu.ground_bottom_color = Color("6cb8d8")
+	ceu.sun_angle_max = 8.0
+	ceu.sun_curve = 0.08
+	var sky := Sky.new()
+	sky.sky_material = ceu
+	sky.radiance_size = Sky.RADIANCE_SIZE_32
+	env.sky = sky
+	env.background_mode = Environment.BG_SKY
 	env.background_color = Color("8fd3ff")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color("b9c6ff")
 	env.ambient_light_energy = 0.32
 	env.fog_enabled = true
-	env.fog_light_color = Color("cfe9ff")
+	env.fog_light_color = Color("c9ecff")
 	env.fog_density = 0.0016
 	env.fog_sky_affect = 0.0
 	var we := WorldEnvironment.new()
@@ -526,8 +551,8 @@ func _ambiente() -> void:
 	we.add_to_group("ambiente")
 	add_child(we)
 	var sol := DirectionalLight3D.new()
-	sol.rotation_degrees = Vector3(-50, -35, 0)
-	sol.light_color = Color("fff3dc")
+	sol.rotation_degrees = Vector3(-46, -35, 0)
+	sol.light_color = Color("fff0d6")
 	sol.light_energy = 0.85
 	sol.add_to_group("sol")
 	add_child(sol)
@@ -753,7 +778,12 @@ func _peca(nome: String, pos: Vector3, rot_y := 0.0, mask := -1) -> void:
 		return
 	_slots[k] = true
 	var m := Grade.full_mask(tipo) if mask < 0 else mask
-	_pecas.append({"tipo": tipo, "cell": cell, "rot": rot, "material": mat, "mask": m})
+	var tinta := 0
+	if tipo == Grade.TETO:
+		tinta = _tinta_telhado
+	elif tipo == Grade.PAREDE_X or tipo == Grade.PAREDE_Z:
+		tinta = _tinta_parede
+	_pecas.append({"tipo": tipo, "cell": cell, "rot": rot, "material": mat, "mask": m, "tinta": tinta})
 
 
 func _prop(nome: String, pos: Vector3, rot_y := 0.0, escala := 1.0, material := ImpactMaterial.NENHUM) -> void:
@@ -776,6 +806,11 @@ func _prop_chao(nome: String, q: Vector2, rot_y := 0.0, escala := 1.0, material 
 func _casa(origem: Vector3, w: int, d: int, andares: int, mat: String, porta := "s", estilo := "casa") -> void:
 	var o := Vector3(snappedf(origem.x, CELULA), snappedf(origem.y, CELULA), snappedf(origem.z, CELULA))
 	var centro := o + Vector3(w * CELULA * 0.5, 0, d * CELULA * 0.5)
+	# pintura própria de cada casa (pelo lugar, sem gastar o sorteio do mapa): paredes
+	# de madeira em tons pastel, pedra caiada de leve; telhados em cores fortes
+	var sorte := absi(hash(Vector2i(roundi(o.x), roundi(o.z))))
+	_tinta_parede = 0 if mat == "metal" else 1 + sorte % 5
+	_tinta_telhado = 6 + (sorte / 7) % 3
 	_ocupado.append([Vector2(centro.x, centro.z), maxf(w, d) * CELULA * 0.75])
 	var porta_i := w / 2
 	var porta_j := d / 2
@@ -831,6 +866,8 @@ func _casa(origem: Vector3, w: int, d: int, andares: int, mat: String, porta := 
 		_cand["loot_casa"].append(Vector3(o.x + (w - 1) * CELULA + 2.0, o.y + CELULA + 0.1, o.z + 2.0))
 	if w * d >= 6:
 		_cand["loot_casa"].append(Vector3(o.x + (w - 1) * CELULA + 2.0, piso, o.z + (d - 1) * CELULA + 2.0))
+	_tinta_parede = 0
+	_tinta_telhado = 0
 
 
 # ---------------- mobília (interiores) ----------------
@@ -1279,6 +1316,55 @@ func _cabana(p: Dictionary) -> void:
 	_casa(Vector3(c.x - 2, p["h"], c.y - 2), 1, 1, 1, mats[_rng.randi() % mats.size()], portas[_rng.randi() % 4], "casa")
 
 
+# ---------------- marcos ----------------
+
+## Um marco surreal por POI (referência de longe, identidade do lugar). Posições
+## fixas em relação ao centro do POI, sem usar o sorteio do mapa; se o lugar
+## estiver ocupado, procura em volta.
+const MARCOS := [
+	["mirante_vento", "cata_vento_gigante_01", Vector2(17, -10), 15.0, 2.2],
+	["porto_ferrugem", "farol_torto_01", Vector2(34, -16), -20.0, 2.6],
+	["fazenda_girassol", "girassol_gigante_01", Vector2(34, -2), 200.0, 1.8],
+	["acampamento_coral", "cogumelos_gigantes_01", Vector2(25, -4), 30.0, 4.0],
+	["pedreira_cinza", "pedras_equilibradas_01", Vector2(0, -11), 10.0, 2.6],
+]
+
+
+func _marcos() -> void:
+	for m in MARCOS:
+		var poi: Dictionary = {}
+		for p in POIS:
+			if p["id"] == m[0]:
+				poi = p
+		var q := _lugar_livre(poi["pos"] + m[2], float(m[4]))
+		var pos := Vector3(q.x, ground_height(q.x, q.y) - 0.1, q.y)
+		var mat := ImpactMaterial.PEDRA if (m[1] as String).begins_with("pedra") else ImpactMaterial.MADEIRA
+		_prop(m[1], pos, m[3], 1.0, mat)
+		_ocupado.append([q, float(m[4])])
+		if m[1] == "cata_vento_gigante_01":
+			# hélice na ponta do mastro (gira em torno do eixo do cubo)
+			var b := Basis(Vector3.UP, deg_to_rad(m[3]))
+			_giradores.append([C + "cata_vento_helice_01.glb", Transform3D(b, pos + b * Vector3(0.25, 12.6, 0.72)), 1.1])
+
+
+func _lugar_livre(alvo: Vector2, raio: float) -> Vector2:
+	for k in 24:
+		var q := alvo
+		if k > 0:
+			var a := k * 2.39996
+			q = alvo + Vector2(cos(a), sin(a)) * (2.0 + k * 1.2)
+		if not is_land(q.x, q.y) or inland(q.x, q.y) < raio + 3.0:
+			continue
+		var livre := true
+		for o in _ocupado:
+			if q.distance_to(o[0]) < float(o[1]) + raio + 1.0:
+				livre = false
+				break
+		if livre and road_distance(q.x, q.y) > raio + 2.0:
+			return q
+	return alvo
+
+
 # ---------------- loot ----------------
 
 ## Candidatos em regiões naturais (campo aberto, perto de árvores, rochas, caminhos).
@@ -1335,11 +1421,17 @@ func _sobre_construcao(q: Vector2) -> bool:
 	return false
 
 
-## Bosques densos (ruído) e campos abertos; pinheiros nas partes altas, árvores
-## redondas nos vales; arbustos na costa; rochas nas encostas; troncos nos bosques.
+## Bosques densos (ruído) e campos abertos, em GRUPOS: cada árvore puxa moitas,
+## capim, flores e às vezes uma pedra para perto do pé (aglomerados naturais, não
+## uma chuva uniforme). Pinheiros nas partes altas, folhosas nos vales, manchas de
+## outono (outra camada de ruído); moitas na costa; capim e flores em manchas nos
+## campos; pedras e lascas nas encostas; troncos caídos nos bosques.
 func _vegetacao() -> void:
-	var feitos := {"arvore": 0, "rocha": 0, "arbusto": 0, "planta": 0, "tronco": 0}
-	var metas := {"arvore": 330, "rocha": 70, "arbusto": 150, "planta": 140, "tronco": 18}
+	var feitos := {"arvore": 0, "rocha": 0, "arbusto": 0, "planta": 0, "tronco": 0, "capim": 0}
+	var metas := {"arvore": 330, "rocha": 80, "arbusto": 150, "planta": 150, "tronco": 18, "capim": 320}
+	var outono := FastNoiseLite.new()
+	outono.seed = SEMENTE + 9
+	outono.frequency = 0.02
 	var tentativas := 0
 	while tentativas < 30000:
 		tentativas += 1
@@ -1348,40 +1440,82 @@ func _vegetacao() -> void:
 		var q := Vector2(_rng.randf_range(-COSTA_MAX, COSTA_MAX), _rng.randf_range(-COSTA_MAX, COSTA_MAX))
 		var h := _h(q)
 		var dentro := inland(q.x, q.y)
-		if dentro < 2.0 or h < 0.6 or _sobre_construcao(q) or road_distance(q.x, q.y) < 4.0:
+		if not _livre_para_planta(q, h, dentro):
 			continue
 		var bosque := _ruido_bosque.get_noise_2d(q.x, q.y)
 		var pos := Vector3(q.x, ground_height(q.x, q.y) - 0.05, q.y)
 		var giro := _rng.randf() * 360.0
 		if dentro < 16.0:
 			if feitos["arbusto"] < metas["arbusto"] and _rng.randf() < 0.5:
-				_prop("arbusto_01", pos, giro, _rng.randf_range(0.8, 1.2), ImpactMaterial.MADEIRA)
+				_prop("arbusto_01" if _rng.randf() < 0.7 else "arbusto_02", pos, giro, _rng.randf_range(0.8, 1.2), ImpactMaterial.MADEIRA)
 				feitos["arbusto"] += 1
+				feitos["capim"] += _ao_pe(q, 1.4, 2, ["grama_01"], 0.8, 1.2)
 			elif feitos["rocha"] < metas["rocha"] and _rng.randf() < 0.15:
 				_prop("pedra_01", pos, giro, _rng.randf_range(0.7, 1.4), ImpactMaterial.PEDRA)
 				feitos["rocha"] += 1
+				feitos["planta"] += _ao_pe(q, 2.2, 2, ["pedra_03", "grama_01"], 0.8, 1.2)
 			continue
 		if bosque > 0.12:
 			if feitos["arvore"] < metas["arvore"]:
-				_prop("pinheiro_01" if h > 12.0 or _rng.randf() < 0.45 else "arvore_redonda_01", pos, giro, _rng.randf_range(0.85, 1.35), ImpactMaterial.MADEIRA)
+				var nome := _arvore_para(h, outono.get_noise_2d(q.x, q.y))
+				_prop(nome, pos, giro, _rng.randf_range(0.85, 1.35), ImpactMaterial.MADEIRA)
 				feitos["arvore"] += 1
+				# pé da árvore: moita e capim (às vezes flores ou uma pedrinha)
+				if _rng.randf() < 0.45:
+					feitos["capim"] += _ao_pe(q, 2.6, _rng.randi_range(1, 3), ["grama_01", "grama_01", "arbusto_01", "pedra_03"], 0.7, 1.2)
 			elif feitos["tronco"] < metas["tronco"] and _rng.randf() < 0.1:
 				_prop("tronco_01", pos + Vector3(0, 0.05, 0), giro, 1.0, ImpactMaterial.MADEIRA)
 				feitos["tronco"] += 1
 			continue
 		var r := _rng.randf()
 		if r < 0.06 and feitos["arvore"] < metas["arvore"]:
-			_prop("arvore_redonda_01", pos, giro, _rng.randf_range(0.9, 1.3), ImpactMaterial.MADEIRA)
+			# árvore solitária no campo, com moitas em volta
+			_prop(_arvore_para(h, outono.get_noise_2d(q.x, q.y)), pos, giro, _rng.randf_range(0.9, 1.3), ImpactMaterial.MADEIRA)
 			feitos["arvore"] += 1
-		elif r < 0.4 and feitos["planta"] < metas["planta"]:
-			_prop("arbusto_01", pos, giro, _rng.randf_range(0.35, 0.6), ImpactMaterial.MADEIRA)   # plantas baixas
-			feitos["planta"] += 1
+			feitos["arbusto"] += _ao_pe(q, 3.0, 2, ["arbusto_01", "arbusto_02", "grama_01"], 0.6, 1.0)
+		elif r < 0.3 and feitos["capim"] < metas["capim"]:
+			# mancha de capim com flores
+			feitos["capim"] += 1 + _ao_pe(q, 2.8, _rng.randi_range(3, 6), ["grama_01", "grama_01", "grama_01", "flores_01"], 0.8, 1.3)
+			_prop("grama_01", pos, giro, _rng.randf_range(0.9, 1.3))
+		elif r < 0.42 and feitos["planta"] < metas["planta"]:
+			_prop("flores_01" if _rng.randf() < 0.5 else "arbusto_02", pos, giro, _rng.randf_range(0.5, 0.9), ImpactMaterial.MADEIRA)
+			feitos["planta"] += 1 + _ao_pe(q, 1.8, 2, ["flores_01", "grama_01"], 0.7, 1.1)
 		elif r < 0.55 and feitos["rocha"] < metas["rocha"] and h > 8.0:
-			_prop("pedra_01", pos, giro, _rng.randf_range(0.8, 1.8), ImpactMaterial.PEDRA)
+			# encosta: pedra grande ou lasca, com seixos
+			_prop("pedra_02" if _rng.randf() < 0.35 else "pedra_01", pos, giro, _rng.randf_range(0.8, 1.8), ImpactMaterial.PEDRA)
 			feitos["rocha"] += 1
+			feitos["planta"] += _ao_pe(q, 2.8, 2, ["pedra_03", "grama_01"], 0.8, 1.4)
 		elif r < 0.7 and feitos["arbusto"] < metas["arbusto"]:
 			_prop("arbusto_01", pos, giro, _rng.randf_range(0.8, 1.2), ImpactMaterial.MADEIRA)
 			feitos["arbusto"] += 1
+
+
+func _livre_para_planta(q: Vector2, h: float, dentro: float) -> bool:
+	return not (dentro < 2.0 or h < 0.6 or _sobre_construcao(q) or road_distance(q.x, q.y) < 4.0)
+
+
+## Árvore conforme a altura e a mancha de outono.
+func _arvore_para(h: float, outono: float) -> String:
+	if h > 12.0 or _rng.randf() < 0.3:
+		return "pinheiro_02" if _rng.randf() < 0.4 else "pinheiro_01"
+	if outono > 0.35:
+		return "arvore_redonda_03"
+	return "arvore_redonda_02" if _rng.randf() < 0.3 else "arvore_redonda_01"
+
+
+## Espalha n plantas pequenas (decoração) em volta de q. Retorna quantas colocou.
+func _ao_pe(q: Vector2, raio: float, n: int, nomes: Array, e0: float, e1: float) -> int:
+	var feitos := 0
+	for i in n:
+		var a := _rng.randf() * TAU
+		var p := q + Vector2(cos(a), sin(a)) * _rng.randf_range(raio * 0.45, raio)
+		if not _livre_para_planta(p, _h(p), inland(p.x, p.y)):
+			continue
+		var nome: String = nomes[_rng.randi() % nomes.size()]
+		_prop(nome, Vector3(p.x, ground_height(p.x, p.y) - 0.04, p.y), _rng.randf() * 360.0, _rng.randf_range(e0, e1),
+				ImpactMaterial.MADEIRA if not nome.begins_with("pedra") else ImpactMaterial.PEDRA)
+		feitos += 1
+	return feitos
 
 
 ## 24 pontos de início espalhados (reserva; a entrada normal é pelo Ônibus de Batalha).

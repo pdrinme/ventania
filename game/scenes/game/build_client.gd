@@ -43,6 +43,7 @@ func _altura() -> Callable:
 
 func _mapa() -> void:
 	var lista := mundo.building_pieces()
+	_n_mapa = lista.size()
 	for i in lista.size():
 		var d: Dictionary = lista[i]
 		var p := Construcoes.Peca.new()
@@ -54,6 +55,8 @@ func _mapa() -> void:
 		p.hp_max = Construcoes.max_hp(p.material)
 		p.hp = p.hp_max
 		p.mask = d.get("mask", Grade.full_mask(p.tipo))
+		if d.get("tinta", 0) > 0:
+			_tinta[p.id] = int(d["tinta"])
 		p.ancorada = Grade.anchored(p.tipo, p.cell, p.rot, _altura())
 		_adicionar(p)
 
@@ -103,6 +106,9 @@ func _instancia(chave: String, malha: Mesh, xf: Transform3D, id: int) -> String:
 	g.sujo = true
 	return chave
 
+
+var _tinta := {}                   # id da peça do mapa -> índice de pintura
+var _n_mapa := 0                   # ids 1.._n_mapa são as peças do próprio mapa
 
 static var _molduras := {}
 static var _malhas_editadas := {}
@@ -180,9 +186,11 @@ func _tirar_visual(id: int) -> void:
 	_onde.erase(id)
 
 
-## Dados por instância: dano (rachaduras) e obra.
+## Dados por instância: dano (rachaduras), obra, pintura (índice/16, só nas casas do
+## mapa) e "torto" (1 nas peças do mapa: paredes levemente envergadas no shader; as
+## construções do jogador ficam retas).
 func _custom(p: Construcoes.Peca) -> Color:
-	return Color(p.damage_frac(), p.obra, 0.0, 0.0)
+	return Color(p.damage_frac(), p.obra, _tinta.get(p.id, 0) / 16.0, 1.0 if p.id <= _n_mapa else 0.0)
 
 
 func _process(_delta: float) -> void:

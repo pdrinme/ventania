@@ -12,7 +12,7 @@ const REGIAO := 100.0
 ## Decoração sem colisão que o perfil gráfico pode rarear (densidade da vegetação):
 ## esconder instâncias com colisão deixaria obstáculos invisíveis, então árvores e
 ## pedras ficam sempre.
-const VEGETACAO_DECOR := ["arbusto_01", "girassol_01"]
+const VEGETACAO_DECOR := ["arbusto_01", "arbusto_02", "girassol_01", "flores_01", "grama_01", "pedra_03"]
 
 var com_visual := true
 var distancia_visivel := 320.0

@@ -110,7 +110,7 @@ rodar_godot timeout 300 "$GODOT" --headless --path game -s res://tests/integrati
 
 passo "Etapa 6: partida só com 23 bots (simulação headless, métricas e CPU)"
 FILTRO="BOTS|FALHOU|partida [0-9]|CPU|facil|medio|dificil"
-rodar_godot timeout 900 "$GODOT" --headless --fixed-fps 30 --path game -s res://tests/integration/test_bots.gd -- 23 1; checar $? "bots"
+rodar_godot timeout 900 "$GODOT" --headless --fixed-fps 30 --path game -s res://tests/integration/test_bots.gd -- 23 2; checar $? "bots"
 
 passo "Etapa 7: rede — 2 salas, sala cheia, reconexão, banda, relevância, rede ruim simulada, lixo e inundação"
 FILTRO="REDE|FALHOU|kbit|entidades"
