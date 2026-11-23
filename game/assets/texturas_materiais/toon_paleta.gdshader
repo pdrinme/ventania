@@ -23,6 +23,9 @@ uniform float forca_ao : hint_range(0.0, 1.0) = 0.75;
 // variação de "pintura à mão": manchas suaves e grão fino, para a cor não ficar chapada
 uniform float forca_variacao : hint_range(0.0, 0.3) = 0.07;
 
+// 1 = efeitos de pintura (manchas/grão por pixel); 0 no detalhe baixo (celular/PC fraco)
+global uniform float detalhe_arte;
+
 varying vec3 p_local;
 varying vec2 estado_peca;
 varying float ao_vertice;
@@ -112,9 +115,11 @@ void fragment() {
 		cor = mix(cor, vec3(0.45, 0.78, 1.0), obra * (0.45 + 0.25 * linhas));
 	}
 	// pintura: manchas grandes + pinceladas finas (no espaço do objeto: não "escorrega")
-	float manchas = ruido(p_local * 1.7) - 0.5;
-	float grao = ruido(p_local * 9.0 + 3.1) - 0.5;
-	cor *= 1.0 + forca_variacao * (manchas * 1.2 + grao * 0.6);
+	if (detalhe_arte > 0.5) {
+		float manchas = ruido(p_local * 1.7) - 0.5;
+		float grao = ruido(p_local * 9.0 + 3.1) - 0.5;
+		cor *= 1.0 + forca_variacao * (manchas * 1.2 + grao * 0.6);
+	}
 	cor *= mix(1.0, ao_vertice, forca_ao);
 	ALBEDO = cor;
 	ROUGHNESS = 1.0;

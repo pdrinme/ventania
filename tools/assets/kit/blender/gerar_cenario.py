@@ -88,6 +88,12 @@ def copa(nome, raio, pos, cor, semente=0, escala=(1, 1, 0.95), achatar=0.72, sub
         if c.z < 0:
             c.z *= achatar
         v.co = Vector((c.x * escala[0], c.y * escala[1], c.z * escala[2])) + Vector(pos)
+    if sub >= 3:
+        # metade dos triângulos: a silhueta fofa fica, o custo cai (centenas de árvores)
+        mod = o.modifiers.new("decimar", "DECIMATE")
+        mod.ratio = 0.5
+        bpy.context.view_layer.objects.active = o
+        bpy.ops.object.modifier_apply(modifier=mod.name)
     k._suavizar(o, 80)
     return k.pintar(o, cor)
 
@@ -275,8 +281,8 @@ def flores_01():
         cor = cores[i % len(cores)]
         for p in range(5):
             ap = p * math.tau / 5
-            partes.append(k.esfera("petala", 0.035, (x + math.cos(ap) * 0.04, y + math.sin(ap) * 0.04, h), cor,
-                                   escala=(1, 1, 0.4), segmentos=5, aneis=3))
+            partes.append(k.caixa("petala", (0.05, 0.03, 0.012), (x + math.cos(ap) * 0.035, y + math.sin(ap) * 0.035, h), cor,
+                                  rot=(0, 0, math.degrees(ap))))
         partes.append(k.esfera("miolo", 0.025, (x, y, h + 0.01), "amarelo_sol" if cor != "amarelo_sol" else "laranja", segmentos=5, aneis=3))
     for i in range(4):
         a = i * math.tau / 4 + 0.3

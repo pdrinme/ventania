@@ -538,6 +538,8 @@ func _ambiente() -> void:
 	sky.radiance_size = Sky.RADIANCE_SIZE_32
 	env.sky = sky
 	env.background_mode = Environment.BG_SKY
+	env.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED   # luz ambiente é cor fixa: sem radiância
+	sky.process_mode = Sky.PROCESS_MODE_INCREMENTAL
 	env.background_color = Color("8fd3ff")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color("b9c6ff")

@@ -15,6 +15,8 @@ uniform vec3 rocha : source_color = vec3(0.56, 0.54, 0.50);
 uniform vec3 terra : source_color = vec3(0.62, 0.47, 0.30);
 uniform vec3 cor_sombra : source_color = vec3(0.62, 0.66, 0.92);
 
+global uniform float detalhe_arte;     // 0 no detalhe baixo: só o essencial
+
 varying vec3 p_mundo;
 varying vec3 pesos;
 varying vec3 n_mundo;
@@ -41,7 +43,8 @@ void fragment() {
 	float grande = ruido(q * 0.035);
 	float medio = ruido(q * 0.21);
 	float fino = ruido(q * 1.7);
-	float muito_grande = ruido(q * 0.009 + 7.3);
+	bool rico = detalhe_arte > 0.5;
+	float muito_grande = rico ? ruido(q * 0.009 + 7.3) : 0.5;
 	float incl = 1.0 - clamp(n_mundo.y, 0.0, 1.0);          // 0 = plano, ~0.5 = encosta forte
 	// grama: manchas grandes (campo ensolarado x vale úmido), dois tons médios e "tufos"
 	vec3 g = mix(grama_a, grama_b, smoothstep(0.35, 0.75, grande));
@@ -50,8 +53,10 @@ void fragment() {
 	g = mix(g, grama_funda * 0.9, smoothstep(0.08, 0.35, incl) * 0.5);   // encostas mais escuras
 	g *= 0.93 + 0.12 * medio + 0.06 * step(0.82, fino) - 0.05 * step(fino, 0.12);
 	// pontinhos de flor no campo plano (bem esparsos, só de perto pesa pouco)
-	float flor = step(0.985, ruido(q * 3.3 + 11.0)) * step(incl, 0.12) * smoothstep(0.4, 0.7, muito_grande);
-	g = mix(g, mix(vec3(1.0, 0.95, 0.85), vec3(1.0, 0.62, 0.78), step(0.5, fino)), flor);
+	if (rico) {
+		float flor = step(0.985, ruido(q * 3.3 + 11.0)) * step(incl, 0.12) * smoothstep(0.4, 0.7, muito_grande);
+		g = mix(g, mix(vec3(1.0, 0.95, 0.85), vec3(1.0, 0.62, 0.78), step(0.5, fino)), flor);
+	}
 	// areia: ondulações; molhada (mais escura) perto do mar
 	vec3 a = areia * (0.95 + 0.06 * sin(q.x * 0.9 + q.y * 0.4 + medio * 3.0));
 	a = mix(a * vec3(0.78, 0.74, 0.70), a, smoothstep(0.2, 1.1, p_mundo.y));

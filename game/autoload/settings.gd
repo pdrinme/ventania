@@ -177,6 +177,12 @@ func _aplicar_ambiente(n: Node) -> void:
 		# acabamento por nível de detalhe: tonemap suave (médio/alto) e brilho leve
 		# nas partes claras (só alto). Baixo: nada, o mais barato possível.
 		var detalhe: String = store.get_value("graphics", "detail")
+		# efeitos de pintura por pixel nos shaders do kit e do terreno
+		RenderingServer.global_shader_parameter_set("detalhe_arte", 0.0 if detalhe == "baixo" else 1.0)
+		# troca de LOD das malhas mais cedo nos níveis baixos (personagens, construções)
+		var vp := we.get_viewport()
+		if vp:
+			vp.mesh_lod_threshold = {"baixo": 6.0, "medio": 2.5}.get(detalhe, 1.0)
 		env.tonemap_mode = Environment.TONE_MAPPER_LINEAR if detalhe == "baixo" else Environment.TONE_MAPPER_FILMIC
 		env.tonemap_exposure = 1.0 if detalhe == "baixo" else 1.05
 		env.tonemap_white = 1.4
@@ -184,6 +190,9 @@ func _aplicar_ambiente(n: Node) -> void:
 		env.glow_intensity = 0.35
 		env.glow_bloom = 0.04
 		env.glow_hdr_threshold = 1.1
-		env.adjustment_enabled = detalhe != "baixo"
+		env.adjustment_enabled = detalhe == "alto"
+		# céu em degradê só de médio para cima; no baixo, fundo de cor chapada (barato)
+		if env.sky:
+			env.background_mode = Environment.BG_COLOR if detalhe == "baixo" else Environment.BG_SKY
 		env.adjustment_saturation = 1.08
 		env.adjustment_contrast = 1.04
