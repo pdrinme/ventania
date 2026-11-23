@@ -14,13 +14,37 @@ uniform vec3 cor_sombra : source_color = vec3(0.62, 0.66, 0.92);
 uniform float limite_luz : hint_range(-1.0, 1.0) = 0.05;
 uniform float suavidade : hint_range(0.0, 0.5) = 0.06;
 uniform float forca_rim : hint_range(0.0, 1.0) = 0.25;
+// oclusão ambiente assada nos vértices pelo exportador (COLOR.r; 1 sem dados)
+uniform float forca_ao : hint_range(0.0, 1.0) = 0.75;
+// variação de "pintura à mão": manchas suaves e grão fino, para a cor não ficar chapada
+uniform float forca_variacao : hint_range(0.0, 0.3) = 0.07;
 
 varying vec3 p_local;
 varying vec2 estado_peca;
+varying float ao_vertice;
 
 void vertex() {
 	p_local = VERTEX;
 	estado_peca = INSTANCE_CUSTOM.xy;
+	// sem cor de vértice o atributo chega como preto (GLES3): a AO exportada nunca é
+	// menor que 0,35, então preto puro = "sem dado" (não escurece)
+	ao_vertice = (COLOR.r + COLOR.g + COLOR.b) < 0.03 ? 1.0 : COLOR.r;
+}
+
+float ruido(vec3 p) {
+	vec3 i = floor(p);
+	vec3 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	float n = i.x + i.y * 57.0 + i.z * 113.0;
+	float a = fract(sin(n) * 43758.5453);
+	float b = fract(sin(n + 1.0) * 43758.5453);
+	float c = fract(sin(n + 57.0) * 43758.5453);
+	float d = fract(sin(n + 58.0) * 43758.5453);
+	float e = fract(sin(n + 113.0) * 43758.5453);
+	float g = fract(sin(n + 114.0) * 43758.5453);
+	float h = fract(sin(n + 170.0) * 43758.5453);
+	float k = fract(sin(n + 171.0) * 43758.5453);
+	return mix(mix(mix(a, b, f.x), mix(c, d, f.x), f.y), mix(mix(e, g, f.x), mix(h, k, f.x), f.y), f.z);
 }
 
 vec2 sorteio(vec2 p) {
@@ -63,15 +87,22 @@ void fragment() {
 		float linhas = step(0.55, fract(p_local.y * 2.0 - TIME * 0.6));
 		cor = mix(cor, vec3(0.45, 0.78, 1.0), obra * (0.45 + 0.25 * linhas));
 	}
+	// pintura: manchas grandes + pinceladas finas (no espaço do objeto: não "escorrega")
+	float manchas = ruido(p_local * 1.7) - 0.5;
+	float grao = ruido(p_local * 9.0 + 3.1) - 0.5;
+	cor *= 1.0 + forca_variacao * (manchas * 1.2 + grao * 0.6);
+	cor *= mix(1.0, ao_vertice, forca_ao);
 	ALBEDO = cor;
 	ROUGHNESS = 1.0;
 }
 
 void light() {
 	float ndl = dot(NORMAL, LIGHT);
+	// três faixas (sombra, meio-tom, luz) com transições curtas: volume de desenho animado
 	float faixa = smoothstep(limite_luz, limite_luz + suavidade, ndl) * ATTENUATION;
+	float plena = smoothstep(0.45, 0.45 + suavidade, ndl) * ATTENUATION;
 	// No lado escuro sobra só um toque frio; a luz ambiente (WorldEnvironment) faz o resto.
-	vec3 tom = mix(cor_sombra * 0.12, vec3(0.9), faixa);
+	vec3 tom = mix(cor_sombra * 0.12, vec3(0.78), faixa) + vec3(0.14) * plena;
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 4.0) * faixa * forca_rim;
 	DIFFUSE_LIGHT += (tom + rim) * LIGHT_COLOR / PI;
 }

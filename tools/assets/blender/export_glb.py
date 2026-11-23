@@ -15,6 +15,10 @@ Convenções esperadas na cena (ver docs/assets/PIPELINE.md):
   - Objetos de colisão com sufixo "-col", "-colonly" ou "-convcolonly" (sufixos da Godot).
   - Objetos com sufixo "-noexport" são ignorados.
   - Propriedades customizadas viram metadados na Godot (export_extras).
+  - Oclusão ambiente "assada" nos vértices (atributo de cor "Color", canal R): raios
+    sobre o hemisfério de cada vértice contra a própria malha do asset. O shader do
+    kit escurece cantos, dobras e encaixes com ela (volume sem textura e sem custo em
+    tempo real). Desligue por objeto com a propriedade customizada "sem_ao" = 1.
 """
 
 import argparse
@@ -104,6 +108,73 @@ def verificar(cena, orc, aplicar_escala):
     return erros, avisos, stats
 
 
+def _assar_ao(raio=0.35, amostras=20):
+    """AO por vértice (0 = fechado, 1 = aberto), gravado na cor "Color" (R=G=B).
+    Usa a malha avaliada (modificadores aplicados) e uma BVH de TODOS os objetos
+    visíveis da cena (peças encostadas também fazem sombra umas nas outras)."""
+    import math
+    import random
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    dg = bpy.context.evaluated_depsgraph_get()
+    malhas = [o for o in bpy.context.scene.objects if o.type == "MESH" and not _eh_colisao(o.name)]
+    if not malhas:
+        return
+    # BVH única no espaço do mundo
+    verts, polis = [], []
+    for o in malhas:
+        ev = o.evaluated_get(dg)
+        m = ev.to_mesh()
+        base = len(verts)
+        mw = o.matrix_world
+        verts += [mw @ v.co for v in m.vertices]
+        polis += [[base + i for i in p.vertices] for p in m.polygons]
+        ev.to_mesh_clear()
+    bvh = BVHTree.FromPolygons(verts, polis, epsilon=0.0)
+    rnd = random.Random(3)
+    direcoes = []
+    for i in range(amostras):
+        # hemisfério cosseno (Fibonacci)
+        u = (i + 0.5) / amostras
+        r = math.sqrt(u)
+        a = i * 2.399963
+        direcoes.append(Vector((r * math.cos(a), r * math.sin(a), math.sqrt(1 - u))))
+    for o in malhas:
+        if o.get("sem_ao"):
+            continue
+        if o.modifiers:
+            # AO na malha de repouso (base); modificadores de deformação (armadura) são aplicados no export
+            pass
+        m = o.data
+        if "Color" in m.color_attributes:
+            m.color_attributes.remove(m.color_attributes["Color"])
+        cor = m.color_attributes.new("Color", "BYTE_COLOR", "POINT")
+        mw = o.matrix_world
+        nm = mw.to_3x3().inverted().transposed()
+        for v in m.vertices:
+            p = mw @ v.co
+            n = (nm @ v.normal).normalized()
+            # base ortonormal em volta da normal
+            t = n.orthogonal().normalized()
+            b = n.cross(t)
+            livres = 0.0
+            for d in direcoes:
+                dw = (t * d.x + b * d.y + n * d.z).normalized()
+                hit = bvh.ray_cast(p + n * 0.004, dw, raio)
+                if hit[0] is None:
+                    livres += 1.0
+                else:
+                    livres += min(1.0, hit[3] / raio) ** 2
+            ao = livres / len(direcoes)
+            ao = 0.35 + 0.65 * ao                      # nunca preto: só sombreado
+            cor.data[v.index].color = (ao, ao, ao, 1.0)
+        m.color_attributes.active_color = cor
+        try:
+            m.color_attributes.render_color_index = m.color_attributes.find("Color")
+        except Exception:
+            pass
+
+
 def exportar(caminho, permite_animacao, material_compartilhado=False):
     """material_compartilhado: a cena usa só materiais que a Godot substitui na
     importação (ex.: M_paleta_ventania). Exporta o material pelo nome, sem
@@ -127,6 +198,8 @@ def exportar(caminho, permite_animacao, material_compartilhado=False):
         export_optimize_animation_size=True,
         export_def_bones=True,        # só ossos de deformação
         export_unused_images=False,
+        export_vertex_color="ACTIVE",  # AO assada (ver _assar_ao)
+        export_all_vertex_colors=False,
     )
 
 
@@ -154,6 +227,8 @@ def main():
             print("ERRO:", m)
         sys.exit(1)
 
+    raio_ao = {"personagens": 0.07, "armas": 0.06, "mochilas_acessorios": 0.08, "baus_coletaveis": 0.12}.get(a.categoria, 0.45)
+    _assar_ao(raio_ao)
     saida = a.saida or os.path.join(RAIZ, "game", "assets", a.categoria, f"{a.id}.glb")
     exportar(saida, orc["permite_animacao"], bool(bpy.context.scene.get("ventania_material_compartilhado")))
     print("EXPORTADO:", os.path.relpath(saida, RAIZ))

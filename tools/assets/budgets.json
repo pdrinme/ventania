@@ -2,7 +2,7 @@
   "_doc": "Orçamentos por categoria para o LOD0. Ver docs/assets/IMPORTACAO_GODOT_E_OTIMIZACAO.md. Valores iniciais, revisados após medições em hardware real.",
   "categorias": {
     "personagens": {
-      "max_tris": 6000,
+      "max_tris": 8500,
       "max_materiais": 3,
       "max_textura_px": 1024,
       "max_ossos": 60,
@@ -71,5 +71,5 @@
     "original",
     "terceiros_licenciado"
   ],
-  "_doc_personagens": "personagens: até 3 materiais (paleta + vidro + água do aquário do Capitão Maré); os outros trajes usam só a paleta."
+  "_doc_personagens": "personagens: até 3 materiais (paleta + vidro + água do aquário do Capitão Maré); os outros trajes usam só a paleta. Revisão de arte: até 8500 triângulos (corpo contínuo, rosto com olhos de verdade, roupas em camadas); a Godot gera LODs na importação, então de longe custa bem menos."
 }
