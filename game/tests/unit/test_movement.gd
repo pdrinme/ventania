@@ -144,3 +144,8 @@ func test_poses_de_entrada_vem_do_estado_replicado() -> void:
 	var dir := PawnVisual.air_tilt("queda_livre", Vector3(8, 0, 0), 0.0)
 	var esq := PawnVisual.air_tilt("queda_livre", Vector3(-8, 0, 0), 0.0)
 	assert_true(dir.y < -0.2 and esq.y > 0.2, "inclina nas curvas (%.2f / %.2f)" % [dir.y, esq.y])
+	# no chão: curva correndo inclina para dentro, parado não inclina; arrancada para a frente
+	var curva := PawnVisual.ground_lean(Movement.SPRINT_SPEED, 3.0, 0.0)
+	assert_true(curva.y > 0.1 and curva.y <= 0.21, "inclina para dentro na curva (%.2f)" % curva.y)
+	assert_true(absf(PawnVisual.ground_lean(0.0, 3.0, 0.0).y) < 0.001, "parado girando não inclina")
+	assert_true(PawnVisual.ground_lean(4.0, 0.0, 20.0).x > 0.05 and PawnVisual.ground_lean(4.0, 0.0, -20.0).x < -0.05, "arrancada/freada")

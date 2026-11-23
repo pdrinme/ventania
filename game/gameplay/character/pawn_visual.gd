@@ -44,6 +44,10 @@ var _w_planador := 0.0
 var _w_preparar := 0.0
 var _inclinacao := Basis()        # orientação procedural do corpo no ar (deitado, mergulho, curvas)
 var _t_ar := 0.0
+var _yaw_ant := 0.0
+var _vel_ant := Vector3.ZERO
+var _giro := 0.0                  # velocidade de giro suavizada (rad/s) para inclinar nas curvas
+var _acel := 0.0                  # aceleração para a frente suavizada (m/s²)
 var traje := ""                   # id do traje equipado (defina antes de entrar na árvore)
 var picareta_id := ""             # picareta cosmética (mesmos marcadores; gameplay igual)
 var fx: TrajeFx                   # efeito do traje (ex.: aquário), se houver
@@ -400,6 +404,14 @@ static func air_tilt(pose: String, vel_local: Vector3, mergulho: float) -> Vecto
 	return Vector2.ZERO
 
 
+## Inclinação no chão (função pura): (frente, lado) em radianos. Curva rápida
+## correndo inclina para dentro; arrancada inclina para a frente, freada para trás.
+static func ground_lean(vel_h: float, giro: float, acel: float) -> Vector2:
+	var lado := clampf(giro * vel_h * 0.028, -0.2, 0.2)          # até ~11°
+	var frente := clampf(acel * 0.006, -0.1, 0.12)               # até ~7°
+	return Vector2(frente, lado)
+
+
 func _entrada(delta: float) -> void:
 	var pose := fall_pose(queda, _vel)
 	var no_ar := queda == Pawn.QUEDA_LIVRE or queda == Pawn.PLANADOR
@@ -417,10 +429,20 @@ func _entrada(delta: float) -> void:
 	var osc := 0.0
 	if pose != "chao" and pose != "onibus":
 		osc = sin(_t_ar * (2.3 if pose != "planador" else 1.7)) * deg_to_rad(3.0 if pose != "planador" else 2.0)
+	if pose == "chao" and delta > 0.0:
+		# no chão: peso nas curvas (inclina para dentro) e nas arrancadas/freadas
+		var giro := wrapf(rotation.y - _yaw_ant, -PI, PI) / delta
+		_giro = lerpf(_giro, clampf(giro, -8.0, 8.0), clampf(delta * 8.0, 0.0, 1.0))
+		var frente := -(Basis(Vector3.UP, rotation.y).z)
+		var a := (_vel - _vel_ant).dot(frente) / delta
+		_acel = lerpf(_acel, clampf(a, -30.0, 30.0), clampf(delta * 6.0, 0.0, 1.0))
+		inc += ground_lean(Vector2(_vel.x, _vel.z).length(), _giro, _acel)
+	_yaw_ant = rotation.y
+	_vel_ant = _vel
 	var alvo := Basis(Vector3(1, 0, 0), -inc.x) * Basis(Vector3(0, 0, 1), inc.y + osc)
 	_inclinacao = _inclinacao.slerp(alvo, clampf(delta * 5.0, 0.0, 1.0)).orthonormalized()
-	# gira em torno do centro do corpo (~1 m), não dos pés
-	var centro := Vector3(0, 1.0, 0)
+	# no ar gira em torno do centro do corpo (~1 m); no chão, em torno dos pés
+	var centro := Vector3(0, 1.0 * _w_entrada, 0)
 	var t := Transform3D(_inclinacao, centro - _inclinacao * centro)
 	_modelo.transform = t * Transform3D(Basis(Vector3.UP, PI), Vector3.ZERO)
 

@@ -233,14 +233,15 @@ def _pose_idle(t):
     resp = math.sin(f * 3)                 # 3 respirações por ciclo
     peso = math.sin(f)                     # 1 transferência de peso por ciclo
     p = {
-        "_quadril": (0.018 * peso, -0.012 + 0.004 * resp, 0.0),
-        "Hips": [(Y, -2.0 * peso)],
-        "Spine": [(X, 1.0 + 0.8 * resp), (Y, 1.2 * peso)],
-        "Chest": [(X, -1.5 * resp), (Y, 0.8 * peso)],
+        # contrapposto: peso mais na perna direita, bacia caída para o outro lado
+        "_quadril": (-0.022 + 0.014 * peso, -0.014 + 0.004 * resp, 0.0),
+        "Hips": [(Y, 3.0 - 1.6 * peso), (Z, 4.0)],
+        "Spine": [(X, 1.0 + 0.8 * resp), (Y, -1.5 + 1.2 * peso), (Z, -3.0)],
+        "Chest": [(X, -1.5 * resp), (Y, -1.5 + 0.8 * peso), (Z, -2.0)],
         "Neck": [(X, 1.0)],
-        "Head": [(X, 2.0 + 1.2 * math.sin(f * 2 + 0.6)), (Z, 4.0 * math.sin(f + 1.1))],
-        "LeftUpperLeg": [(Y, 1.5 * peso), (X, -2)], "RightUpperLeg": [(Y, 1.5 * peso), (X, -1)],
-        "LeftLowerLeg": [(X, 4 + 3 * _mx(-peso))], "RightLowerLeg": [(X, 4 + 3 * _mx(peso))],
+        "Head": [(X, 2.0 + 1.2 * math.sin(f * 2 + 0.6)), (Z, -4.0 + 4.0 * math.sin(f + 1.1)), (Y, 3.0)],
+        "LeftUpperLeg": [(Y, -3.0 + 1.5 * peso), (X, -5), (Z, 6)], "RightUpperLeg": [(Y, -2.0 + 1.5 * peso), (X, -1)],
+        "LeftLowerLeg": [(X, 10 + 3 * _mx(-peso))], "RightLowerLeg": [(X, 3 + 2 * _mx(peso))],
         "LeftFoot": [(X, -2)], "RightFoot": [(X, -2)],
     }
     p.update(_bracos(4 + 1.5 * resp, 4 - 1.5 * resp, 14, 14))
@@ -259,7 +260,7 @@ def _passada(t, perna, joelho, braco, cotovelo, inclinacao, bob, quadril_base=0.
     pe_d = -14 * _mx(-s) + 26 * _mx(math.sin(f + 0.5))
     p = {
         # quadril mais baixo no contato (|sin| = 1) e mais alto no apoio; em corrida há voo
-        "_quadril": (0.012 * c, quadril_base - bob * abs(s) + voo * abs(c), 0.0),
+        "_quadril": (0.02 * c, quadril_base - bob * abs(s) + voo * abs(c), 0.0),
         "Hips": [(Z, -giro * s), (Y, 2.5 * c)],
         "Spine": [(X, inclinacao * 0.4), (Z, giro * 0.5 * s)],
         "Chest": [(X, inclinacao * 0.6), (Z, giro * 0.9 * s)],
@@ -278,12 +279,12 @@ def _passada(t, perna, joelho, braco, cotovelo, inclinacao, bob, quadril_base=0.
 
 
 def _pose_andar(t):
-    return _passada(t, perna=26, joelho=58, braco=22, cotovelo=16, inclinacao=3, bob=0.035)
+    return _passada(t, perna=27, joelho=60, braco=24, cotovelo=18, inclinacao=4, bob=0.04, giro=7.0)
 
 
 def _pose_correr(t):
-    return _passada(t, perna=46, joelho=100, braco=42, cotovelo=78, inclinacao=13, bob=0.03,
-                    quadril_base=-0.04, giro=8.0, voo=0.035)
+    return _passada(t, perna=48, joelho=105, braco=50, cotovelo=84, inclinacao=16, bob=0.035,
+                    quadril_base=-0.05, giro=11.0, voo=0.045)
 
 
 def _pose_agachado(t, passo=0.0):
