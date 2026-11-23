@@ -5,6 +5,6 @@ banco SQLite com migrações, /v1/health e /v1/compat.
 Etapa 8: contas e sessões, amigos e presença, grupos e convites, eventos
 (long-polling), matchmaking com servidores de partida, salas privadas e tickets.
 """
-SERVER_VERSION = "1.2.1"
+SERVER_VERSION = "1.3.0"
 PROTOCOL_VERSION = 1   # deve bater com game/core/version.gd PROTOCOL
 CONTENT_VERSION = 1

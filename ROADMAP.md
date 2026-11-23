@@ -11,6 +11,7 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 - **M4 — "Com estilo"** (Etapa 13): os primeiros cosméticos originais, equipáveis e visíveis na partida.
 - ✅ **v1.0.0** (Etapa 12): M3 entregue: pacotes do jogo e do servidor completo, com os guias.
 - ✅ **v1.1.0** (Etapa 13): M4 entregue: 9 trajes originais novos, picareta-âncora, 2 planadores, animações de entrada e loja com imagens reais e visualizador 3D.
+- ✅ **v1.3.0** (revisão de arte): personagens e as 11 skins remodelados, animações com mais peso, vegetação e rochas novas em grupos, terreno e céu, casas pintadas e levemente tortas, 5 marcos surreais, armas/itens/baú remodelados, loot com coluna de luz e efeitos por perfil gráfico. Antes/depois em `docs/art/comparacao_1.3.0.jpg`; detalhes abaixo.
 - ✅ **v1.2.1**: correção das paredes com janela/porta invisíveis na 1.2.0.
 - ✅ **v1.2.0** (revisão de qualidade): IA e navegação, escadas reais e interiores mobiliados, rampas, mapa com regiões, tela de resultado, mira no celular e desempenho. Medido antes e depois; detalhes abaixo.
 
@@ -773,3 +774,21 @@ Feita sobre o código existente, sem reconstruir sistemas. Primeiro auditei e me
 | Escopo grande para um projeto pessoal | Sistemas pela metade | Marcos M1, M2 e M3, e nenhuma etapa avança sem aceite |
 | Assets originais exigem produção artística | Visual simples por muito tempo | Placeholders geométricos originais primeiro e assets CC0 verificados depois |
 | Contêiner de desenvolvimento efêmero | Perda de trabalho | Repositório git remoto antes da Etapa 1 |
+
+## v1.3.0 — revisão de arte
+
+Direção: cartum caprichoso e levemente torto, original (ver `docs/art/GUIA_DE_ESTILO.md`).
+Gameplay, rede (protocolo v12), hitboxes e regras não mudaram.
+
+- ✅ Personagens: biblioteca `estilo_personagem.py` (corpo contínuo com pesos suaves, roupas em cascas, rosto completo, cabelo em mechas); as 11 skins refeitas uma a uma.
+- ✅ Animação: idle com contrapposto, andar/correr com mais giro e impulso; inclinação nas curvas e arrancadas (`PawnVisual.ground_lean`, testada).
+- ✅ Vegetação: 12 modelos, distribuição em grupos, manchas de outono; árvores e pedras novas entram na coleta e no desvio dos bots.
+- ✅ Terreno: grama em 4 tons, encostas, flores, areia molhada, estratos de rocha, beira de caminho.
+- ✅ Casas do mapa: pintura por casa e envergadura no shader (colisão inalterada; construções do jogador retas).
+- ✅ Marcos: cata-vento gigante (hélice gira), farol torto, girassol gigante, cogumelos gigantes, pedras equilibradas.
+- ✅ Armas, itens e baú remodelados com os mesmos marcadores; loot com anel pulsante e coluna de luz por raridade.
+- ✅ Luz: céu em degradê, 3 faixas de luz, oclusão ambiente assada, tonemap/brilho por nível de detalhe.
+- ✅ Desempenho: efeitos por pixel, céu, ajuste de cor e LOD controlados pelo perfil. `bench_mapa` (render por software) 1.2.1 → 1.3.0: Desempenho 29,2 → 25,2 FPS (1% pior 16,9 → 16,3), Equilibrado 18,1 → 13,5, Qualidade 9,2 → 4,9. O custo extra nos perfis altos vem dos personagens mais detalhados com sombra.
+- ✅ Imagens da loja regeneradas; catálogo e licenças dos 14 assets novos (todos originais).
+- ⬜ Detalhes de fachada presos às peças (chaminés, toldos, floreiras) — precisam sumir junto com a parede destruída.
+

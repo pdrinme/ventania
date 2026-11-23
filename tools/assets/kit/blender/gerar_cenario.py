@@ -320,8 +320,8 @@ def pedra_01():
 
 
 def pedra_02():
-    alta = rocha("alta", 0.8, (0, 0, 1.1), "pedra_escura", 71, escala=(1.0, 0.75, 2.0), forca=0.32)
-    base = rocha("base", 0.75, (0.45, 0.2, 0.3), "pedra_media", 72, escala=(1.4, 1.1, 0.6))
+    alta = rocha("alta", 0.8, (0, 0, 1.1), "pedra_media", 71, escala=(1.0, 0.75, 2.0), forca=0.32)
+    base = rocha("base", 0.75, (0.45, 0.2, 0.3), "pedra_clara", 72, escala=(1.4, 1.1, 0.6))
     lasca = rocha("lasca", 0.45, (-0.6, -0.3, 0.25), "pedra_clara", 73, escala=(1.0, 0.8, 0.9))
     for o in (alta,):
         for v in o.data.vertices:           # inclina a lasca (encosta torta)

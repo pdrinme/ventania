@@ -1,13 +1,30 @@
 # Guia de estilo visual — Ventania
 
-Direção: **cartunesco clássico, original.** Formas grandes e amigáveis, cores
-saturadas, leitura instantânea a distância, custo mínimo de GPU.
+Direção (revisão de arte 1.3.0): **cartum caprichoso e levemente torto, original.**
+Formas grandes e amigáveis, cores saturadas com tons pastel nas casas, silhuetas
+legíveis de longe, um toque de imperfeição intencional (troncos curvos, paredes
+envergadas, telhados coloridos, marcos surreais) e custo baixo de GPU. A
+inspiração é o *clima* dos battle royales cartunescos (alegre, colorido, com
+humor), nunca os assets, personagens, mapas ou texturas de qualquer jogo.
 
-![Vitrine do kit (perfil Quality)](vitrine_kit_quality.png)
+![Antes e depois da revisão de arte](comparacao_1.3.0.jpg)
 
-*Renderizado na Godot 4.7.2, renderizador Compatibility, com `game/tests/vitrine_kit.gd`.
-Perfil Quality: 58 draw calls e cerca de 17,6 mil primitivas. Perfil Performance (sem sombras):
-29 draw calls e cerca de 8,8 mil primitivas.*
+*Mesmos ângulos, mesmo mapa, mesma luz do jogo (`game/tests/capturar_visual.gd`).
+Fotos completas em `docs/art/antes/` e `docs/art/depois/`.*
+
+### O que mudou na 1.3.0
+
+| Área | Antes | Depois |
+|---|---|---|
+| Personagens | manequins de peças rígidas, rosto em traços | corpo contínuo com pesos suaves, olhos com íris/pálpebra/cílios, sobrancelhas, nariz, boca, orelhas, cabelo em mechas, roupas em camadas com barras e costuras |
+| Skins | 11 trajes sobre o manequim | as 11 refeitas uma a uma, mantendo a identidade (aquário, monitor, saco de espantalho, planeta, armadura de tempestade…) |
+| Animação | ciclos básicos | idle com contrapposto, corrida com mais impulso e giro de tronco, peso nas curvas e arrancadas (procedural, do estado da rede) |
+| Vegetação | 1 árvore, 1 pinheiro, 1 moita, 1 pedra | 12 modelos (folhosas, outono, pinheiros, moitas, flores, capim, 3 pedras), em grupos naturais |
+| Terreno | verde uniforme | 4 tons de grama por região, encostas escuras, flores, areia molhada, estratos na rocha, beira de caminho |
+| Casas | caixas listradas laranja/cinza | paredes pastel e telhados coloridos por casa, envergadura suave |
+| Marcos | — | cata-vento gigante, farol torto, girassol gigante, cogumelos gigantes, pedras equilibradas |
+| Armas/itens | blocos simples | miras, guarda-mato, quebra-chamas, lunetas, baú de tábuas com tampa abaulada; loot com coluna de luz por raridade |
+| Luz | cor de fundo chapada | céu em degradê, luz em 3 faixas, oclusão ambiente assada por vértice, tonemap/brilho por perfil |
 
 ## 1. Princípios
 
@@ -37,34 +54,70 @@ Perfil Quality: 58 draw calls e cerca de 17,6 mil primitivas. Perfil Performance
 
 - **Um material para o kit inteiro:** `M_paleta_ventania.tres` (ShaderMaterial com `toon_paleta.gdshader`).
 - No Blender, use só o material `M_paleta_ventania` (criado por `kit_comum.material()`). O exportador grava apenas o nome, e a Godot troca pelo material compartilhado na importação (`post_import.gd`).
-- O shader tem luz em 2 faixas com transição curta, sombra puxada para azul e brilho de borda leve. Ele é compatível com GLES3 e não usa texturas extras.
+- O shader tem luz em **3 faixas** (sombra, meio-tom, luz) com transição curta, sombra puxada para azul e brilho de borda leve. Compatível com GLES3, sem texturas extras.
+- **Oclusão ambiente assada por vértice**: o exportador (`export_glb.py`) lança raios na própria malha e grava em `COLOR` (raio por categoria; personagens 7 cm, cenário 45 cm). Cantos, axilas e o pé das árvores escurecem sem custo em tempo de execução.
+- **Variação de pintura** (manchas suaves + grão) por pixel, desligada no detalhe baixo pelo uniform global `detalhe_arte`.
+- **Construções do mapa** (MultiMesh, `INSTANCE_CUSTOM`): `.z` = pintura (tabela `TINTAS`: 5 pastéis de parede, 3 cores de telhado), `.w` = "torto": envergadura de até 12 cm, função contínua da posição no mundo, então as emendas entre peças continuam fechadas e a colisão continua valendo. Construções do jogador ficam retas e sem pintura.
 - Ajustes artísticos ficam nos uniforms do material (`cor_sombra`, `limite_luz`, `suavidade`, `forca_rim`), não no código.
 
 ## 4. Proporções e escala
 
 | Elemento | Medida |
 |---|---|
-| Personagem | cerca de 1,88 m. Cabeça com cerca de 1/4,5 da altura. Mãos e pés grandes |
+| Personagem | cerca de 1,88 m. Cabeça com cerca de 1/4,5 da altura, olhos grandes. Mãos e pés grandes |
 | Célula de construção | 4 × 4 × 4 m. Espessura das paredes 0,22 m |
 | Baú | 1,1 × 0,7 × 0,68 m (fechado) |
-| Árvores | 4,5–5,5 m. Copa em blobs (icosfera com ruído) |
+| Árvores | 4,5–7 m. Tronco curvo com base alargada; copa em "nuvens" com calombos contínuos |
+| Marcos | 8–14 m, visíveis a 500–600 m |
 
 ## 5. Personagens
 
-- **Esqueleto padrão** com os nomes do `SkeletonProfileHumanoid` da Godot (Hips, Spine, Chest, Neck, Head, Left/Right Shoulder, UpperArm, LowerArm, Hand, UpperLeg, LowerLeg, Foot), mais Root. São 20 ossos em T-pose. **Todo traje usa este esqueleto**, e as hitboxes são iguais para todos.
-- Skinning rígido por partes: barato, estável em GLES3 e coerente com o visual de peças arredondadas. As juntas são cobertas por esferas (cotovelo, joelho, ombro).
-- **Traje = cores + acessórios** sobre a mesma base. Um traje novo começa copiando `gerar_personagem.py` e trocando as constantes de cor e as peças da cabeça e do tronco.
-- Rosto simples: olhos ovais pretos com brilho, sobrancelhas, nariz redondo e boca em traço.
+- **Esqueleto padrão** com os nomes do `SkeletonProfileHumanoid` da Godot (20 ossos em T-pose). **Todo traje usa este esqueleto**, e as hitboxes são iguais para todos (gameplay não muda com a skin).
+- **Biblioteca** `tools/assets/kit/blender/estilo_personagem.py`:
+  - corpo contínuo (modificador Skin sobre um grafo de juntas + subdivisão 1), tipos `padrao`, `fino`, `robusto`;
+  - pesos suaves por distância aos ossos (até 3 influências, só entre ossos vizinhos): ombros, cotovelos e joelhos dobram sem quebrar;
+  - **roupas são cascas** do próprio corpo, recortadas por planos (`casca`, `faixa`, `entre_z`, `ate_x`) e afastadas pela normal: herdam os pesos e deformam junto;
+  - cabeça, olhos (branco, íris, pupila, 2 brilhos, pálpebra, cílios), sobrancelhas, nariz, boca, orelhas, cabelo em mechas (`topete`, `bagunca`, `rabo`), mãos com dedos, calçados com sola e cadarço.
+- Skins em `gerar_skins.py`: cada uma tem a sua função, com identidade própria (não é troca de cor). Para criar uma nova, copie a função mais parecida.
+- Rosto: olhos grandes e expressivos com pálpebra a 1/3, sorriso de canto, sobrancelha levemente inclinada. Sem copiar rostos de personagens existentes.
 
-## 6. Orçamentos do kit atual (medidos)
+## 5.1 Cenário
+
+- **Vegetação** (`gerar_cenario.py`): troncos tubulares curvos com raízes, copas em nuvem decimadas, pinheiros de camadas com pontas caídas, pedras facetadas por cortes planos, musgo. Distribuição em grupos (`_vegetacao` + `_ao_pe` em `ilha_ventania.gd`).
+- **Marcos** (`gerar_marcos.py`): um por POI, grande, torto e com humor; peças que giram usam o nó `Girador` (só cliente).
+- **Casas**: a paleta de cada casa sai de um hash da posição (determinístico, igual no servidor e no cliente, sem gastar o sorteio do mapa).
+- Escadas reais (degraus) nos edifícios de vários andares; nunca rampa no lugar de escada.
+
+## 6. Orçamentos do kit atual (medidos, 1.3.0)
 
 | Asset | Triângulos | Orçamento |
 |---|---|---|
-| recruta_base_01 | 2.790 | 6.000 |
-| bau_ventania_01 | 376 | 800 |
+| personagens (11 trajes) | 4.500–8.474 | 8.500 (a Godot gera LODs) |
+| bau_ventania_01 | 848 | 1.000 |
+| armas | 436–920 | 1.500 |
+| itens (munição, cura, escudo) | 156–476 | 1.000 |
+| árvores | 536–904 | 2.500 |
+| pinheiros | 248–302 | 2.500 |
+| moitas, flores, capim, pedras | 44–780 | 2.500 |
+| marcos | 256–2.212 | 2.500 |
 | paredes, pisos e rampas | 108–192 | 300 |
-| tetos | 30 | 300 |
-| árvores, pinheiro, pedra, arbusto | 40–108 | 2.500 |
+
+Custo por perfil (`tests/perf/bench_mapa.gd`, mesma máquina, render por software,
+12 personagens animados na tela): Desempenho 25 FPS (1% pior 16), Equilibrado 13,5,
+Qualidade 4,9. Na 1.2.1 eram 29 / 18 / 9,2: a arte nova custa mais nos perfis
+altos, sobretudo pelos personagens com sombra em 2 divisões. Em GPU de verdade a
+diferença é bem menor; para PC fraco e celular, use Desempenho ou Equilibrado.
+
+O que cada perfil liga (nível de detalhe):
+
+| | Baixo | Médio | Alto |
+|---|---|---|---|
+| Ruídos de pintura por pixel (kit e terreno) | não | sim | sim |
+| Céu em degradê | não (cor) | sim | sim |
+| Tonemap filmic | não | sim | sim |
+| Ajuste de cor e brilho (glow) | não | não | sim |
+| Troca de LOD (limite em pixels) | 6 | 2,5 | 1 |
+| Densidade da vegetação decorativa | 45% | 80% | 100% |
 
 ## 7. Como gerar ou alterar o kit
 
@@ -82,8 +135,21 @@ Para renderizar a vitrine (no Linux sem tela, use `xvfb-run`):
 godot --path game --rendering-driver opengl3 --resolution 1280x720 -s res://tests/vitrine_kit.gd -- vitrine.png quality
 ```
 
-## 8. Próximos assets sugeridos
+Fotos de comparação (antes/depois, mesmos ângulos):
 
-Armas (5 arquétipos do GAME_DESIGN), ferramenta de coleta, 2–3 trajes variantes,
-mochila, planador, caixa de munição, curativos/células de escudo, casas e props
-de ponto de interesse.
+```bash
+xvfb-run -a godot --path game --rendering-driver opengl3 --resolution 1280x720 -s res://tests/capturar_visual.gd -- pasta_saida
+```
+
+Giro de 4 vistas de um traje e fileira de props:
+
+```bash
+xvfb-run -a godot --path game --rendering-driver opengl3 -s res://tests/capturar_traje.gd -- saida.png res://assets/personagens/recruta_base_01.glb idle 0.5
+xvfb-run -a godot --path game --rendering-driver opengl3 -s res://tests/capturar_props.gd -- saida.png 4 18 res://assets/cenario/arvore_redonda_01.glb
+```
+
+## 8. Próximos passos de arte
+
+- Detalhes decorativos nas casas (chaminés, toldos, floreiras) presos às peças, para sumirem junto quando a parede é destruída.
+- Mais variações de cabelo e rosto para trajes futuros, sobre a mesma biblioteca.
+- Animação de recarga por arma mais expressiva (hoje é procedural no ItemRig).

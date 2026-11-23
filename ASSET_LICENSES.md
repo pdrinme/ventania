@@ -46,6 +46,7 @@
 | Interiores: 3 escadas em U (madeira, concreto, metal) + 3 guarda-corpos de vão e 24 móveis (sofá, mesa, cadeira, cama, guarda-roupa, geladeira, fogão, pia, TV, estante, luminária, tapete, balcão com caixa, gôndola, expositor, máquina, bancada, armário de metal, caixotes, tambores, barris, sacos, feno, ferramentas) | Projeto Ventania (`tools/assets/kit/blender/gerar_interiores.py`) | Original | Original |
 | `game/assets/ui/icone.png` | Projeto Ventania (`tools/assets/kit/gerar_icone.py`) | Original | Original |
 | `game/assets/texturas_materiais/paleta_ventania.png`, `toon_paleta.gdshader`, `M_paleta_ventania.tres` | Projeto Ventania | Original | Original |
+| Revisão de arte 1.3.0: as 11 skins remodeladas (`estilo_personagem.py` + `gerar_skins.py`), 12 modelos de vegetação e rocha (`gerar_cenario.py`), 6 marcos (`gerar_marcos.py`: cata-vento gigante + hélice, farol torto, girassol gigante, cogumelos gigantes, pedras equilibradas), armas, itens e baú refeitos, `terreno.gdshader`, `girador.gd` | Projeto Ventania (procedural, Blender/bpy) | Original | Original. Nenhum modelo, textura ou referência extraída de outro jogo |
 
 A fonte da verdade é `assets_catalog.json`. Os `game/assets/<cat>/LICENSES.json`
 são gerados por `python3 tools/assets/catalog.py licencas`, e o validador do
