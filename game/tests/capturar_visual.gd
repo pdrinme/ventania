@@ -80,24 +80,32 @@ func _init() -> void:
 	await _foto("07_paisagem")
 	cam.look_at_from_position(faz + Vector3(-30, 12, 36), faz)
 	await _foto("08_fazenda")
-	# armas, itens e baú (os modelos do jogo), lado a lado no chão
+	# loot como aparece no jogo (LootVisual: anel, coluna de luz por raridade) e o baú
 	var linha := vila + Vector3(-30, 0, 32)
-	var modelos := ["armas/picareta_01", "armas/faisca_01", "armas/zumbido_01", "armas/rajada_01",
-			"armas/trovao_01", "armas/gaviao_01", "baus_coletaveis/kit_cura_01", "baus_coletaveis/celula_escudo_g_01", "baus_coletaveis/municao_01", "baus_coletaveis/bau_ventania_01"]
+	var ids := []
+	for k in 64:
+		var id := ItemDB.id_of(k)
+		if id == "":
+			if k == 0:
+				continue      # índice 0 = nenhum item
+			break
+		if ItemDB.is_weapon(id) or ItemDB.is_consumable(id):
+			ids.append(k)
 	var n := 0
-	for mp in modelos:
-		var caminho := "res://assets/%s.glb" % mp
-		if not ResourceLoader.exists(caminho):
-			continue
-		var m := (load(caminho) as PackedScene).instantiate() as Node3D
-		var p := linha + Vector3(-4.0 + n * 1.3, 0, 0)
-		p.y = mapa.ground_height(p.x, p.z) + (0.0 if mp.begins_with("baus") else 0.6)
-		m.position = p
-		m.rotation_degrees = Vector3(0, 90, 0) if not mp.begins_with("baus") else Vector3(0, 20, 0)
-		root.add_child(m)
+	for k in ids.slice(0, 8):
+		var p := linha + Vector3(-4.2 + n * 1.2, 0, 0)
+		p.y = mapa.ground_height(p.x, p.z)
+		var lv := LootVisual.new()
+		lv.setup({"pos": p, "item": k, "ammo": 0, "rarity": n % 5, "count": 1, "mat": 0})
+		root.add_child(lv)
 		n += 1
+	var bau := (load("res://assets/baus_coletaveis/bau_ventania_01.glb") as PackedScene).instantiate() as Node3D
+	bau.position = linha + Vector3(5.6, 0, -0.6)
+	bau.position.y = mapa.ground_height(bau.position.x, bau.position.z)
+	bau.rotation_degrees.y = -25
+	root.add_child(bau)
 	cam.fov = 40
-	cam.look_at_from_position(linha + Vector3(0, 2.2, 5.0), linha + Vector3(0, 0.5, 0))
+	cam.look_at_from_position(linha + Vector3(0.6, 2.0, 6.0), linha + Vector3(0.6, 0.5, 0))
 	await _foto("09_armas_itens")
 	print("VISUAL_OK")
 	quit()

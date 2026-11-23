@@ -57,7 +57,7 @@ class TestValidateGlb(unittest.TestCase):
         self.assertEqual(st["tris"], 10)
 
     def test_excesso_de_triangulos(self):
-        erros, _, _ = self._validar(glb_minimo(tris=900))
+        erros, _, _ = self._validar(glb_minimo(tris=1200))
         self.assertTrue(any("triângulos" in e for e in erros))
 
     def test_excesso_de_materiais(self):

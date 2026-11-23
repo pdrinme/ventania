@@ -224,7 +224,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Coleta: madeira",
-      "atualizado_em": "2026-11-16"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "pinheiro_01",
@@ -240,7 +240,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Coleta: madeira",
-      "atualizado_em": "2026-11-16"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "pedra_01",
@@ -256,7 +256,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Coleta: pedra",
-      "atualizado_em": "2026-11-16"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "arbusto_01",
@@ -272,7 +272,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Sem colisão (esconderijo)",
-      "atualizado_em": "2026-11-16"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "bau_ventania_01",
@@ -288,7 +288,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Tampa articulada, animação 'abrir'",
-      "atualizado_em": "2026-11-16"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "recruta_base_01",
@@ -304,7 +304,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Esqueleto padrão humanoide (nomes Godot), animações idle e acenar",
-      "atualizado_em": "2026-11-16"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "recruta_brisa_01",
@@ -320,7 +320,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Traje feminino do personagem-base: mesmo esqueleto, animações e hitbox (Etapa 9)",
-      "atualizado_em": "2026-11-17"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "capitao_mare_01",
@@ -336,7 +336,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Skin original: aquário no lugar da cabeça (vidro, água, cascalho, algas, castelinho) e corpo de robô de metal; usa M_vidro_ventania e M_agua_ventania",
-      "atualizado_em": "2026-11-17"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "entregador_01",
@@ -352,7 +352,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Skin original: capacete de moto, mochila térmica, jaqueta com faixas refletivas",
-      "atualizado_em": "2026-11-17"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "escafandro_01",
@@ -368,7 +368,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Skin original: mergulhador antigo com capacete de latão de três vigias",
-      "atualizado_em": "2026-11-17"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "faz_tudo_01",
@@ -384,7 +384,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Skin original: robô de manutenção com cabeça de monitor, giroflex, chave inglesa e esteiras",
-      "atualizado_em": "2026-11-17"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "espantalho_01",
@@ -400,7 +400,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Skin original: saco de estopa, chapéu de palha, palha nas mangas e um corvo no ombro",
-      "atualizado_em": "2026-11-17"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "explorador_01",
@@ -416,7 +416,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Skin original: gorro de aviador, óculos, gola de pelúcia, cachecol ao vento e mochila-hélice",
-      "atualizado_em": "2026-11-17"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "botanico_01",
@@ -432,7 +432,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Skin original: criatura-planta de madeira com coroa de folhas, flor, cogumelos e raízes",
-      "atualizado_em": "2026-11-17"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "astronomo_01",
@@ -448,7 +448,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Skin original: cabeça de planeta com anel e lua, sobretudo estrelado e telescópio",
-      "atualizado_em": "2026-11-17"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "guardiao_01",
@@ -464,7 +464,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Skin original: armadura com ombreiras de nuvem, crista de raio e viseira em T",
-      "atualizado_em": "2026-11-17"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "peixe_laranja_01",
@@ -560,7 +560,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Etapa 3",
-      "atualizado_em": "2026-11-16"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "trovao_01",
@@ -576,7 +576,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Etapa 3",
-      "atualizado_em": "2026-11-16"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "zumbido_01",
@@ -592,7 +592,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Etapa 3",
-      "atualizado_em": "2026-11-16"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "faisca_01",
@@ -608,7 +608,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Etapa 3",
-      "atualizado_em": "2026-11-16"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "gaviao_01",
@@ -624,7 +624,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Etapa 3",
-      "atualizado_em": "2026-11-16"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "municao_01",
@@ -640,7 +640,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Etapa 3",
-      "atualizado_em": "2026-11-16"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "curativo_01",
@@ -656,7 +656,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Etapa 3",
-      "atualizado_em": "2026-11-16"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "kit_cura_01",
@@ -672,7 +672,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Etapa 3",
-      "atualizado_em": "2026-11-16"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "celula_escudo_p_01",
@@ -688,7 +688,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Etapa 3",
-      "atualizado_em": "2026-11-16"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "celula_escudo_g_01",
@@ -704,7 +704,7 @@
       "estado": "importado",
       "referencias": [],
       "notas": "Etapa 3",
-      "atualizado_em": "2026-11-16"
+      "atualizado_em": "2026-11-23"
     },
     {
       "id": "picareta_01",
@@ -1441,6 +1441,230 @@
       "referencias": [],
       "notas": "Mobília dos interiores (gerar_interiores.py)",
       "atualizado_em": "2026-11-17"
+    },
+    {
+      "id": "arvore_redonda_02",
+      "nome": "Árvore \"pirulito\" torta",
+      "categoria": "cenario",
+      "origem": "original",
+      "autor": "Projeto Ventania",
+      "licenca": "Original",
+      "url_origem": "",
+      "atribuicao": "",
+      "arquivo_fonte": "assets_src/cenario/arvore_redonda_02.blend",
+      "arquivo_exportado": "game/assets/cenario/arvore_redonda_02.glb",
+      "estado": "importado",
+      "referencias": [],
+      "notas": "Coleta: madeira",
+      "atualizado_em": "2026-11-23"
+    },
+    {
+      "id": "arvore_redonda_03",
+      "nome": "Árvore de outono",
+      "categoria": "cenario",
+      "origem": "original",
+      "autor": "Projeto Ventania",
+      "licenca": "Original",
+      "url_origem": "",
+      "atribuicao": "",
+      "arquivo_fonte": "assets_src/cenario/arvore_redonda_03.blend",
+      "arquivo_exportado": "game/assets/cenario/arvore_redonda_03.glb",
+      "estado": "importado",
+      "referencias": [],
+      "notas": "Coleta: madeira",
+      "atualizado_em": "2026-11-23"
+    },
+    {
+      "id": "pinheiro_02",
+      "nome": "Pinheiro alto e fino",
+      "categoria": "cenario",
+      "origem": "original",
+      "autor": "Projeto Ventania",
+      "licenca": "Original",
+      "url_origem": "",
+      "atribuicao": "",
+      "arquivo_fonte": "assets_src/cenario/pinheiro_02.blend",
+      "arquivo_exportado": "game/assets/cenario/pinheiro_02.glb",
+      "estado": "importado",
+      "referencias": [],
+      "notas": "Coleta: madeira",
+      "atualizado_em": "2026-11-23"
+    },
+    {
+      "id": "arbusto_02",
+      "nome": "Moita com flores",
+      "categoria": "cenario",
+      "origem": "original",
+      "autor": "Projeto Ventania",
+      "licenca": "Original",
+      "url_origem": "",
+      "atribuicao": "",
+      "arquivo_fonte": "assets_src/cenario/arbusto_02.blend",
+      "arquivo_exportado": "game/assets/cenario/arbusto_02.glb",
+      "estado": "importado",
+      "referencias": [],
+      "notas": "Decoração (sem colisão)",
+      "atualizado_em": "2026-11-23"
+    },
+    {
+      "id": "flores_01",
+      "nome": "Tufo de flores",
+      "categoria": "cenario",
+      "origem": "original",
+      "autor": "Projeto Ventania",
+      "licenca": "Original",
+      "url_origem": "",
+      "atribuicao": "",
+      "arquivo_fonte": "assets_src/cenario/flores_01.blend",
+      "arquivo_exportado": "game/assets/cenario/flores_01.glb",
+      "estado": "importado",
+      "referencias": [],
+      "notas": "Decoração (sem colisão)",
+      "atualizado_em": "2026-11-23"
+    },
+    {
+      "id": "grama_01",
+      "nome": "Tufo de capim",
+      "categoria": "cenario",
+      "origem": "original",
+      "autor": "Projeto Ventania",
+      "licenca": "Original",
+      "url_origem": "",
+      "atribuicao": "",
+      "arquivo_fonte": "assets_src/cenario/grama_01.blend",
+      "arquivo_exportado": "game/assets/cenario/grama_01.glb",
+      "estado": "importado",
+      "referencias": [],
+      "notas": "Decoração (sem colisão)",
+      "atualizado_em": "2026-11-23"
+    },
+    {
+      "id": "pedra_02",
+      "nome": "Lasca de pedra inclinada",
+      "categoria": "cenario",
+      "origem": "original",
+      "autor": "Projeto Ventania",
+      "licenca": "Original",
+      "url_origem": "",
+      "atribuicao": "",
+      "arquivo_fonte": "assets_src/cenario/pedra_02.blend",
+      "arquivo_exportado": "game/assets/cenario/pedra_02.glb",
+      "estado": "importado",
+      "referencias": [],
+      "notas": "Coleta: pedra",
+      "atualizado_em": "2026-11-23"
+    },
+    {
+      "id": "pedra_03",
+      "nome": "Seixos",
+      "categoria": "cenario",
+      "origem": "original",
+      "autor": "Projeto Ventania",
+      "licenca": "Original",
+      "url_origem": "",
+      "atribuicao": "",
+      "arquivo_fonte": "assets_src/cenario/pedra_03.blend",
+      "arquivo_exportado": "game/assets/cenario/pedra_03.glb",
+      "estado": "importado",
+      "referencias": [],
+      "notas": "Decoração (sem colisão)",
+      "atualizado_em": "2026-11-23"
+    },
+    {
+      "id": "cata_vento_gigante_01",
+      "nome": "Cata-vento gigante (marco do Mirante)",
+      "categoria": "cenario",
+      "origem": "original",
+      "autor": "Projeto Ventania",
+      "licenca": "Original",
+      "url_origem": "",
+      "atribuicao": "",
+      "arquivo_fonte": "assets_src/cenario/cata_vento_gigante_01.blend",
+      "arquivo_exportado": "game/assets/cenario/cata_vento_gigante_01.glb",
+      "estado": "importado",
+      "referencias": [],
+      "notas": "Marco",
+      "atualizado_em": "2026-11-23"
+    },
+    {
+      "id": "cata_vento_helice_01",
+      "nome": "Hélice do cata-vento gigante",
+      "categoria": "cenario",
+      "origem": "original",
+      "autor": "Projeto Ventania",
+      "licenca": "Original",
+      "url_origem": "",
+      "atribuicao": "",
+      "arquivo_fonte": "assets_src/cenario/cata_vento_helice_01.blend",
+      "arquivo_exportado": "game/assets/cenario/cata_vento_helice_01.glb",
+      "estado": "importado",
+      "referencias": [],
+      "notas": "Gira no cliente (Girador)",
+      "atualizado_em": "2026-11-23"
+    },
+    {
+      "id": "farol_torto_01",
+      "nome": "Farol torto (marco do Porto)",
+      "categoria": "cenario",
+      "origem": "original",
+      "autor": "Projeto Ventania",
+      "licenca": "Original",
+      "url_origem": "",
+      "atribuicao": "",
+      "arquivo_fonte": "assets_src/cenario/farol_torto_01.blend",
+      "arquivo_exportado": "game/assets/cenario/farol_torto_01.glb",
+      "estado": "importado",
+      "referencias": [],
+      "notas": "Marco",
+      "atualizado_em": "2026-11-23"
+    },
+    {
+      "id": "girassol_gigante_01",
+      "nome": "Girassol gigante (marco da Fazenda)",
+      "categoria": "cenario",
+      "origem": "original",
+      "autor": "Projeto Ventania",
+      "licenca": "Original",
+      "url_origem": "",
+      "atribuicao": "",
+      "arquivo_fonte": "assets_src/cenario/girassol_gigante_01.blend",
+      "arquivo_exportado": "game/assets/cenario/girassol_gigante_01.glb",
+      "estado": "importado",
+      "referencias": [],
+      "notas": "Marco",
+      "atualizado_em": "2026-11-23"
+    },
+    {
+      "id": "cogumelos_gigantes_01",
+      "nome": "Cogumelos gigantes (marco do Acampamento)",
+      "categoria": "cenario",
+      "origem": "original",
+      "autor": "Projeto Ventania",
+      "licenca": "Original",
+      "url_origem": "",
+      "atribuicao": "",
+      "arquivo_fonte": "assets_src/cenario/cogumelos_gigantes_01.blend",
+      "arquivo_exportado": "game/assets/cenario/cogumelos_gigantes_01.glb",
+      "estado": "importado",
+      "referencias": [],
+      "notas": "Marco; chapéus são plataformas",
+      "atualizado_em": "2026-11-23"
+    },
+    {
+      "id": "pedras_equilibradas_01",
+      "nome": "Pedras equilibradas (marco da Pedreira)",
+      "categoria": "cenario",
+      "origem": "original",
+      "autor": "Projeto Ventania",
+      "licenca": "Original",
+      "url_origem": "",
+      "atribuicao": "",
+      "arquivo_fonte": "assets_src/cenario/pedras_equilibradas_01.blend",
+      "arquivo_exportado": "game/assets/cenario/pedras_equilibradas_01.glb",
+      "estado": "importado",
+      "referencias": [],
+      "notas": "Marco; coleta: pedra",
+      "atualizado_em": "2026-11-23"
     }
   ]
 }

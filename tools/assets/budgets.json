@@ -37,7 +37,7 @@
       "permite_animacao": false
     },
     "baus_coletaveis": {
-      "max_tris": 800,
+      "max_tris": 1000,
       "max_materiais": 1,
       "max_textura_px": 256,
       "max_ossos": 4,
@@ -71,5 +71,5 @@
     "original",
     "terceiros_licenciado"
   ],
-  "_doc_personagens": "personagens: até 3 materiais (paleta + vidro + água do aquário do Capitão Maré); os outros trajes usam só a paleta. Revisão de arte: até 8500 triângulos (corpo contínuo, rosto com olhos de verdade, roupas em camadas); a Godot gera LODs na importação, então de longe custa bem menos."
+  "_doc_personagens": "personagens: até 3 materiais (paleta + vidro + água do aquário do Capitão Maré); os outros trajes usam só a paleta. baus_coletaveis: até 1000 (baú com tampa abaulada, cintas e frestas; só 37 baús no mapa, custo total pequeno). Revisão de arte: até 8500 triângulos (corpo contínuo, rosto com olhos de verdade, roupas em camadas); a Godot gera LODs na importação, então de longe custa bem menos."
 }

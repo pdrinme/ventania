@@ -18,18 +18,35 @@ L, P, A = 1.1, 0.7, 0.5   # largura, profundidade, altura do corpo
 DOBRADICA = (0, P / 2, A)
 
 
+def _arco(nome, raio, comp, z, cor, achatar=0.72, lados=12):
+    """Meio cilindro deitado no eixo X (tampa abaulada), base plana em z."""
+    o = k.cilindro(nome, raio, comp, (0, 0, z), cor, lados=lados, rot=(0, 90, 0))
+    for v in o.data.vertices:
+        if v.co.z < z:
+            v.co.z = z
+        v.co.z = z + (v.co.z - z) * achatar
+    return o
+
+
 def bau_ventania_01():
+    """Baú de tábuas pintadas de teal com cantoneiras e cintas douradas, rebites,
+    tampa abaulada com o emblema de vento e alça; levemente torto (estilo do kit)."""
     corpo = [
-        k.caixa("caixa", (L, P, A), (0, 0, A / 2), "teal_escuro", bevel=0.05),
-        k.caixa("faixa_base", (L + 0.03, P + 0.03, 0.08), (0, 0, 0.06), "amarelo_sol"),
-        k.caixa("faixa_topo", (L + 0.03, P + 0.03, 0.06), (0, 0, A - 0.05), "amarelo_sol"),
-        k.caixa("fechadura", (0.16, 0.05, 0.14), (0, -P / 2 - 0.02, A - 0.1), "dourado"),
+        k.caixa("caixa", (L, P, A), (0, 0, A / 2), "teal_escuro", bevel=0.04),
+        k.caixa("faixa_base", (L + 0.03, P + 0.03, 0.08), (0, 0, 0.06), "amarelo_sol", bevel=0.01),
+        k.caixa("faixa_topo", (L + 0.03, P + 0.03, 0.06), (0, 0, A - 0.05), "amarelo_sol", bevel=0.01),
+        k.caixa("fechadura", (0.16, 0.05, 0.15), (0, -P / 2 - 0.02, A - 0.1), "dourado", bevel=0.015),
+        k.caixa("buraco", (0.03, 0.02, 0.06), (0, -P / 2 - 0.05, A - 0.11), "preto"),
         # interior dourado (só aparece com a tampa aberta)
         k.caixa("interior", (L - 0.12, P - 0.12, 0.02), (0, 0, A + 0.005), "amarelo_sol"),
     ]
+    # tábuas: frestas horizontais na frente e atrás
+    for z in (0.19, 0.31):
+        for y in (-P / 2 - 0.003, P / 2 + 0.003):
+            corpo.append(k.caixa("fresta", (L - 0.2, 0.01, 0.012), (0, y, z), "preto"))
     for x in (-L / 2, L / 2):
         for y in (-P / 2, P / 2):
-            corpo.append(k.caixa("canto", (0.1, 0.1, A + 0.02), (x * 0.98, y * 0.98, A / 2), "amarelo_sol"))
+            corpo.append(k.caixa("canto", (0.1, 0.1, A + 0.02), (x * 0.98, y * 0.98, A / 2), "amarelo_sol", bevel=0.015))
     # dobradiças: ligam corpo e tampa visualmente (eixo X, na borda de trás do topo)
     for x in (-L * 0.3, L * 0.3):
         corpo.append(k.cilindro("dobradica", 0.035, 0.16, (x, P / 2 + 0.01, A), "metal_escuro", lados=8, rot=(0, 90, 0)))
@@ -38,13 +55,18 @@ def bau_ventania_01():
     oc["visibilidade_m"] = 150.0
 
     tampa_partes = [
-        k.caixa("tampa_caixa", (L + 0.04, P + 0.04, 0.18), (0, 0, A + 0.09), "teal", bevel=0.05),
+        _arco("tampa_caixa", P / 2 + 0.02, L + 0.04, A, "teal"),
+        _arco("cinta_e", P / 2 + 0.035, 0.07, A, "amarelo_sol"),
+        _arco("cinta_d", P / 2 + 0.035, 0.07, A, "amarelo_sol"),
         k.caixa("forro", (L - 0.08, P - 0.08, 0.02), (0, 0, A + 0.002), "teal_escuro"),
-        k.toro("emblema", 0.11, 0.03, (0, -P / 2 - 0.03, A + 0.1), "coral", rot=(90, 0, 0), seg=10, seg_menor=4),
-        k.esfera("emblema_centro", 0.05, (0.03, -P / 2 - 0.04, A + 0.12), "amarelo_sol", segmentos=8, aneis=6),
-        k.cilindro("emblema_cauda", 0.025, 0.22, (-0.13, -P / 2 - 0.03, A + 0.03), "coral", lados=6, rot=(0, 70, 0)),
-        k.caixa("alca", (0.22, 0.05, 0.05), (0, -P / 2 - 0.045, A + 0.16), "dourado", bevel=0.01),
+        k.toro("emblema", 0.1, 0.028, (0, -P / 2 - 0.0, A + 0.1), "coral", rot=(70, 0, 0), seg=10, seg_menor=4),
+        k.esfera("emblema_centro", 0.045, (0.03, -P / 2 - 0.01, A + 0.115), "amarelo_sol", segmentos=8, aneis=6),
+        k.cilindro("emblema_cauda", 0.022, 0.2, (-0.13, -P / 2 + 0.01, A + 0.04), "coral", lados=6, rot=(0, 70, 0)),
+        k.caixa("alca", (0.22, 0.05, 0.05), (0, -P / 2 - 0.045, A + 0.06), "dourado", bevel=0.01),
     ]
+    # cintas nas pontas da tampa
+    tampa_partes[1].location.x = -L * 0.38
+    tampa_partes[2].location.x = L * 0.38
     tampa = k.unir(tampa_partes, "tampa")
     # origem da tampa na DOBRADIÇA (depois de juntar: a origem do objeto está em 0,0,0)
     k.origem_em(tampa, DOBRADICA)
