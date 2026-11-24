@@ -156,10 +156,148 @@ salvar("construir", mix(batida(0.18, 1800, 160, 0.035), silencio(0.05) + clique(
 salvar("desabar", mix(ruido_filtrado(int(TAXA * 0.7), 900)[:int(TAXA * 0.7)] and
        [v * math.exp(-(i / TAXA) / 0.25) for i, v in enumerate(ruido_filtrado(int(TAXA * 0.7), 900))], tom([110, 55], 0.5, 0.6)), vol=0.65)
 # Ônibus de Batalha e Tormenta
-salvar("onibus", mix(tom([140, 150], 0.9, 0.5, decai=0.6), [v * 0.35 for v in whoosh(0.9, 200, 900)]), vol=0.55)
 salvar("salto", whoosh(0.45, 400, 2600, 0.7), vol=0.6)
 salvar("planador", mix(whoosh(0.3, 300, 1200, 0.5), clique(700, 0.05, 0.5)), vol=0.55)
 alerta = []
 for k, f in enumerate([392, 523, 659]):
     alerta = mix(alerta, silencio(0.12 * k) + tom([f, f * 0.99], 0.55, 0.35, decai=0.25))
 salvar("tormenta_alerta", mix(alerta, [v * 0.4 for v in whoosh(0.9, 150, 700)]), vol=0.6)
+
+
+# ================================================================ Ônibus dos Ventos (1.4)
+# Loops SEM EMENDA: todo tom tem número inteiro de ciclos no comprimento do loop e
+# todo ruído é cruzado (o fim desliza para o começo), então o loop não "clica".
+def _passa_baixa(x, corte):
+    a = math.exp(-2 * math.pi * corte / TAXA)
+    y, out = 0.0, []
+    for v in x:
+        y = (1 - a) * v + a * y
+        out.append(y)
+    return out
+
+
+def _ruido(n):
+    return [rnd.uniform(-1, 1) for _ in range(n)]
+
+
+def _laco(x, n, cruz):
+    """Fecha um loop de n amostras a partir de n + cruz: o rabo é misturado no começo."""
+    out = x[:n]
+    for i in range(cruz):
+        k = i / cruz
+        out[i] = x[n + i] * (1 - k) + out[i] * k
+    return out
+
+
+def _normal(x, pico=1.0):
+    m = max(abs(v) for v in x) or 1.0
+    return [v / m * pico for v in x]
+
+
+def motor_onibus(dur=2.0):
+    """Turboélice: zumbido das pás (dente de serra 72 Hz modulado na passagem das pás,
+    18 Hz), ronco grave, assobio da turbina (1,15 e 1,73 kHz com leve vibrato) e ar."""
+    n = int(TAXA * dur)
+    cruz = int(TAXA * 0.25)
+    ar = _normal(_passa_baixa(_ruido(n + cruz), 900))
+    ar = _laco(ar, n, cruz)
+    out = []
+    for i in range(n):
+        t = i / TAXA
+        f = 72.0
+        serra = sum(math.sin(2 * math.pi * f * h * t) / h for h in range(1, 9))
+        pas = 0.55 + 0.45 * abs(math.sin(2 * math.pi * 9.0 * t)) ** 1.5          # 18 batidas/s
+        ronco = math.sin(2 * math.pi * 36.0 * t) * 0.8
+        vib = 0.004 * math.sin(2 * math.pi * 3.0 * t)
+        apito = math.sin(2 * math.pi * 1150.0 * t * (1 + vib)) * 0.06 + math.sin(2 * math.pi * 1730.0 * t) * 0.035
+        out.append(serra * 0.32 * pas + ronco * 0.3 + apito + ar[i] * 0.28)
+    return out
+
+
+def cabine_onibus(dur=3.0):
+    """Dentro do ônibus: o motor abafado (só os graves), sacolejo lento da carroceria e
+    rangidos/chocalhos esparsos de metal e madeira."""
+    n = int(TAXA * dur)
+    m = motor_onibus(dur)
+    # filtra DUAS voltas e usa a segunda: o filtro já "aquecido" não cria clique na emenda
+    abafado = _passa_baixa(_passa_baixa(m + m, 380), 380)[n:]
+    cruz = int(TAXA * 0.3)
+    chiado = _laco(_normal(_passa_baixa(_ruido(n + cruz), 2200)), n, cruz)
+    out = []
+    for i in range(n):
+        t = i / TAXA
+        sacolejo = 0.8 + 0.2 * math.sin(2 * math.pi * (1 / dur) * 2 * t)
+        out.append(abafado[i] * 1.6 * sacolejo + chiado[i] * 0.05)
+    r = random.Random(7)
+    for k in range(7):                                     # chocalhos (posições fixas: loop estável)
+        ini = int(r.uniform(0.05, dur - 0.2) * TAXA)
+        f = r.choice((420, 610, 880, 1240))
+        for j in range(int(TAXA * 0.06)):
+            tt = j / TAXA
+            out[(ini + j) % n] += math.sin(2 * math.pi * f * tt) * math.exp(-tt / 0.012) * 0.18
+    for k in range(2):                                     # rangido longo
+        ini = int((0.4 + k * 1.5) * TAXA)
+        for j in range(int(TAXA * 0.35)):
+            tt = j / TAXA
+            f = 160 + 50 * math.sin(tt * 25)
+            out[(ini + j) % n] += math.sin(2 * math.pi * f * tt) * math.sin(math.pi * tt / 0.35) * 0.07
+    return out
+
+
+def vento(dur=3.0, corte_a=500, corte_b=2600, rajadas=2):
+    """Vento contínuo (altitude): duas faixas de ruído com volume que "respira" em
+    rajadas (número inteiro de rajadas por loop)."""
+    n = int(TAXA * dur)
+    cruz = int(TAXA * 0.4)
+    grave = _laco(_normal(_passa_baixa(_ruido(n + cruz), corte_a)), n, cruz)
+    agudo = _laco(_normal(_passa_baixa(_ruido(n + cruz), corte_b)), n, cruz)
+    out = []
+    for i in range(n):
+        t = i / TAXA
+        g = 0.65 + 0.35 * math.sin(2 * math.pi * rajadas / dur * t)
+        h = 0.5 + 0.5 * math.sin(2 * math.pi * (rajadas + 1) / dur * t + 1.3)
+        out.append(grave[i] * g * 0.8 + (agudo[i] - grave[i] * 0.5) * h * 0.35)
+    return out
+
+
+def buzina(toques=((0.0, 0.28), (0.36, 0.5))):
+    """Buzina de dois tons (Fá + Lá, levemente desafinada e "rouca")."""
+    total = max(a + d for a, d in toques) + 0.15
+    out = silencio(total)
+    for ini, d in toques:
+        for i in range(int(TAXA * d)):
+            t = i / TAXA
+            e = min(1.0, t / 0.02) * min(1.0, (d - t) / 0.06)
+            s = 0.0
+            for f in (349.2, 440.0, 351.0):
+                fase = 2 * math.pi * f * t * (1 - 0.01 * math.exp(-t / 0.05))
+                s += max(-0.6, min(0.6, math.sin(fase) * 1.4)) + 0.3 * math.sin(2 * fase)
+            out[int(ini * TAXA) + i] += s * e * 0.3
+    return out
+
+
+def portas_onibus():
+    """Portas abrindo: ar comprimido (chiado que decai), trava (clunk) e campainha."""
+    n = int(TAXA * 1.6)
+    chiado = _normal(_passa_baixa(_ruido(n), 6000))
+    grave = _normal(_passa_baixa(_ruido(n), 500))
+    out = []
+    for i in range(n):
+        t = i / TAXA
+        e = min(1.0, t / 0.01) * math.exp(-t / 0.35)
+        out.append((chiado[i] - grave[i] * 0.6) * e * 0.5)
+    out = mix(out, silencio(0.45) + clique(140, 0.12, 1.0))
+    sino = mix(tom([988, 988], 0.6, 0.35, decai=0.25), silencio(0.22) + tom([784, 784], 0.8, 0.35, decai=0.3))
+    return mix(out, silencio(0.6) + sino)
+
+
+salvar("onibus_motor", motor_onibus(), vol=0.7)
+salvar("onibus_cabine", cabine_onibus(), vol=0.65)
+salvar("vento_altitude", vento(3.0, 450, 2800, 2), vol=0.7)
+salvar("onibus_vento", vento(2.0, 900, 4000, 1), vol=0.6)
+salvar("onibus_buzina", buzina(), vol=0.75)
+salvar("onibus_buzina_curta", buzina(((0.0, 0.18),)), vol=0.7)
+salvar("onibus_portas", portas_onibus(), vol=0.7)
+# eliminação: baque e o vento levando o corpo
+salvar("eliminado", mix(batida(0.35, 700, 70, 0.12), silencio(0.05) + [v * 0.5 for v in whoosh(0.5, 300, 900)]), vol=0.6)
+salvar("rajada", whoosh(1.1, 250, 2200, 0.7), vol=0.6)

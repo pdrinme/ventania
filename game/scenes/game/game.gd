@@ -22,6 +22,7 @@ var _assistindo := -1               # id do jogador assistido (espectador)
 var resultado := {}                 # último S_RESULT (testes)
 var onibus: OnibusBatalha           # rota do Ônibus de Batalha da partida atual
 var _onibus_vis: Node3D
+var audio_entrada: AudioEntrada         # motor/vento/cabine/buzinas do ônibus e vento da queda
 var _queda_antes := 0
 var _tormenta_antes := {}
 var pawn: Pawn
@@ -89,6 +90,9 @@ func _ready() -> void:
 
 	camera = PlayerCamera.new()
 	add_child(camera)
+	audio_entrada = AudioEntrada.new()
+	audio_entrada.name = "AudioEntrada"
+	add_child(audio_entrada)
 	sampler = InputSampler.new()
 	add_child(sampler)
 
@@ -1085,8 +1089,9 @@ func _on_bus(d: Dictionary) -> void:
 		_onibus_vis = (load("res://assets/cenario/onibus_01.glb") as PackedScene).instantiate() as Node3D
 		_onibus_vis.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 		add_child(_onibus_vis)
+		audio_entrada.attach_bus(_onibus_vis)
 	_onibus_vis.visible = true
-	Audio.play_sfx("onibus", -2.0)
+	audio_entrada.reset()
 
 
 ## Ônibus (visual pela rota), câmera no ônibus/queda e avisos da entrada.
@@ -1102,6 +1107,10 @@ func _atualizar_onibus(_delta: float) -> void:
 			_onibus_vis.global_transform.basis = Basis.looking_at(-dir, Vector3.UP).rotated(Vector3.UP, 0.0)
 	var q := pawn.queda
 	visual.set_fall(q)
+	var a_bordo: bool = q == Pawn.NO_ONIBUS and not _morto
+	var modo_queda := 1 if q == Pawn.QUEDA_LIVRE else (2 if q == Pawn.PLANADOR else 0)
+	audio_entrada.update(_delta, ativo, a_bordo, tick, onibus, camera.global_position, modo_queda if not _morto else 0,
+			pawn.velocity.length())
 	if q == Pawn.NO_ONIBUS and _onibus_vis and not _morto:
 		# portas abertas: o próprio personagem aparece agachado na porta traseira,
 		# segurando o batente (os outros continuam dentro do ônibus)

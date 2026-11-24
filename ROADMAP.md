@@ -11,6 +11,7 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 - **M4 — "Com estilo"** (Etapa 13): os primeiros cosméticos originais, equipáveis e visíveis na partida.
 - ✅ **v1.0.0** (Etapa 12): M3 entregue: pacotes do jogo e do servidor completo, com os guias.
 - ✅ **v1.1.0** (Etapa 13): M4 entregue: 9 trajes originais novos, picareta-âncora, 2 planadores, animações de entrada e loja com imagens reais e visualizador 3D.
+- ✅ **v1.4.0** (personagens e animação): modelos remodelados (proporções cartum, membros com forma, mãos/pés, roupas soltas, cabelo na nuca), animações novas pose a pose no Blender (caminhar/corrida/sprint, pulo, queda, aterrissagem, agachado, eliminação, reações de tiro/recarga/troca) e som do Ônibus dos Ventos. Detalhes abaixo.
 - ✅ **v1.3.0** (revisão de arte): personagens e as 11 skins remodelados, animações com mais peso, vegetação e rochas novas em grupos, terreno e céu, casas pintadas e levemente tortas, 5 marcos surreais, armas/itens/baú remodelados, loot com coluna de luz e efeitos por perfil gráfico. Antes/depois em `docs/art/comparacao_1.3.0.jpg`; detalhes abaixo.
 - ✅ **v1.2.1**: correção das paredes com janela/porta invisíveis na 1.2.0.
 - ✅ **v1.2.0** (revisão de qualidade): IA e navegação, escadas reais e interiores mobiliados, rampas, mapa com regiões, tela de resultado, mira no celular e desempenho. Medido antes e depois; detalhes abaixo.
@@ -791,4 +792,12 @@ Gameplay, rede (protocolo v12), hitboxes e regras não mudaram.
 - ✅ Desempenho: efeitos por pixel, céu, ajuste de cor e LOD controlados pelo perfil. `bench_mapa` (render por software) 1.2.1 → 1.3.0: Desempenho 29,2 → 25,2 FPS (1% pior 16,9 → 16,3), Equilibrado 18,1 → 13,5, Qualidade 9,2 → 4,9. O custo extra nos perfis altos vem dos personagens mais detalhados com sombra.
 - ✅ Imagens da loja regeneradas; catálogo e licenças dos 14 assets novos (todos originais).
 - ⬜ Detalhes de fachada presos às peças (chaminés, toldos, floreiras) — precisam sumir junto com a parede destruída.
+
+## v1.4.0 — personagens, animação e som da entrada
+
+- ✅ Personagens: novo grafo do corpo (deltoide, bíceps, antebraço, coxa, panturrilha, canela, peitoral, trapézio) suavizado; cabeça +10%; mãos e calçados maiores; roupas com folga por região; cabelo cobre a nuca; nariz menor. Skins revisadas uma a uma (capacetes grandes sem escala extra, Botânico encorpado com casca na nuca, mangueira do Escafandro como tubo, nuca do Espantalho costurada, luvas de couro do Recruta).
+- ✅ Animações pose a pose (`animacoes.py`): spline entre poses, atraso por osso, espelho automático. Novos: caminhar, corrida e sprint distintos, idle com personalidade, agachado, pulo, queda, aterrissagem, eliminação; reações aditivas de tiro, recarga e troca só no tronco (a arma segue o peito; as mãos continuam no IK).
+- ✅ Eliminação visível para todos (cópia com o traje cai e o vento leva), disparada pelo evento já replicado; nenhuma mudança de protocolo.
+- ✅ Som do Ônibus dos Ventos (`AudioEntrada`): motor turboélice e vento 3D presos ao ônibus com Doppler, cabine a bordo, buzina de aviso 3 s antes das portas, chiado + campainha ao abrir, buzina de última chamada, vento de altitude na queda livre/planador; fades e eventos uma vez por partida (quem entra no meio não ouve eventos velhos). Prévia: `docs/audio/previa_onibus_1.4.wav`.
+- ✅ Testes novos: `test_animacoes` (clipes em todos os trajes, estados pela velocidade, coice aditivo comparado com gêmeo, eliminação) e `test_audio_onibus` (fades, cabine, eventos, entrar no meio, silêncio no fim, Doppler).
 

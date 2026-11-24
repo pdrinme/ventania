@@ -80,6 +80,17 @@ Fotos completas em `docs/art/antes/` e `docs/art/depois/`.*
   - cabeça, olhos (branco, íris, pupila, 2 brilhos, pálpebra, cílios), sobrancelhas, nariz, boca, orelhas, cabelo em mechas (`topete`, `bagunca`, `rabo`), mãos com dedos, calçados com sola e cadarço.
 - Skins em `gerar_skins.py`: cada uma tem a sua função, com identidade própria (não é troca de cor). Para criar uma nova, copie a função mais parecida.
 - Rosto: olhos grandes e expressivos com pálpebra a 1/3, sorriso de canto, sobrancelha levemente inclinada. Sem copiar rostos de personagens existentes.
+- **Proporções (1.4)**: "herói cartunesco" — cabeça 10% maior que o natural (`ESCALA_CABECA`, todas as peças do osso Head escalam juntas; capacetes já grandes ficam em 1.0), ombros largos e cintura marcada, membros que AFINAM nas juntas (deltoide, bíceps, antebraço, coxa, panturrilha atrás, canela; pulso e tornozelo finos), pescoço firme, mãos "gordinhas" com dedos dobrados e pés grandes. O grafo de juntas tem uma junta por volume e é suavizado depois da subdivisão (sem degraus entre raios).
+- **Roupas com folga**: `casca(..., folga=f)` afasta cada vértice pela normal com um extra que depende da posição — mangas mais largas que o braço e abrindo na ponta, barra solta no quadril, boca da calça caindo sobre o calçado, jaqueta fofa.
+- **Cabelo cobre a nuca** (volume `nuca` + calota que desce atrás das orelhas): nada de "careca" na vista de trás.
+
+## 5.2 Animação (1.4)
+
+- **Autoria pose a pose** em `tools/assets/kit/blender/animacoes.py`: cada clipe é uma lista de poses-chave; entre elas, spline Catmull-Rom (o movimento passa pelas poses sem parar); cada osso tem um **atraso** (cabeça, antebraços e mãos chegam depois do tronco = sobreposição); ciclos de passada são escritos para um lado e **espelhados** automaticamente.
+- **Locomoção**: parado (contrapposto, respiração, olhada, troca de peso) → caminhar (1,8 m/s) → corrida (4,5 m/s, velocidade padrão) → sprint (6,5 m/s), misturados pela velocidade replicada; agachado e andar agachado; pular (impulso → encolhe), queda (braços "nadando"), aterrissar (amortece fundo, passa e assenta). Os ciclos têm contato, descida, passagem e subida/voo.
+- **Armas**: as mãos ficam presas à arma pelo IK (ItemRig); tiro, recarga e troca ganham **reações do tronco** feitas no Blender e SOMADAS na Godot (OneShot ADD com filtro só em Spine/Chest/Neck/Head/ombros). Como a arma segue o peito, o coice e a recarga movem a arma. A recarga estica para a duração da arma.
+- **Eliminação**: clipe `eliminado` (golpe, cambaleia, joelhos, tomba) tocado numa cópia com o traje da vítima, e o vento leva o corpo num redemoinho (`EliminacaoVisual`). Disparado pelo evento de eliminação que todos os clientes já recebem.
+- **Conferir**: folha de quadros `game/tests/capturar_anim.gd`, teste `tests/integration/test_animacoes.gd`.
 
 ## 5.1 Cenário
 
@@ -92,7 +103,7 @@ Fotos completas em `docs/art/antes/` e `docs/art/depois/`.*
 
 | Asset | Triângulos | Orçamento |
 |---|---|---|
-| personagens (11 trajes) | 4.500–8.474 | 8.500 (a Godot gera LODs) |
+| personagens (11 trajes, 1.4) | 4.366–8.384 | 8.500 (a Godot gera LODs) |
 | bau_ventania_01 | 848 | 1.000 |
 | armas | 436–920 | 1.500 |
 | itens (munição, cura, escudo) | 156–476 | 1.000 |

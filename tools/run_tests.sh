@@ -102,6 +102,9 @@ rodar_godot timeout 200 "$GODOT" --headless --fixed-fps 30 --path game -s res://
 
 passo "Animações 1.4: clipes em todos os trajes, locomoção pela velocidade, reações aditivas, eliminação"
 rodar_godot timeout 200 "$GODOT" --headless --fixed-fps 30 --path game -s res://tests/integration/test_animacoes.gd; checar $? "animações"
+
+passo "Som da entrada: ônibus (motor 3D, cabine, buzinas, portas), vento da queda, fades e Doppler"
+rodar_godot timeout 200 "$GODOT" --headless --fixed-fps 30 --path game -s res://tests/integration/test_audio_onibus.gd; checar $? "áudio do ônibus"
 FILTRO="NAVEGACAO|FALHOU|destinos"
 rodar_godot timeout 900 "$GODOT" --headless --fixed-fps 30 --path game -s res://tests/integration/test_navegacao.gd -- 9999 97; checar $? "navegação"
 FILTRO="PICARETA_COSMETICA|FALHA"
