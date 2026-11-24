@@ -740,6 +740,7 @@ func _on_elim(e: Dictionary) -> void:
 	if na_tormenta:
 		texto = "%s foi pego pela Tormenta" % vitima
 	combat_hud.kill_feed(texto)
+	_cena_eliminacao(e["victim"])
 	if pawn and e["killer"] == pawn.entity_id and e["victim"] != e["killer"] and _em_partida():
 		match_hud.eliminacoes += 1
 	if pawn and e["victim"] == pawn.entity_id:
@@ -748,6 +749,19 @@ func _on_elim(e: Dictionary) -> void:
 			_assistindo = e["killer"] if e["killer"] != e["victim"] else -1
 		else:
 			combat_hud.show_eliminated("Eliminado por %s\nReaparecendo…" % quem if e["killer"] != e["victim"] else "Você caiu!\nReaparecendo…")
+
+
+## Animação de eliminação (todos os clientes veem): cópia do personagem com o traje
+## dele cai e é levada pelo vento; o visual real já some pela flag F_DEAD.
+func _cena_eliminacao(vitima: int) -> void:
+	var v: PawnVisual = null
+	if pawn and vitima == pawn.entity_id:
+		v = visual
+	elif _remotos.has(vitima):
+		v = _remotos[vitima]["visual"]
+	if v == null or not is_instance_valid(v) or not v.is_inside_tree() or not v.visible:
+		return
+	EliminacaoVisual.spawn(mundo, v.traje, v.global_transform)
 
 
 func _set_morto(v: bool) -> void:

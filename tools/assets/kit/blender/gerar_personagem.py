@@ -487,15 +487,10 @@ def _acao(arm, nome, quadros, pose_fn, passo=2, loop=True):
 
 def animar(arm):
     arm.animation_data_create()
-    acoes = [
-        _acao(arm, "idle-loop", 120, _pose_idle, passo=4),
-        _acao(arm, "andar-loop", 32, _pose_andar),           # 1,07 s por 2 passos @ 4,5 m/s
-        _acao(arm, "correr-loop", 20, _pose_correr),          # 0,67 s por 2 passos @ 6,5 m/s
-        _acao(arm, "agachado-loop", 60, lambda t: _pose_agachado(t, 0.0), passo=4),
-        _acao(arm, "agachado_andar-loop", 36, lambda t: _pose_agachado(t, 24.0)),
-        _acao(arm, "pular", 10, _pose_pulo, loop=False),
-        _acao(arm, "queda-loop", 24, _pose_queda),
-        _acao(arm, "aterrissar", 12, _pose_aterrissar, loop=False),
+    import animacoes as an
+    # locomoção, pulo, queda, aterrissagem, agachado, eliminação e reações das
+    # armas: autoria pose a pose (animacoes.py, revisão 1.4)
+    acoes = an.criar_todas(arm) + [
         # entrada na partida (Ônibus de Batalha)
         _acao(arm, "preparar-loop", 60, _pose_preparar, passo=4),
         _acao(arm, "saltar", 18, _pose_saltar, loop=False),

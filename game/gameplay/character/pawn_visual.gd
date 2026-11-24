@@ -13,6 +13,11 @@ const MODELO := "res://assets/personagens/recruta_base_01.glb"   # traje padrão
 const DURACAO_TROCA := 0.22
 const DURACAO_GUARDAR := 0.12      # guarda o item atual antes de sacar o próximo
 const DURACAO_RECUO := 0.18
+const VEL_CAMINHAR := 1.8          # m/s do clipe "caminhar" (entre parado e a corrida)
+## [nó, clipe, entrada, saída]: reações aditivas das armas
+const REACOES := [["equipar", "reacao_equipar", 0.04, 0.1], ["recarga", "reacao_recarga", 0.12, 0.2],
+		["tiro", "reacao_tiro", 0.0, 0.06]]
+const OSSOS_TRONCO := ["Spine", "Chest", "Neck", "Head", "LeftShoulder", "RightShoulder"]
 
 var _modelo: Node3D
 var _sk: Skeleton3D
@@ -69,15 +74,17 @@ func _montar_arvore() -> void:
 	var bt := AnimationNodeBlendTree.new()
 	var pe := AnimationNodeBlendSpace1D.new()
 	pe.sync = true
-	pe.add_blend_point(_anim("idle"), 0.0)
-	pe.add_blend_point(_anim("andar"), Movement.WALK_SPEED)
-	pe.add_blend_point(_anim("correr"), Movement.SPRINT_SPEED)
+	pe.add_blend_point(_anim("idle"), 0.0, -1, &"idle")
+	if _ap.has_animation("caminhar"):
+		pe.add_blend_point(_anim("caminhar"), VEL_CAMINHAR, -1, &"caminhar")   # analógico leve, bots freando
+	pe.add_blend_point(_anim("andar"), Movement.WALK_SPEED, -1, &"corrida")
+	pe.add_blend_point(_anim("correr"), Movement.SPRINT_SPEED, -1, &"sprint")
 	pe.min_space = 0.0
 	pe.max_space = Movement.SPRINT_SPEED
 	var ag := AnimationNodeBlendSpace1D.new()
 	ag.sync = true
-	ag.add_blend_point(_anim("agachado"), 0.0)
-	ag.add_blend_point(_anim("agachado_andar"), Movement.CROUCH_SPEED)
+	ag.add_blend_point(_anim("agachado"), 0.0, -1, &"agachado")
+	ag.add_blend_point(_anim("agachado_andar"), Movement.CROUCH_SPEED, -1, &"agachado_andar")
 	ag.min_space = 0.0
 	ag.max_space = Movement.CROUCH_SPEED
 	var salto := AnimationNodeOneShot.new()
@@ -148,12 +155,50 @@ func _montar_arvore() -> void:
 	bt.connect_node("pesado", 1, "pesado_anim")
 	bt.connect_node("entrada", 0, "pesado")
 	bt.connect_node("entrada", 1, "prep")
-	bt.connect_node("output", 0, "entrada")
+	# reações das armas (revisão 1.4): clipes do Blender SOMADOS só ao tronco e à
+	# cabeça, por cima de qualquer locomoção; as mãos seguem a arma pelo IK, então o
+	# coice e a recarga movem a arma junto com o peito
+	var ultimo := "entrada"
+	for r in REACOES:
+		if not _ap.has_animation(r[1]):
+			continue
+		var os := AnimationNodeOneShot.new()
+		os.mix_mode = AnimationNodeOneShot.MIX_MODE_ADD
+		os.fadein_time = r[2]
+		os.fadeout_time = r[3]
+		os.filter_enabled = true
+		for osso in OSSOS_TRONCO:
+			os.set_filter_path(NodePath("%s:%s" % [_caminho_esqueleto(), osso]), true)
+		var vel := AnimationNodeTimeScale.new()
+		bt.add_node(r[0] + "_anim", _anim(r[1]))
+		bt.add_node(r[0] + "_vel", vel)
+		bt.add_node(r[0], os)
+		bt.connect_node(r[0] + "_vel", 0, r[0] + "_anim")
+		bt.connect_node(r[0], 0, ultimo)
+		bt.connect_node(r[0], 1, r[0] + "_vel")
+		ultimo = r[0]
+	bt.connect_node("output", 0, ultimo)
 	_tree = AnimationTree.new()
 	_modelo.add_child(_tree)
 	_tree.anim_player = _tree.get_path_to(_ap)
 	_tree.tree_root = bt
 	_tree.active = true
+	for r in REACOES:
+		if _ap.has_animation(r[1]):
+			_tree.set("parameters/%s_vel/scale" % r[0], 1.0)
+
+
+## Caminho do Skeleton3D a partir da raiz do AnimationPlayer (para os filtros).
+func _caminho_esqueleto() -> String:
+	var raiz := _ap.get_node(_ap.root_node)
+	return str(raiz.get_path_to(_sk))
+
+
+func _reagir(nome: String, escala := 1.0) -> void:
+	if _tree == null or not _ap.has_animation("reacao_" + nome):
+		return
+	_tree.set("parameters/%s_vel/scale" % nome, escala)
+	_tree.set("parameters/%s/request" % nome, AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 
 
 func _anim(nome: String) -> AnimationNodeAnimation:
@@ -271,6 +316,8 @@ func _trocar_modelo(indice: int) -> void:
 		rig.holder.add_child(rig.item_node)
 		_cano = rig.item_node.find_child("muzzle", true, false) as Node3D
 	rig.equip = 0.0
+	if not caminho.is_empty():
+		_reagir("equipar")
 
 
 ## Item que está de fato na mão agora (pode estar guardando o anterior).
@@ -290,6 +337,10 @@ func set_aim(pitch: float, mirando: bool) -> void:
 
 
 func set_action(acao: int, progresso: float) -> void:
+	if acao == Protocol.ACT_RELOAD and rig.action != Protocol.ACT_RELOAD and com_arma:
+		# o clipe tem 1 s: estica para a duração da recarga desta arma
+		var dur := ItemDB.reload_time(rig.item, 0) if ItemDB.is_weapon(rig.item) else 1.0
+		_reagir("recarga", 1.0 / maxf(0.4, dur))
 	rig.action = acao
 	rig.progress = clampf(progresso, 0.0, 1.0)
 
@@ -302,6 +353,8 @@ func set_reach(ponto_mundo: Vector3, peso: float) -> void:
 
 func fire() -> void:
 	var cat := ItemRig.categoria(rig.item)
+	if com_arma:
+		_reagir("tiro", 1.0 if rig.item != "trovao" and rig.item != "gaviao" else 0.7)
 	rig.recoil = minf(rig.recoil + (1.4 if rig.item == "trovao" or rig.item == "gaviao" else 0.7), 2.0)
 	if _cano:
 		_flash.global_position = _cano.global_position
@@ -492,7 +545,9 @@ func _estado(h: float) -> String:
 		return "agachado_andar" if h > 0.3 else "agachado"
 	if h > 5.2:
 		return "correr"
-	return "andar" if h > 0.3 else "idle"
+	if h > 3.0:
+		return "andar"
+	return "caminhar" if h > 0.3 else "idle"
 
 
 ## Nome do estado de locomoção atual (testes/diagnóstico).

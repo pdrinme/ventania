@@ -2,7 +2,7 @@ extends SceneTree
 ## Tira de filme das animações: uma linha por animação, colunas = momentos do ciclo.
 ## Uso: godot --path game --rendering-driver opengl3 -s res://tests/capturar_animacoes.gd -- saida.png [yaw] [anim1,anim2,...] [modelo.glb]
 
-var ANIMS := ["idle", "andar", "correr", "agachado", "agachado_andar", "pular", "queda", "aterrissar", "acenar"]
+var ANIMS := ["idle", "caminhar", "andar", "correr", "agachado", "agachado_andar", "pular", "queda", "aterrissar", "acenar", "eliminado"]
 const COLUNAS := 6
 
 
