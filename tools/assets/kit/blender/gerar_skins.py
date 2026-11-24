@@ -33,8 +33,11 @@ class Corpo:
 
     def __init__(self):
         self.p = []
+        self.escala_cabeca = ep.ESCALA_CABECA
 
     def add(self, o, osso):
+        if osso == "Head":
+            ep.escalar_cabeca(o, self.escala_cabeca)
         self.p.append(gp._osso(o, osso))
         return o
 
@@ -123,7 +126,7 @@ def recruta(c, fem=False):
         for s in (1, -1):
             c.add(k.esfera("brinco", 0.017, (s * 0.17, -0.0, 1.585), "dourado", segmentos=8, aneis=6), "Head")
     for lado, s in LADOS:
-        c.varios(ep.mao(lado, s, "cinza_tecido", punho="pedra_media"), f"{lado}Hand")
+        c.varios(ep.mao(lado, s, "couro", punho="madeira_escura"), f"{lado}Hand")
         c.varios(ep.calcado(lado, s, "couro", sola="madeira_escura", cano=0.12, cadarco="areia"), f"{lado}Foot")
 
 
@@ -147,6 +150,7 @@ def _juntas(c, cor, r_cot=0.06, r_joe=0.07):
 
 # =============================================================== CAPITÃO MARÉ
 def capitao_mare(c):
+    c.escala_cabeca = 1.0          # capacete/aquário já é grande: sem a escala cartum
     """O Aquarista: um aquário de verdade no lugar da cabeça (vidro, moldura, água,
     cascalho, algas, pedra, castelinho, tampa com bomba de ar) sobre um corpo de
     robô: chassi liso de metal com placas rebitadas que acompanham o corpo,
@@ -265,6 +269,7 @@ def entregador(c):
 
 # =============================================================== ESCAFANDRO
 def escafandro(c):
+    c.escala_cabeca = 1.0          # capacete/aquário já é grande: sem a escala cartum
     """Escafandro: mergulhador antigo — capacete de latão gigante (três vigias,
     grade, válvula), corselete rebitado, macacão grosso de lona com costuras,
     pesos de chumbo na cintura e no peito, luvas de couro e botas de chumbo."""
@@ -301,7 +306,10 @@ def escafandro(c):
         c.add(k.toro("aro_lado", 0.075, 0.02, (s * 0.275, 0, 1.72), CH, rot=(0, 90, 0), seg=14, seg_menor=4), "Head")
     c.add(k.cilindro("valvula", 0.05, 0.08, (0, 0.2, 1.88), CH, lados=10, rot=(-40, 0, 0)), "Head")
     c.add(k.toro("volante", 0.05, 0.012, (0, 0.23, 1.92), "vermelho", rot=(-40, 0, 0), seg=12, seg_menor=4), "Head")
-    c.add(ep.mecha("mangueira", (0, 0.24, 1.6), (0.06, 0.27, 1.22), 0.03, "preto", curva=(0, 0.07, 0)), "Chest")
+    # mangueira de ar: do capacete até o peso das costas (tubo, não lâmina)
+    c.add(ep.mecha("mangueira", (0.02, 0.19, 1.6), (0.03, 0.265, 1.34), 0.026, "pedra_escura", curva=(0.02, 0.07, 0.02),
+                   lados=8, segmentos=6, cone=False), "Chest")
+    c.add(ep.anel("conector", 0.032, 0.012, (0.03, 0.262, 1.36), "dourado", seg=10), "Chest")
     _rebites(c, "Head", [(math.cos(a) * 0.255, math.sin(a) * 0.255, 1.5) for a in [i * math.tau / 10 for i in range(10)]], cor=CH, r=0.018)
 
 
@@ -405,6 +413,12 @@ def espantalho(c):
     c.add(k.cilindro("bico", 0.014, 0.05, (0.26, -0.115, 1.59), "amarelo_sol", lados=6, rot=(90, 0, 0), raio_topo=0.002), "LeftShoulder")
     c.add(k.esfera("olho_corvo", 0.009, (0.285, -0.095, 1.605), "branco", segmentos=6, aneis=4), "LeftShoulder")
     c.add(k.caixa("rabo_corvo", (0.05, 0.08, 0.015), (0.26, 0.1, 1.5), "preto", rot=(20, 0, 0)), "LeftShoulder")
+    # nuca do saco: costura vertical, remendo e palha saindo (não fica um disco liso)
+    for i in range(5):
+        c.add(k.caixa("costura_nuca", (0.03, 0.008, 0.008), (0, 0.19, 1.6 + i * 0.045), "madeira_escura", rot=(0, 20 * (-1) ** i, 0)), "Head")
+    c.add(k.caixa("remendo_nuca", (0.07, 0.01, 0.06), (0.07, 0.178, 1.7), "coral", bevel=0.006, rot=(0, 0, 8)), "Head")
+    for i, (x, z) in enumerate(((-0.06, 1.56), (0.0, 1.55), (0.07, 1.565))):
+        c.add(k.cilindro("palha_nuca", 0.008, 0.08, (x, 0.17, z), "amarelo_sol", lados=4, rot=(-30, 10 * (i - 1), 0), raio_topo=0.002), "Head")
 
 
 # =============================================================== EXPLORADOR DAS NUVENS
@@ -459,7 +473,7 @@ def botanico(c):
     rosadas e coroa de folhas com uma flor de vento, ombreiras de cogumelo, raízes
     nos pés e um regador."""
     CAS, MAD, FO, FC, FE = "tronco", "madeira_clara", "folha_media", "folha_clara", "folha_escura"
-    corpo = ep.corpo_base("fino", CAS)
+    corpo = ep.corpo_base("padrao", CAS)
     c.pele(corpo)
     c.pele(ep.faixa(corpo, "musgo_cintura", FE, ep.entre_z(0.98, 1.06) + ep.ate_x(0.3), 0.02))
     for i, (x, z, r) in enumerate(((0.1, 1.22, 0.06), (-0.12, 1.33, 0.05), (0.04, 1.4, 0.045), (-0.06, 1.12, 0.04))):
@@ -477,7 +491,7 @@ def botanico(c):
     for lado, s in LADOS:
         c.add(k.cilindro("broto", 0.012, 0.09, (s * 0.38, 0, 1.44), CAS, lados=5, rot=(0, s * 30, 0), raio_topo=0.002), f"{lado}UpperArm")
         c.add(k.esfera("folhinha", 0.025, (s * 0.4, 0, 1.49), FC, escala=(1.3, 0.5, 0.7), segmentos=6, aneis=4), f"{lado}UpperArm")
-        c.varios(ep.mao(lado, s, MAD), f"{lado}Hand")
+        c.varios(ep.mao(lado, s, "madeira_media"), f"{lado}Hand")
         x = s * 0.11
         c.add(k.cilindro("base_raiz", 0.08, 0.1, (x, -0.02, 0.08), CAS, lados=10, raio_topo=0.06), f"{lado}Foot")
         for a in (-50, -15, 20, 140):
@@ -486,6 +500,7 @@ def botanico(c):
                              rot=(80, 0, a), raio_topo=0.008), f"{lado}Foot")
     # rosto de madeira expressivo
     c.add(ep.cabeca(MAD, mandibula=0.12, queixo=0.0, bochecha=0.06), "Head")
+    c.varios(ep.cabelo("casca", "tronco"), "Head")             # casca de árvore cobrindo a nuca
     c.varios(ep.olhos(iris="folha_escura", pele=MAD, tam=1.12, palpebra=0.25), "Head")
     c.varios(ep.sobrancelhas(cor="madeira_escura", grossura=0.9, angulo=-6), "Head")
     c.varios(ep.boca(sorriso=0.9, largura=0.045, cor="madeira_escura"), "Head")
@@ -541,6 +556,7 @@ def astronomo(c):
 
 # =============================================================== GUARDIÃO DA TEMPESTADE
 def guardiao(c):
+    c.escala_cabeca = 1.0          # capacete/aquário já é grande: sem a escala cartum
     """Guardião da Tempestade: armadura escura de placas que acompanham o corpo,
     ombreiras de nuvem carregada, elmo com viseira em T luminosa e crista de raio,
     emblema de raio no peito, anel de vento na cintura e capa rasgada."""

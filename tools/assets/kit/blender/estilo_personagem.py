@@ -31,16 +31,30 @@ import kit_comum as k  # noqa: E402
 # ---------------------------------------------------------------- proporções
 # Medidas por tipo de corpo: (raio x, raio y) por junta. Altura fixa (esqueleto).
 CORPOS = {
-    "padrao": {"ombro": 0.205, "peito": (0.19, 0.125), "cintura": (0.15, 0.11), "quadril": (0.165, 0.12),
-               "braco": 0.066, "cotovelo": 0.054, "pulso": 0.046, "coxa": 0.09, "joelho": 0.064, "tornozelo": 0.048,
-               "pescoco": 0.052},
-    "fino": {"ombro": 0.19, "peito": (0.175, 0.118), "cintura": (0.128, 0.098), "quadril": (0.168, 0.12),
-             "braco": 0.058, "cotovelo": 0.047, "pulso": 0.04, "coxa": 0.086, "joelho": 0.058, "tornozelo": 0.043,
-             "pescoco": 0.047},
-    "robusto": {"ombro": 0.225, "peito": (0.215, 0.145), "cintura": (0.18, 0.135), "quadril": (0.18, 0.13),
-                "braco": 0.076, "cotovelo": 0.062, "pulso": 0.052, "coxa": 0.1, "joelho": 0.075, "tornozelo": 0.056,
-                "pescoco": 0.06},
+    # proporções de "herói cartunesco": ombros largos, cintura marcada, membros que
+    # afinam nas juntas (deltoide, bíceps, antebraço, coxa, panturrilha), pulso e
+    # tornozelo finos. Cada valor é um raio (ou (rx, ry)) do modificador Skin.
+    "padrao": {"quadril": (0.162, 0.118), "cintura": (0.142, 0.104), "peito_baixo": (0.168, 0.118),
+               "peito": (0.198, 0.13), "peito_alto": (0.19, 0.112), "trapezio": (0.12, 0.085), "pescoco": 0.058,
+               "deltoide": 0.084, "biceps": (0.07, 0.067), "cotovelo": 0.052, "antebraco": (0.064, 0.056), "pulso": (0.044, 0.037),
+               "coxa_alta": 0.104, "coxa": 0.094, "sobre_joelho": 0.074, "joelho": 0.068, "panturrilha": (0.074, 0.082),
+               "canela": 0.056, "tornozelo": 0.046},
+    "fino": {"quadril": (0.165, 0.12), "cintura": (0.124, 0.094), "peito_baixo": (0.148, 0.108),
+             "peito": (0.172, 0.118), "peito_alto": (0.168, 0.104), "trapezio": (0.108, 0.078), "pescoco": 0.05,
+             "deltoide": 0.074, "biceps": (0.06, 0.058), "cotovelo": 0.046, "antebraco": (0.056, 0.05), "pulso": (0.039, 0.033),
+             "coxa_alta": 0.104, "coxa": 0.09, "sobre_joelho": 0.068, "joelho": 0.062, "panturrilha": (0.068, 0.076),
+             "canela": 0.052, "tornozelo": 0.042},
+    "robusto": {"quadril": (0.178, 0.13), "cintura": (0.17, 0.128), "peito_baixo": (0.198, 0.14),
+                "peito": (0.226, 0.15), "peito_alto": (0.216, 0.13), "trapezio": (0.14, 0.1), "pescoco": 0.068,
+                "deltoide": 0.096, "biceps": (0.082, 0.078), "cotovelo": 0.062, "antebraco": (0.076, 0.066), "pulso": (0.052, 0.044),
+                "coxa_alta": 0.114, "coxa": 0.104, "sobre_joelho": 0.084, "joelho": 0.078, "panturrilha": (0.084, 0.092),
+                "canela": 0.064, "tornozelo": 0.054},
 }
+
+# Cabeça um pouco maior que o "real" (leitura de longe, estilo cartum): todas as
+# peças presas ao osso Head escalam em volta da base do pescoço (gerar_skins).
+ESCALA_CABECA = 1.1
+PIVO_CABECA = (0.0, 0.0, 1.5)
 
 # Ossos (cabeça, cauda) — mesmos de gerar_personagem.OSSOS
 def _ossos():
@@ -159,10 +173,29 @@ def _suave(o, ang=60):
     return o
 
 
+def escalar_cabeca(o, fator=None):
+    """Escala uma peça da cabeça em volta da base do pescoço (proporção cartum)."""
+    f = ESCALA_CABECA if fator is None else fator
+    if abs(f - 1.0) < 1e-6:
+        return o
+    mundo(o)
+    piv = Vector(PIVO_CABECA)
+    for v in o.data.vertices:
+        v.co = piv + (v.co - piv) * f
+    return o
+
+
 # ---------------------------------------------------------------- corpo
 def corpo_base(tipo="padrao", cor="pele_2", sem_bracos=False):
-    """Corpo inteiro numa malha só (pescoço até os tornozelos e pulsos)."""
-    c = CORPOS[tipo]
+    """Corpo inteiro numa malha só (pescoço até os tornozelos e pulsos). Mais juntas
+    que o mínimo: cada uma é um "volume" (peito, deltoide, panturrilha...), e a
+    subdivisão as funde em formas contínuas, sem tubos retos."""
+    c = dict(CORPOS[tipo])
+    # a suavização final encolhe os volumes (~10%): membros compensados aqui
+    for chave in ("deltoide", "biceps", "cotovelo", "antebraco", "pulso", "coxa_alta", "coxa", "sobre_joelho",
+                  "joelho", "panturrilha", "canela", "tornozelo", "pescoco"):
+        v = c[chave]
+        c[chave] = tuple(x * 1.18 for x in v) if isinstance(v, tuple) else v * 1.18
     juntas = []      # (pos, (rx, ry))
     arestas = []
 
@@ -170,34 +203,44 @@ def corpo_base(tipo="padrao", cor="pele_2", sem_bracos=False):
         juntas.append((Vector(p), r if isinstance(r, tuple) else (r, r)))
         return len(juntas) - 1
 
-    quad = j((0, 0, 0.94), c["quadril"])                          # 0: raiz
-    cint = j((0, 0.005, 1.08), c["cintura"])
-    peito = j((0, -0.01, 1.25), c["peito"])
-    topo = j((0, 0.0, 1.37), (c["peito"][0] * 0.82, c["peito"][1] * 0.85))
-    pesc0 = j((0, 0.005, 1.45), c["pescoco"])
-    pesc1 = j((0, 0.01, 1.53), c["pescoco"] * 0.95)
-    arestas += [(quad, cint), (cint, peito), (peito, topo), (topo, pesc0), (pesc0, pesc1)]
+    def cadeia(*ids):
+        for a, b in zip(ids, ids[1:]):
+            arestas.append((a, b))
+
+    quad = j((0, 0.0, 0.94), c["quadril"])                        # 0: raiz
+    cint = j((0, 0.006, 1.07), c["cintura"])
+    pb = j((0, -0.004, 1.17), c["peito_baixo"])
+    pe = j((0, -0.014, 1.27), c["peito"])                          # peitoral à frente
+    pa = j((0, 0.0, 1.36), c["peito_alto"])
+    tr = j((0, 0.012, 1.43), c["trapezio"])                         # trapézio até o pescoço
+    pesc0 = j((0, 0.012, 1.48), c["pescoco"])
+    pesc1 = j((0, 0.014, 1.55), c["pescoco"] * 0.94)
+    cadeia(quad, cint, pb, pe, pa, tr, pesc0, pesc1)
     for s in (1, -1):
         if not sem_bracos:
-            om = j((s * c["ombro"], 0, 1.375), c["braco"] * 1.15)
-            bm_ = j((s * 0.33, 0, 1.38), (c["braco"], c["braco"] * 0.95))
-            co = j((s * 0.47, 0, 1.38), c["cotovelo"])
-            ab = j((s * 0.57, 0, 1.38), (c["cotovelo"] * 1.12, c["cotovelo"] * 1.0))
-            pu = j((s * 0.705, 0, 1.38), (c["pulso"], c["pulso"] * 0.8))
-            arestas += [(topo, om), (om, bm_), (bm_, co), (co, ab), (ab, pu)]
-        qd = j((s * 0.105, 0, 0.88), c["coxa"] * 1.05)
-        cx = j((s * 0.11, -0.005, 0.72), c["coxa"])
-        jo = j((s * 0.11, 0, 0.53), c["joelho"])
-        pa = j((s * 0.11, 0.012, 0.38), (c["joelho"] * 1.05, c["joelho"] * 1.12))   # panturrilha
-        to = j((s * 0.11, 0, 0.14), c["tornozelo"])
-        arestas += [(quad, qd), (qd, cx), (cx, jo), (jo, pa), (pa, to)]
+            om = j((s * 0.19, 0.004, 1.385), c["deltoide"])
+            bi = j((s * 0.32, 0.0, 1.38), c["biceps"])
+            co = j((s * 0.465, 0.004, 1.38), c["cotovelo"])
+            an = j((s * 0.55, 0.0, 1.382), c["antebraco"])
+            pu = j((s * 0.7, 0.0, 1.38), c["pulso"])
+            arestas.append((pa, om))
+            cadeia(om, bi, co, an, pu)
+        qa = j((s * 0.1, 0.004, 0.86), c["coxa_alta"])
+        cx = j((s * 0.108, -0.006, 0.72), c["coxa"])
+        sj = j((s * 0.11, -0.004, 0.6), c["sobre_joelho"])
+        jo = j((s * 0.11, -0.002, 0.53), c["joelho"])
+        pt = j((s * 0.11, 0.016, 0.41), c["panturrilha"])            # panturrilha: volume atrás
+        cn = j((s * 0.11, 0.008, 0.27), c["canela"])
+        to = j((s * 0.11, 0.0, 0.14), c["tornozelo"])
+        arestas.append((quad, qa))
+        cadeia(qa, cx, sj, jo, pt, cn, to)
     bm = bmesh.new()
     vs = [bm.verts.new(p) for p, _ in juntas]
     for a, b in arestas:
         bm.edges.new((vs[a], vs[b]))
     o = _novo_obj("corpo", bm)
     mod = o.modifiers.new("skin", "SKIN")
-    mod.branch_smoothing = 0.6
+    mod.branch_smoothing = 0.8
     mod.use_smooth_shade = True
     for i, (_, r) in enumerate(juntas):
         sv = o.data.skin_vertices[0].data[i]
@@ -207,13 +250,18 @@ def corpo_base(tipo="padrao", cor="pele_2", sem_bracos=False):
     sub.levels = 1
     sub.render_levels = 1
     _aplicar_mods(o)
+    # relaxa a malha (tira os "degraus" entre juntas de raios diferentes)
+    lis = o.modifiers.new("liso", "SMOOTH")
+    lis.factor = 0.5
+    lis.iterations = 3
+    _aplicar_mods(o)
     _suave(o, 80)
     k.pintar(o, cor)
     pesos_suaves(o)
     return o
 
 
-def casca(corpo, nome, cor, planos, afastar=0.014):
+def casca(corpo, nome, cor, planos, afastar=0.014, folga=None):
     """Roupa = pedaço do corpo recortado por PLANOS (corte reto e limpo, sem
     serrilhado), afastado pela normal. planos: [(ponto, normal), ...] — fica o lado
     em que (p - ponto)·normal <= 0. Os pesos vêm junto (deforma igual ao corpo)."""
@@ -229,7 +277,8 @@ def casca(corpo, nome, cor, planos, afastar=0.014):
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     bm.normal_update()
     for v in bm.verts:
-        v.co += v.normal * afastar
+        extra = folga(v.co) if folga else 0.0
+        v.co += v.normal * (afastar + extra)
     bm.to_mesh(o.data)
     bm.free()
     _suave(o, 80)
@@ -273,7 +322,7 @@ def anel(nome, raio, espessura, pos, cor, eixo="Z", seg=14, achatado=1.0, rx=Non
 def cabeca(pele="pele_2", z=1.67, tam=1.0, mandibula=0.22, queixo=0.02, bochecha=0.0):
     """Crânio esculpido: esfera deformada (nuca cheia, mandíbula afinando para o
     queixo, bochechas) + pescoço encaixado embaixo."""
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=26, ring_count=18, radius=0.17 * tam, location=(0, 0, z))
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=16, radius=0.17 * tam, location=(0, 0, z))
     o = bpy.context.active_object
     o.name = "cabeca"
     for v in o.data.vertices:
@@ -309,7 +358,7 @@ def olhos(z=1.675, sep=0.068, tam=1.0, iris="azul_tormenta", pele="pele_2", cili
         x = s * sep
         r = 0.04 * tam
         base = Vector((x, y_face, z))
-        br = k.esfera("olho_branco", r, base, "branco", escala=(0.85, 0.55, 1.15), segmentos=12, aneis=8)
+        br = k.esfera("olho_branco", r, base, "branco", escala=(0.85, 0.55, 1.15), segmentos=11, aneis=7)
         pecas.append(br)
         frente = base + Vector((olhar[0] * s * 0.0 + olhar[0] * 0.012, -r * 0.5, olhar[1] * 0.012))
         pecas.append(k.esfera("iris", r * 0.58, frente, iris, escala=(0.85, 0.35, 1.0), segmentos=10, aneis=6))
@@ -363,7 +412,7 @@ def nariz(z=1.63, pele="pele_3", tam=1.0, y_face=-0.165, forma="redondo"):
     if forma == "pontudo":
         o = k.cilindro("nariz", 0.022 * tam, 0.05 * tam, (0, y_face - 0.015, z), pele, lados=8, rot=(80, 0, 0), raio_topo=0.008 * tam)
     else:
-        o = k.esfera("nariz", 0.026 * tam, (0, y_face - 0.008, z), pele, escala=(1.0, 0.9, 0.85), segmentos=10, aneis=8)
+        o = k.esfera("nariz", 0.021 * tam, (0, y_face - 0.006, z + 0.003), pele, escala=(1.05, 0.85, 0.8), segmentos=8, aneis=6)
     return [o]
 
 
@@ -392,7 +441,7 @@ def orelhas(z=1.655, pele="pele_2", x=0.165):
         o.rotation_euler = (0, 0, math.radians(s * -15))
         k._aplicar(o)
         pecas.append(o)
-        pecas.append(k.esfera("orelha_dentro", 0.024, (s * (x + 0.012), 0.005, z), _escurecer(pele), escala=(0.3, 0.6, 0.85), segmentos=6, aneis=4))
+        pecas.append(k.esfera("orelha_dentro", 0.016, (s * (x + 0.014), 0.008, z), _escurecer(pele), escala=(0.25, 0.55, 0.85), segmentos=6, aneis=4))
     return pecas
 
 
@@ -400,8 +449,9 @@ def _escurecer(pele):
     return {"pele_1": "pele_2", "pele_2": "pele_3", "pele_3": "pele_4", "pele_4": "pele_4"}.get(pele, pele)
 
 
-def mecha(nome, base, ponta, raio, cor, curva=(0, 0, 0), lados=6, segmentos=4):
-    """Mecha de cabelo: tubo cônico curvo (de base a ponta, arqueando por `curva`)."""
+def mecha(nome, base, ponta, raio, cor, curva=(0, 0, 0), lados=6, segmentos=4, cone=True):
+    """Mecha de cabelo: tubo cônico curvo (de base a ponta, arqueando por `curva`).
+    cone=False: tubo de raio constante (mangueira, cabo)."""
     pecas = []
     base, ponta, curva = Vector(base), Vector(ponta), Vector(curva)
     pts = []
@@ -412,7 +462,7 @@ def mecha(nome, base, ponta, raio, cor, curva=(0, 0, 0), lados=6, segmentos=4):
     aneis = []
     for i, p in enumerate(pts):
         t = i / segmentos
-        r = raio * (1 - t) ** 0.8 + 0.002
+        r = raio * (1 - t) ** 0.8 + 0.002 if cone else raio
         d = (pts[min(i + 1, segmentos)] - pts[max(i - 1, 0)]).normalized()
         a = d.orthogonal().normalized()
         b = d.cross(a)
@@ -434,15 +484,15 @@ def cabelo(estilo, cor, z=1.67, tam=1.0):
     alto), 'bagunca' (mechas para todo lado), 'raspado' (só a calota)."""
     pecas = []
     cz = z + 0.03
-    calota = mundo(k.esfera("calota", 0.182 * tam, (0, 0.018, cz + 0.018), cor, escala=(1.03, 1.06, 0.92), segmentos=16, aneis=10))
+    calota = mundo(k.esfera("calota", 0.184 * tam, (0, 0.02, cz + 0.012), cor, escala=(1.03, 1.07, 0.95), segmentos=18, aneis=12))
     bm = bmesh.new()
     bm.from_mesh(calota.data)
     # corta a calota na testa (frente) e na altura das orelhas (lados)
     def fora(v):
         p = v.co
         testa = p.y < -0.05 * tam and p.z < cz + 0.085 * tam
-        lado = p.z < cz - 0.02 * tam and p.y < 0.07
-        nuca = p.z < cz - 0.12 * tam
+        lado = p.z < cz - 0.02 * tam and p.y < 0.03       # atrás das orelhas fica coberto
+        nuca = p.z < cz - 0.2 * tam
         return testa or lado or nuca
     bmesh.ops.delete(bm, geom=[v for v in bm.verts if fora(v)], context="VERTS")
     bm.to_mesh(calota.data)
@@ -452,6 +502,9 @@ def cabelo(estilo, cor, z=1.67, tam=1.0):
     _aplicar_mods(calota)
     _suave(calota, 70)
     pecas.append(calota)
+    # nuca: volume de cabelo que desce até o pescoço (antes ficava "careca" atrás)
+    nuca = k.esfera("nuca", 0.15 * tam, (0, 0.07, cz - 0.1), cor, escala=(1.0, 0.75, 0.75), segmentos=12, aneis=7)
+    pecas.append(nuca)
     if estilo in ("topete", "bagunca"):
         # mechas para cima e para trás (vento), da testa ao alto da cabeça
         mechas = [((-0.06, -0.12, cz + 0.11), (-0.02, -0.07, cz + 0.27), (0.0, -0.03, 0.02), 0.045),
@@ -484,18 +537,36 @@ def cabelo(estilo, cor, z=1.67, tam=1.0):
 
 # ---------------------------------------------------------------- mãos e pés
 def mao(lado, s, cor="cinza_tecido", punho=None, z=1.38):
-    """Luva com palma, quatro dedos levemente curvados e polegar."""
+    """Mão cartunesca "gordinha": palma arredondada, quatro dedos grossos levemente
+    dobrados (relaxados) e polegar para a frente. Lê bem de longe e segurando arma."""
     x0 = s * 0.715
-    pecas = [k.caixa("palma", (0.1, 0.085, 0.045), (s * 0.765, -0.005, z), cor, bevel=0.022)]
-    for i, dy in enumerate((-0.03, -0.01, 0.01, 0.03)):
-        comp = (0.055, 0.062, 0.058, 0.048)[i]
-        f = k.cilindro("dedo", 0.0125, comp, (s * (0.815 + comp / 2), dy, z - 0.004), cor, lados=7, rot=(0, 90, 0), raio_topo=0.011)
-        f.rotation_euler.y += math.radians(s * 12)
-        k._aplicar(f)
-        pecas.append(f)
-    pecas.append(k.cilindro("polegar", 0.015, 0.05, (s * 0.765, -0.055, z + 0.005), cor, lados=7, rot=(65, 0, s * 30), raio_topo=0.012))
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(s * 0.77, -0.004, z))
+    palma = bpy.context.active_object
+    palma.name = "palma"
+    palma.scale = (0.112, 0.102, 0.058)
+    k._aplicar(palma)
+    sub = palma.modifiers.new("sub", "SUBSURF")
+    sub.levels = 1
+    bev = None
+    _aplicar_mods(palma)
+    _suave(palma, 80)
+    k.pintar(palma, cor)
+    pecas = [palma]
+    for i, dy in enumerate((-0.034, -0.011, 0.012, 0.034)):
+        comp = (0.054, 0.06, 0.057, 0.047)[i]
+        r = 0.0175 if i < 3 else 0.015
+        x1 = s * 0.822
+        # falange de baixo reta, de cima dobrada para baixo (mão relaxada)
+        f1 = k.cilindro("dedo", r, comp * 0.55, (x1 + s * comp * 0.27, dy, z - 0.002), cor, lados=7, rot=(0, 90, 0))
+        ponta_x = x1 + s * comp * 0.55
+        f2 = k.cilindro("dedo2", r * 0.95, comp * 0.5, (ponta_x + s * comp * 0.2, dy, z - 0.012), cor, lados=7,
+                        rot=(0, 90 + s * 35, 0))
+        tip = k.esfera("ponta", r * 0.95, (ponta_x + s * comp * 0.4, dy, z - 0.026), cor, segmentos=6, aneis=3)
+        pecas += [f1, f2, tip]
+    pecas.append(k.cilindro("polegar", 0.017, 0.048, (s * 0.778, -0.058, z - 0.004), cor, lados=7, rot=(70, 0, s * 35), raio_topo=0.015))
+    pecas.append(k.esfera("polegar_ponta", 0.015, (s * 0.795, -0.078, z - 0.012), cor, segmentos=7, aneis=4))
     if punho:
-        pecas.append(anel("punho_luva", 0.044, 0.012, (x0, 0, z), punho, eixo="X", seg=12))
+        pecas.append(anel("punho_luva", 0.048, 0.013, (x0, 0, z), punho, eixo="X", seg=10))
     return pecas
 
 
@@ -504,13 +575,13 @@ def calcado(lado, s, cor="couro", sola="preto", cano=0.0, biqueira=None, cadarco
     lingueta e cadarço; cano opcional (bota)."""
     x = s * 0.11
     pecas = []
-    bpy.ops.mesh.primitive_cube_add(size=1, location=(x, -0.045, 0.065))
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(x, -0.05, 0.068))
     o = bpy.context.active_object
     o.name = "calcado"
-    o.scale = (0.15 if not tenis else 0.16, 0.29, 0.11)
+    o.scale = (0.158 if not tenis else 0.168, 0.31, 0.118)   # pés grandes (estilo cartum)
     k._aplicar(o)
     for v in o.data.vertices:                     # coordenadas locais (centro do calçado)
-        t = max(0.0, min(1.0, (-v.co.y / 0.145 + 1) / 2))   # 0 calcanhar .. 1 bico
+        t = max(0.0, min(1.0, (-v.co.y / 0.155 + 1) / 2))   # 0 calcanhar .. 1 bico
         # bico mais largo e mais baixo, calcanhar estreito e alto
         v.co.x *= 0.85 + 0.25 * t
         if v.co.z > 0.0:
@@ -521,45 +592,67 @@ def calcado(lado, s, cor="couro", sola="preto", cano=0.0, biqueira=None, cadarco
     _suave(o, 70)
     k.pintar(o, cor)
     pecas.append(o)
-    so = k.caixa("sola", (0.14 if not tenis else 0.155, 0.285, 0.026), (x, -0.045, 0.014), sola, bevel=0.011)
+    so = k.caixa("sola", (0.152 if not tenis else 0.165, 0.31, 0.03), (x, -0.05, 0.015), sola, bevel=0.013)
     pecas.append(so)
     if biqueira:
-        pecas.append(k.esfera("biqueira", 0.07, (x, -0.17, 0.05), biqueira, escala=(1.05, 0.9, 0.65), segmentos=10, aneis=6))
+        pecas.append(k.esfera("biqueira", 0.074, (x, -0.185, 0.05), biqueira, escala=(1.05, 0.9, 0.65), segmentos=10, aneis=6))
     # lingueta + cadarço (3 traços)
     pecas.append(k.caixa("lingueta", (0.06, 0.08, 0.02), (x, -0.08, 0.115), cor, bevel=0.008, rot=(-25, 0, 0)))
     for i in range(3):
         pecas.append(k.caixa("cadarco", (0.07, 0.012, 0.008), (x, -0.06 - i * 0.03, 0.118 - i * 0.012), cadarco, rot=(-25, 0, 0)))
     if cano > 0:
         pecas.append(k.cilindro("cano", 0.062, cano, (x, 0.005, 0.1 + cano / 2), cor, lados=12, raio_topo=0.066))
-        pecas.append(anel("borda_cano", 0.066, 0.012, (x, 0.005, 0.1 + cano), cor, seg=12))
+        pecas.append(anel("borda_cano", 0.066, 0.012, (x, 0.005, 0.1 + cano), cor, seg=10))
     return pecas
 
 
 # ---------------------------------------------------------------- roupas prontas
+def _folga_camisa(lim):
+    """Tecido solto: mangas mais largas que o braço, abrindo na ponta; barra que
+    abre um pouco no quadril; peito/costas quase colados."""
+    def f(p):
+        e = 0.0
+        ax = abs(p.x)
+        if ax > 0.2 and lim > 0.25:
+            t = min(1.0, (ax - 0.2) / max(0.05, lim - 0.2))
+            e += 0.008 + 0.012 * t * t
+        if p.z < 1.06:
+            e += 0.014 * min(1.0, (1.06 - p.z) / 0.1)
+        return e
+    return f
+
+
 def camiseta(corpo, cor, manga="curta", gola=None, barra=None, afastar=0.012, listra=None):
-    """Camiseta/camisa: tronco (quadril até a base do pescoço) e mangas, com barra,
-    punhos e uma listra opcional no peito (z0, z1, cor), todos colados ao corpo."""
+    """Camiseta/camisa: tronco (quadril até a base do pescoço) e mangas soltas, com
+    barra, punhos e uma listra opcional no peito (z0, z1, cor)."""
     lim = {"curta": 0.37, "longa": 0.69, "nenhuma": 0.21}[manga]
-    pecas = [casca(corpo, "camisa", cor, entre_z(0.96, 1.452) + ate_x(lim), afastar + 0.006)]
+    folga = _folga_camisa(lim if manga == "curta" else 0.3)
+    pecas = [casca(corpo, "camisa", cor, entre_z(0.955, 1.46) + ate_x(lim), afastar + 0.006, folga)]
     if gola:
-        pecas.append(anel("gola", 0.06, 0.016, (0, 0.006, 1.447), gola, seg=16, rx=0.066))
-    pecas.append(faixa(corpo, "barra", barra or cor, entre_z(0.96, 0.995) + ate_x(0.3), afastar + 0.014))
+        pecas.append(anel("gola", 0.066, 0.016, (0, 0.012, 1.455), gola, seg=16, rx=0.072))
+    pecas.append(faixa(corpo, "barra", barra or cor, entre_z(0.955, 0.99) + ate_x(0.3), afastar + 0.03))
     if manga != "nenhuma":
         for s in (1, -1):
-            pecas.append(faixa(corpo, "punho_manga", barra or cor, braco_entre(s, lim - 0.035, lim), afastar + 0.014))
+            pecas.append(faixa(corpo, "punho_manga", barra or cor, braco_entre(s, lim - 0.03, lim),
+                               afastar + (0.034 if manga == "curta" else 0.024)))
     if listra:
         z0, z1, cl = listra
-        pecas.append(faixa(corpo, "listra", cl, entre_z(z0, z1) + ate_x(0.23), afastar + 0.012))
+        pecas.append(faixa(corpo, "listra", cl, entre_z(z0, z1) + ate_x(0.23), afastar + 0.014))
     return pecas
 
 
 def calca(corpo, cor, comprimento="longa", cinto=None, fivela="dourado", bolsos=True, barra=None, afastar=0.012, z_cintura=1.1):
     zmin = {"longa": 0.16, "bermuda": 0.5, "corsario": 0.32}[comprimento]
-    pecas = [casca(corpo, "calca", cor, entre_z(zmin, z_cintura), afastar)]
+    def folga(p):
+        e = 0.004
+        if p.z < 0.3:
+            e += 0.016 * min(1.0, (0.3 - p.z) / 0.12)       # boca da calça cai sobre o calçado
+        return e
+    pecas = [casca(corpo, "calca", cor, entre_z(zmin, z_cintura), afastar, folga)]
     if cinto:
         pecas.append(faixa(corpo, "cinto", cinto, entre_z(z_cintura - 0.05, z_cintura - 0.008), afastar + 0.012))
         pecas.append(k.caixa("fivela", (0.055, 0.015, 0.04), (0, -0.142, z_cintura - 0.029), fivela, bevel=0.006))
-    pecas.append(faixa(corpo, "barra_calca", barra or _escurecer_tecido(cor), entre_z(zmin, zmin + 0.04), afastar + 0.01))
+    pecas.append(faixa(corpo, "barra_calca", barra or _escurecer_tecido(cor), entre_z(zmin, zmin + 0.04), afastar + 0.03))
     for s in (1, -1):
         if bolsos:
             pecas.append(k.caixa("bolso", (0.07, 0.012, 0.06), (s * 0.09, -0.126, 0.95), _escurecer_tecido(cor), bevel=0.008, rot=(-6, 0, s * 10)))
@@ -575,7 +668,14 @@ def _escurecer_tecido(cor):
 def jaqueta(corpo, cor, gola_alta=False, ziper="metal_claro", forro=None, punho=None, faixas=None, aberta=False, comprimento=0.94):
     """Jaqueta: tronco e mangas até o pulso, mais grossa que a camisa, com gola,
     zíper, punhos, barra e bolsos; faixas: [(z, cor)] (ex.: refletivas)."""
-    pecas = [casca(corpo, "jaqueta", cor, entre_z(comprimento, 1.455) + ate_x(0.69), 0.024)]
+    def folga(p):
+        e = 0.0
+        if abs(p.x) > 0.22:
+            e += 0.006 + 0.01 * min(1.0, (abs(p.x) - 0.22) / 0.4)    # mangas fofas
+        if p.z < 1.05:
+            e += 0.012 * min(1.0, (1.05 - p.z) / 0.1)
+        return e
+    pecas = [casca(corpo, "jaqueta", cor, entre_z(comprimento, 1.465) + ate_x(0.69), 0.026, folga)]
     g = 0.09 if gola_alta else 0.076
     pecas.append(anel("gola", g, 0.026 if gola_alta else 0.02, (0, 0.008, 1.45 + (0.015 if gola_alta else 0)), forro or cor, seg=16, rx=g + 0.01))
     if gola_alta:
@@ -585,7 +685,7 @@ def jaqueta(corpo, cor, gola_alta=False, ziper="metal_claro", forro=None, punho=
         pecas.append(k.caixa("puxador", (0.016, 0.006, 0.03), (0, -0.161, 1.42), ziper, bevel=0.004))
     pecas.append(faixa(corpo, "barra", punho or cor, entre_z(comprimento, comprimento + 0.04) + ate_x(0.3), 0.034))
     for s in (1, -1):
-        pecas.append(faixa(corpo, "punho", punho or cor, braco_entre(s, 0.645, 0.69), 0.034))
+        pecas.append(faixa(corpo, "punho", punho or cor, braco_entre(s, 0.645, 0.69), 0.05))
         pecas.append(k.caixa("bolso_j", (0.09, 0.012, 0.07), (s * 0.1, -0.165, comprimento + 0.11), _escurecer_tecido(cor), bevel=0.01))
     for z, cf in (faixas or []):
         pecas.append(faixa(corpo, "faixa", cf, entre_z(z - 0.018, z + 0.018), 0.03))
