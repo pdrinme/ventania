@@ -11,6 +11,7 @@ Legenda: ✅ concluído e testado · 🟡 em andamento · ⬜ não iniciado.
 - **M4 — "Com estilo"** (Etapa 13): os primeiros cosméticos originais, equipáveis e visíveis na partida.
 - ✅ **v1.0.0** (Etapa 12): M3 entregue: pacotes do jogo e do servidor completo, com os guias.
 - ✅ **v1.1.0** (Etapa 13): M4 entregue: 9 trajes originais novos, picareta-âncora, 2 planadores, animações de entrada e loja com imagens reais e visualizador 3D.
+- ✅ **v1.4.1**: revisão de todas as skins — mãos inteiras (palma com tamanho real, dedos encostados, pulso entrando na luva), sola que segue a forma do calçado (sem "tábua"), botas esculpidas no Capitão e no Escafandro, chapéu do Espantalho assentado na cabeça, cabelo cobrindo as têmporas do Recruta. Antes/depois em `docs/art/correcao_skins_1.4.1.jpg`.
 - ✅ **v1.4.0** (personagens e animação): modelos remodelados (proporções cartum, membros com forma, mãos/pés, roupas soltas, cabelo na nuca), animações novas pose a pose no Blender (caminhar/corrida/sprint, pulo, queda, aterrissagem, agachado, eliminação, reações de tiro/recarga/troca) e som do Ônibus dos Ventos. Detalhes abaixo.
 - ✅ **v1.3.0** (revisão de arte): personagens e as 11 skins remodelados, animações com mais peso, vegetação e rochas novas em grupos, terreno e céu, casas pintadas e levemente tortas, 5 marcos surreais, armas/itens/baú remodelados, loot com coluna de luz e efeitos por perfil gráfico. Antes/depois em `docs/art/comparacao_1.3.0.jpg`; detalhes abaixo.
 - ✅ **v1.2.1**: correção das paredes com janela/porta invisíveis na 1.2.0.

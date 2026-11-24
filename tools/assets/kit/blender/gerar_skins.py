@@ -177,9 +177,8 @@ def capitao_mare(c):
         c.pele(_armadura(corpo, "canela_placa", MC, ep.entre_z(0.2, 0.46), 0.035))
         c.add(k.cilindro("pistao_p", 0.016, 0.26, (s * 0.11, 0.085, 0.36), "pedra_escura", lados=6), f"{lado}LowerLeg")
         x = s * 0.11
-        c.add(k.caixa("bota", (0.19, 0.32, 0.13), (x, -0.05, 0.065), ME, bevel=0.05), f"{lado}Foot")
-        c.add(k.caixa("bico_bota", (0.17, 0.08, 0.1), (x, -0.19, 0.07), LT, bevel=0.035), f"{lado}Foot")
-        c.add(k.caixa("sola", (0.18, 0.31, 0.03), (x, -0.05, 0.015), "pedra_escura", bevel=0.01), f"{lado}Foot")
+        # bota pesada de robô, esculpida (a sola segue a forma do pé)
+        c.varios(ep.calcado(lado, s, ME, sola="pedra_escura", cano=0.16, biqueira=LT, cadarco=MC), f"{lado}Foot")
     _juntas(c, LT, 0.058, 0.072)
     c.add(k.caixa("placa_peito", (0.3, 0.03, 0.18), (0, -0.19, 1.27), ME, bevel=0.015), "Chest")
     c.add(k.cilindro("manometro", 0.062, 0.03, (0.06, -0.21, 1.3), "branco", lados=14, rot=(90, 0, 0)), "Chest")
@@ -282,9 +281,7 @@ def escafandro(c):
         c.varios(ep.mao(lado, s, "couro", punho="madeira_escura"), f"{lado}Hand")
         x = s * 0.12
         c.add(k.cilindro("cano_bota", 0.105, 0.14, (x, 0, 0.17), CH, lados=14), f"{lado}LowerLeg")
-        c.add(k.caixa("bota", (0.21, 0.34, 0.14), (x, -0.05, 0.07), CH, bevel=0.05), f"{lado}Foot")
-        c.add(k.caixa("bico_latao", (0.19, 0.09, 0.11), (x, -0.2, 0.075), LAT, bevel=0.035), f"{lado}Foot")
-        c.add(k.caixa("sola", (0.22, 0.35, 0.035), (x, -0.05, 0.017), "pedra_escura", bevel=0.012), f"{lado}Foot")
+        c.varios(ep.calcado(lado, s, CH, sola="pedra_escura", cano=0.18, biqueira=LAT, cadarco=LAT), f"{lado}Foot")
     c.pele(ep.faixa(corpo, "costura_cintura", "madeira_clara", ep.entre_z(1.08, 1.1) + ep.ate_x(0.3), 0.04))
     c.pele(ep.faixa(corpo, "cinto_peso", "couro", ep.entre_z(0.98, 1.05) + ep.ate_x(0.3), 0.05))
     for x in (-0.12, 0.0, 0.12):
@@ -395,7 +392,7 @@ def espantalho(c):
     cab = ep.cabeca("areia", mandibula=0.1, queixo=0.0)
     c.add(cab, "Head")
     c.add(k.toro("corda", 0.075, 0.02, (0, 0.005, 1.54), "madeira_media", seg=12, seg_menor=4), "Head")
-    c.add(k.caixa("costura_testa", (0.25, 0.01, 0.012), (0, -0.165, 1.79), "madeira_escura", rot=(0, 4, 0)), "Head")
+    c.add(k.caixa("costura_testa", (0.25, 0.01, 0.012), (0, -0.168, 1.745), "madeira_escura", rot=(0, 4, 0)), "Head")
     for s in (1, -1):
         for r in (45, -45):
             c.add(k.caixa("ponto_olho", (0.07, 0.014, 0.016), (s * 0.068, -0.165, 1.69), "preto", rot=(0, r, 0)), "Head")
@@ -403,10 +400,11 @@ def espantalho(c):
         c.add(k.caixa("ponto_boca", (0.04, 0.012, 0.012), (-0.08 + i * 0.04, -0.16, 1.6 + (0.012 if i % 2 else -0.012)), "preto",
                       rot=(0, 30 if i % 2 else -30, 0)), "Head")
     # chapéu de palha de aba larga, torta
-    c.add(k.cilindro("aba", 0.36, 0.025, (0, 0.02, 1.84), PAL, lados=20, rot=(-8, 6, 0)), "Head")
-    c.add(k.cilindro("copa", 0.15, 0.17, (0, 0.03, 1.94), PAL, lados=14, raio_topo=0.11, rot=(-4, 8, 0)), "Head")
-    c.add(k.cilindro("fita", 0.152, 0.035, (0, 0.03, 1.875), "vermelho", lados=14, rot=(-4, 8, 0)), "Head")
-    tufo("palha_chapeu", (0.14, 0.05, 1.8), (0, 60, 0), "Head", n=3, comp=0.08)
+    # a copa ENVOLVE o alto da cabeça (antes ficava pousada no topo e a aba "boiava")
+    c.add(k.cilindro("aba", 0.36, 0.025, (0, 0.02, 1.785), PAL, lados=20, rot=(-8, 6, 0)), "Head")
+    c.add(k.cilindro("copa", 0.19, 0.22, (0, 0.025, 1.885), PAL, lados=16, raio_topo=0.13, rot=(-4, 8, 0)), "Head")
+    c.add(k.cilindro("fita", 0.192, 0.04, (0, 0.025, 1.81), "vermelho", lados=16, rot=(-4, 8, 0)), "Head")
+    tufo("palha_chapeu", (0.16, 0.05, 1.76), (0, 60, 0), "Head", n=3, comp=0.08)
     # corvo no ombro esquerdo
     c.add(k.esfera("corvo", 0.065, (0.26, 0.02, 1.52), "preto", escala=(0.8, 1.3, 0.9), segmentos=10, aneis=8), "LeftShoulder")
     c.add(k.esfera("corvo_cab", 0.04, (0.26, -0.07, 1.59), "preto", segmentos=10, aneis=8), "LeftShoulder")

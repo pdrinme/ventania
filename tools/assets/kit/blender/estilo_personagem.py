@@ -222,7 +222,7 @@ def corpo_base(tipo="padrao", cor="pele_2", sem_bracos=False):
             bi = j((s * 0.32, 0.0, 1.38), c["biceps"])
             co = j((s * 0.465, 0.004, 1.38), c["cotovelo"])
             an = j((s * 0.55, 0.0, 1.382), c["antebraco"])
-            pu = j((s * 0.7, 0.0, 1.38), c["pulso"])
+            pu = j((s * 0.745, 0.0, 1.38), c["pulso"])         # entra na luva (a suavização recolhe a ponta)
             arestas.append((pa, om))
             cadeia(om, bi, co, an, pu)
         qa = j((s * 0.1, 0.004, 0.86), c["coxa_alta"])
@@ -231,7 +231,7 @@ def corpo_base(tipo="padrao", cor="pele_2", sem_bracos=False):
         jo = j((s * 0.11, -0.002, 0.53), c["joelho"])
         pt = j((s * 0.11, 0.016, 0.41), c["panturrilha"])            # panturrilha: volume atrás
         cn = j((s * 0.11, 0.008, 0.27), c["canela"])
-        to = j((s * 0.11, 0.0, 0.14), c["tornozelo"])
+        to = j((s * 0.11, 0.0, 0.09), c["tornozelo"])        # entra no calçado
         arestas.append((quad, qa))
         cadeia(qa, cx, sj, jo, pt, cn, to)
     bm = bmesh.new()
@@ -490,8 +490,8 @@ def cabelo(estilo, cor, z=1.67, tam=1.0):
     # corta a calota na testa (frente) e na altura das orelhas (lados)
     def fora(v):
         p = v.co
-        testa = p.y < -0.05 * tam and p.z < cz + 0.085 * tam
-        lado = p.z < cz - 0.02 * tam and p.y < 0.03       # atrás das orelhas fica coberto
+        testa = p.y < -0.05 * tam and p.z < cz + 0.06 * tam       # franja mais baixa
+        lado = p.z < cz - 0.05 * tam and p.y < 0.03       # têmporas e atrás das orelhas cobertos
         nuca = p.z < cz - 0.2 * tam
         return testa or lado or nuca
     bmesh.ops.delete(bm, geom=[v for v in bm.verts if fora(v)], context="VERTS")
@@ -517,9 +517,10 @@ def cabelo(estilo, cor, z=1.67, tam=1.0):
                        ((-0.12, 0.06, cz + 0.08), (-0.21, 0.12, cz + 0.03), (0, 0, 0.03), 0.034)]
         for i, (b, p, cv, r) in enumerate(mechas):
             pecas.append(mecha(f"mecha{i}", b, p, r * tam, cor, curva=cv))
-        # costeletas
+        # laterais (têmporas) e costeletas: cobrem a lateral da cabeça até a orelha
         for s in (1, -1):
-            pecas.append(k.esfera("costeleta", 0.03, (s * 0.158, -0.035, cz - 0.045), cor, escala=(0.4, 0.9, 1.4), segmentos=8, aneis=6))
+            pecas.append(k.esfera("lateral", 0.075, (s * 0.15, -0.005, cz - 0.005), cor, escala=(0.42, 1.25, 0.95), segmentos=10, aneis=7))
+            pecas.append(k.esfera("costeleta", 0.034, (s * 0.162, -0.05, cz - 0.06), cor, escala=(0.4, 0.85, 1.5), segmentos=8, aneis=6))
     elif estilo == "rabo":
         # franja varrida de lado + volume nas laterais + rabo de cavalo alto
         for i, (b, p, cv, r) in enumerate([
@@ -537,36 +538,25 @@ def cabelo(estilo, cor, z=1.67, tam=1.0):
 
 # ---------------------------------------------------------------- mãos e pés
 def mao(lado, s, cor="cinza_tecido", punho=None, z=1.38):
-    """Mão cartunesca "gordinha": palma arredondada, quatro dedos grossos levemente
-    dobrados (relaxados) e polegar para a frente. Lê bem de longe e segurando arma."""
+    """Mão cartunesca "gordinha": palma arredondada (chanfro, tamanho real), quatro
+    dedos grossos levemente dobrados ENCOSTADOS na palma e polegar para a frente.
+    Tudo sobreposto (nada solto) e preso ao osso da mão."""
     x0 = s * 0.715
-    bpy.ops.mesh.primitive_cube_add(size=1, location=(s * 0.77, -0.004, z))
-    palma = bpy.context.active_object
-    palma.name = "palma"
-    palma.scale = (0.112, 0.102, 0.058)
-    k._aplicar(palma)
-    sub = palma.modifiers.new("sub", "SUBSURF")
-    sub.levels = 1
-    bev = None
-    _aplicar_mods(palma)
-    _suave(palma, 80)
-    k.pintar(palma, cor)
-    pecas = [palma]
-    for i, dy in enumerate((-0.034, -0.011, 0.012, 0.034)):
-        comp = (0.054, 0.06, 0.057, 0.047)[i]
-        r = 0.0175 if i < 3 else 0.015
-        x1 = s * 0.822
-        # falange de baixo reta, de cima dobrada para baixo (mão relaxada)
-        f1 = k.cilindro("dedo", r, comp * 0.55, (x1 + s * comp * 0.27, dy, z - 0.002), cor, lados=7, rot=(0, 90, 0))
-        ponta_x = x1 + s * comp * 0.55
-        f2 = k.cilindro("dedo2", r * 0.95, comp * 0.5, (ponta_x + s * comp * 0.2, dy, z - 0.012), cor, lados=7,
-                        rot=(0, 90 + s * 35, 0))
-        tip = k.esfera("ponta", r * 0.95, (ponta_x + s * comp * 0.4, dy, z - 0.026), cor, segmentos=6, aneis=3)
-        pecas += [f1, f2, tip]
-    pecas.append(k.cilindro("polegar", 0.017, 0.048, (s * 0.778, -0.058, z - 0.004), cor, lados=7, rot=(70, 0, s * 35), raio_topo=0.015))
-    pecas.append(k.esfera("polegar_ponta", 0.015, (s * 0.795, -0.078, z - 0.012), cor, segmentos=7, aneis=4))
+    pecas = [k.caixa("palma", (0.112, 0.1, 0.056), (s * 0.772, -0.004, z), cor, bevel=0.024)]
+    for i, dy in enumerate((-0.033, -0.011, 0.011, 0.033)):
+        comp = (0.06, 0.066, 0.063, 0.052)[i]
+        r = 0.0168 if i < 3 else 0.0148
+        xb = s * 0.808                                          # começa DENTRO da palma
+        ang = 18                                                # dobra leve (relaxada)
+        cx = xb + s * comp / 2 * math.cos(math.radians(ang))
+        cz = z - 0.004 - comp / 2 * math.sin(math.radians(ang))
+        pecas.append(k.cilindro("dedo", r, comp, (cx, dy, cz), cor, lados=7, rot=(0, 90 + s * ang, 0)))
+        ponta = (xb + s * comp * math.cos(math.radians(ang)), dy, z - 0.004 - comp * math.sin(math.radians(ang)))
+        pecas.append(k.esfera("ponta", r, ponta, cor, segmentos=7, aneis=4))
+    pecas.append(k.cilindro("polegar", 0.018, 0.052, (s * 0.772, -0.06, z - 0.002), cor, lados=7, rot=(70, 0, s * 35), raio_topo=0.016))
+    pecas.append(k.esfera("polegar_ponta", 0.016, (s * 0.79, -0.082, z - 0.01), cor, segmentos=7, aneis=4))
     if punho:
-        pecas.append(anel("punho_luva", 0.048, 0.013, (x0, 0, z), punho, eixo="X", seg=10))
+        pecas.append(anel("punho_luva", 0.05, 0.014, (x0, 0, z), punho, eixo="X", seg=10))
     return pecas
 
 
@@ -592,7 +582,30 @@ def calcado(lado, s, cor="couro", sola="preto", cano=0.0, biqueira=None, cadarco
     _suave(o, 70)
     k.pintar(o, cor)
     pecas.append(o)
-    so = k.caixa("sola", (0.152 if not tenis else 0.165, 0.31, 0.03), (x, -0.05, 0.015), sola, bevel=0.013)
+    # sola = a parte de baixo do PRÓPRIO calçado, um pouco maior (segue a forma do
+    # pé: bico largo, calcanhar estreito) — antes era uma caixa reta ("tábua")
+    so = o.copy()
+    so.data = o.data.copy()
+    so.name = "sola"
+    bpy.context.scene.collection.objects.link(so)
+    bm = bmesh.new()
+    bm.from_mesh(so.data)
+    geo = bm.verts[:] + bm.edges[:] + bm.faces[:]
+    z_corte = 0.032 - so.location.z                       # malha em coordenadas locais do calçado
+    bmesh.ops.bisect_plane(bm, geom=geo, plane_co=Vector((0, 0, z_corte)), plane_no=Vector((0, 0, 1)), clear_outer=True)
+    borda = [e for e in bm.edges if e.is_boundary]
+    if borda:
+        bmesh.ops.holes_fill(bm, edges=borda)
+    cx = sum(v.co.x for v in bm.verts) / max(1, len(bm.verts))
+    cy = sum(v.co.y for v in bm.verts) / max(1, len(bm.verts))
+    for v in bm.verts:
+        v.co.x = cx + (v.co.x - cx) * 1.07
+        v.co.y = cy + (v.co.y - cy) * 1.04
+        v.co.z = min(v.co.z, z_corte + 0.002) - 0.004
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(so.data)
+    bm.free()
+    k.pintar(so, sola)
     pecas.append(so)
     if biqueira:
         pecas.append(k.esfera("biqueira", 0.074, (x, -0.185, 0.05), biqueira, escala=(1.05, 0.9, 0.65), segmentos=10, aneis=6))
