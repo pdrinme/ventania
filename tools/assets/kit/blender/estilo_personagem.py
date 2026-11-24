@@ -393,17 +393,16 @@ def olhos(z=1.675, sep=0.068, tam=1.0, iris="azul_tormenta", pele="pele_2", cili
     return pecas
 
 
-def sobrancelhas(z=1.735, sep=0.07, cor="cabelo_castanho", grossura=1.0, angulo=8.0, y_face=-0.16, arco=0.012):
+def sobrancelhas(z=1.724, sep=0.07, cor="cabelo_castanho", grossura=1.0, angulo=8.0, y_face=-0.16, arco=0.012):
+    """Sobrancelhas em arco: grossas perto do nariz, afinando para fora, deitadas
+    sobre a testa e seguindo a curva do rosto. angulo > 0: a ponta de dentro fica
+    mais baixa (decidido/sapeca); < 0: mais alta (preocupado/doce)."""
     pecas = []
-    for s in (1, -1):
-        # arco: cilindro curto inclinado + ponta afinando
-        o = k.cilindro("sobrancelha", 0.011 * grossura, 0.07, (s * sep, y_face, z), cor, lados=6, rot=(0, 90, 0), raio_topo=0.006 * grossura)
-        for v in o.data.vertices:
-            dx = v.co.x - s * sep
-            v.co.z += arco * (1 - (dx / 0.035) ** 2)
-        o.rotation_euler = (0, math.radians(s * -angulo), 0)
-        k._aplicar(o)
-        o.location = (0, 0, 0)
+    dz = 0.0009 * angulo
+    for s_ in (1, -1):
+        dentro = (s_ * (sep - 0.03), y_face - 0.004, z - dz)
+        fora = (s_ * (sep + 0.038), y_face + 0.024, z + dz + 0.004)
+        o = mecha("sobrancelha", dentro, fora, 0.0105 * grossura, cor, curva=(0, -0.004, arco), lados=6, segmentos=5)
         pecas.append(o)
     return pecas
 
@@ -505,6 +504,9 @@ def cabelo(estilo, cor, z=1.67, tam=1.0):
     # nuca: volume de cabelo que desce até o pescoço (antes ficava "careca" atrás)
     nuca = k.esfera("nuca", 0.15 * tam, (0, 0.07, cz - 0.1), cor, escala=(1.0, 0.75, 0.75), segmentos=12, aneis=7)
     pecas.append(nuca)
+    # laterais (têmporas), em todos os estilos: cobrem a lateral da cabeça até a orelha
+    for s in (1, -1):
+        pecas.append(k.esfera("lateral", 0.075 * tam, (s * 0.15 * tam, -0.005, cz - 0.005), cor, escala=(0.42, 1.25, 0.95), segmentos=10, aneis=7))
     if estilo in ("topete", "bagunca"):
         # mechas para cima e para trás (vento), da testa ao alto da cabeça
         mechas = [((-0.06, -0.12, cz + 0.11), (-0.02, -0.07, cz + 0.27), (0.0, -0.03, 0.02), 0.045),
@@ -517,9 +519,8 @@ def cabelo(estilo, cor, z=1.67, tam=1.0):
                        ((-0.12, 0.06, cz + 0.08), (-0.21, 0.12, cz + 0.03), (0, 0, 0.03), 0.034)]
         for i, (b, p, cv, r) in enumerate(mechas):
             pecas.append(mecha(f"mecha{i}", b, p, r * tam, cor, curva=cv))
-        # laterais (têmporas) e costeletas: cobrem a lateral da cabeça até a orelha
+        # costeletas
         for s in (1, -1):
-            pecas.append(k.esfera("lateral", 0.075, (s * 0.15, -0.005, cz - 0.005), cor, escala=(0.42, 1.25, 0.95), segmentos=10, aneis=7))
             pecas.append(k.esfera("costeleta", 0.034, (s * 0.162, -0.05, cz - 0.06), cor, escala=(0.4, 0.85, 1.5), segmentos=8, aneis=6))
     elif estilo == "rabo":
         # franja varrida de lado + volume nas laterais + rabo de cavalo alto

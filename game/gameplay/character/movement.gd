@@ -11,6 +11,7 @@ const JUMP_HEIGHT := 1.4
 const JUMP_VELOCITY := 7.4             # ~1,4 m de altura com integração a 30 Hz (medido em teste)
 const STICK_VELOCITY := -1.5           # no chão: empurra levemente para baixo para manter contato
 const SNAP_DIST := 0.45                # "grudar" no chão ao descer degraus/rampas
+const SNAP_VY_MIN := -3.5              # ainda gruda logo depois de perder o chão (queda lenta)
 const GROUND_ACCEL := 45.0             # m/s² até a velocidade alvo
 const AIR_ACCEL := 9.0
 const MAX_FALL_SPEED := 45.0
@@ -69,7 +70,11 @@ static func step(pawn: Pawn, cmd: Protocol.InputCmd, dt: float) -> void:
 	var no_chao_agora := pawn.is_on_floor()
 	# "Grudar" manual: o snap nativo depende de estado interno do CharacterBody3D que
 	# não viaja pela rede e quebra a predição. Este depende só de `grounded`.
-	if no_chao and not no_chao_agora and not pulou:
+	# também logo depois de perder o chão (lombada, descida íngreme): enquanto a
+	# queda ainda é lenta. Pulos (subindo ou descendo rápido) e quedas de verdade
+	# (mais de SNAP_DIST) não são afetados.
+	var recem_saiu := not no_chao and vy < 0.0 and vy > SNAP_VY_MIN
+	if (no_chao or recem_saiu) and not no_chao_agora and not pulou:
 		var col := KinematicCollision3D.new()
 		if pawn.test_move(pawn.global_transform, Vector3(0, -SNAP_DIST, 0), col) \
 				and col.get_normal().angle_to(Vector3.UP) <= pawn.floor_max_angle:

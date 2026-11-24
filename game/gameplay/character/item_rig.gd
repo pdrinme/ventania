@@ -110,7 +110,8 @@ func _process_modification_with_delta(delta: float) -> void:
 	var cat := categoria(item)
 	var chest := sk.get_bone_global_pose(_chest)
 	var ombros := chest.origin + OMBROS
-	var mira := Basis(Vector3.RIGHT, -pitch)
+	# o tronco pode estar girado em relação às pernas (giro no lugar): a arma segue o tronco
+	var mira := Basis(Vector3.UP, aim.yaw_twist if aim else 0.0) * Basis(Vector3.RIGHT, -pitch)
 	var alvo_dw := 0.0
 	var alvo_ew := 0.0
 	aim.head_extra = move_toward(aim.head_extra, 0.0, delta * 2.0)

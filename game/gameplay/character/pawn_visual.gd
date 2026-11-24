@@ -13,6 +13,10 @@ const MODELO := "res://assets/personagens/recruta_base_01.glb"   # traje padrão
 const DURACAO_TROCA := 0.22
 const DURACAO_GUARDAR := 0.12      # guarda o item atual antes de sacar o próximo
 const DURACAO_RECUO := 0.18
+const GIRO_LIMITE := deg_to_rad(60.0)        # parado: tronco gira até aqui antes das pernas
+const GIRO_LIMITE_ARMA := deg_to_rad(45.0)
+const GIRO_VEL := 7.0                          # rad/s das pernas alcançando o tronco
+const TEMPO_AR_VISUAL := 0.15      # s sem chão antes de mostrar a pose de queda
 const VEL_CAMINHAR := 1.8          # m/s do clipe "caminhar" (entre parado e a corrida)
 ## [nó, clipe, entrada, saída]: reações aditivas das armas
 const REACOES := [["equipar", "reacao_equipar", 0.04, 0.1], ["recarga", "reacao_recarga", 0.12, 0.2],
@@ -50,6 +54,10 @@ var _w_preparar := 0.0
 var _inclinacao := Basis()        # orientação procedural do corpo no ar (deitado, mergulho, curvas)
 var _t_ar := 0.0
 var _yaw_ant := 0.0
+var _yaw_pernas := 0.0            # para onde as pernas apontam (giro no lugar)
+var _girando_pernas := false
+var _yaw_iniciado := false
+var _passos := 0.0                # 0..1: mistura de passinhos enquanto as pernas giram
 var _vel_ant := Vector3.ZERO
 var _giro := 0.0                  # velocidade de giro suavizada (rad/s) para inclinar nas curvas
 var _acel := 0.0                  # aceleração para a frente suavizada (m/s²)
@@ -384,6 +392,10 @@ func wave() -> void:
 
 ## velocidade (m/s, mundo), flags Protocol.F_*, yaw (rad).
 func update_state(velocidade: Vector3, flags: int, yaw: float) -> void:
+	if not _yaw_iniciado:
+		_yaw_iniciado = true
+		_yaw_pernas = yaw
+		_yaw_ant = yaw
 	rotation.y = yaw
 	_vel = velocidade
 	_flags = flags
@@ -395,9 +407,12 @@ func _process(delta: float) -> void:
 		return
 	var h := Vector2(_vel.x, _vel.z).length()
 	var flags_chao := _flags & Protocol.F_ON_FLOOR != 0
-	_ar = move_toward(_ar, 0.0 if flags_chao else 1.0, delta * 7.0)
 	if not flags_chao:
 		_tempo_no_ar += delta
+	# só é "no ar" de verdade depois de um instante sem chão (ou subindo num pulo):
+	# um tick sem contato numa lombada não levanta as pernas
+	var no_ar_mesmo := not flags_chao and (_tempo_no_ar > TEMPO_AR_VISUAL or _vel.y > 1.0)
+	_ar = move_toward(_ar, 1.0 if no_ar_mesmo else 0.0, delta * 7.0)
 	# decolou: dispara o pulo
 	if _no_chao_antes and _vel.y > 2.0:
 		_tree.set("parameters/salto/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
@@ -407,7 +422,8 @@ func _process(delta: float) -> void:
 	if flags_chao:
 		_tempo_no_ar = 0.0
 	_no_chao_antes = flags_chao
-	_tree.set("parameters/pe/blend_position", h)
+	_giro_no_lugar(delta, h, flags_chao)
+	_tree.set("parameters/pe/blend_position", maxf(h, VEL_CAMINHAR * 0.8 * _passos))
 	_tree.set("parameters/ag/blend_position", h)
 	_tree.set("parameters/agachar/blend_amount", _agachado)
 	_tree.set("parameters/solo_ar/blend_amount", _ar)
@@ -429,6 +445,33 @@ func _process(delta: float) -> void:
 	_entrada(delta)
 	if fx:
 		fx.velocidade = Basis(Vector3.UP, rotation.y).inverse() * _vel
+
+
+## Giro no lugar: parado no chão, o tronco (e a arma) segue a mira na hora e as
+## pernas ficam plantadas; passando do limite, elas alcançam com passinhos.
+## Andando, no ar ou na entrada, as pernas acompanham o corpo.
+func _giro_no_lugar(delta: float, h: float, no_chao: bool) -> void:
+	var yaw := rotation.y
+	var parado := no_chao and h < 0.6 and _w_entrada < 0.01 and _agachado < 0.5
+	if not parado:
+		_yaw_pernas = lerp_angle(_yaw_pernas, yaw, clampf(delta * 12.0, 0.0, 1.0))
+		_girando_pernas = false
+	else:
+		var dif := wrapf(yaw - _yaw_pernas, -PI, PI)
+		var limite := GIRO_LIMITE_ARMA if com_arma else GIRO_LIMITE
+		if absf(dif) > limite:
+			_girando_pernas = true
+		if _girando_pernas:
+			_yaw_pernas = _yaw_pernas + clampf(dif, -GIRO_VEL * delta, GIRO_VEL * delta)
+			if absf(wrapf(yaw - _yaw_pernas, -PI, PI)) < deg_to_rad(4.0):
+				_girando_pernas = false
+	_passos = move_toward(_passos, 1.0 if _girando_pernas else 0.0, delta * 8.0)
+	var giro := wrapf(_yaw_pernas - yaw, -PI, PI)        # pernas em relação ao nó (que segue a mira)
+	_giro_pernas = giro
+	aim.yaw_twist = -giro
+
+
+var _giro_pernas := 0.0
 
 
 ## Pose de entrada a partir do que vem pela rede (estado de queda e velocidade).
@@ -497,7 +540,7 @@ func _entrada(delta: float) -> void:
 	# no ar gira em torno do centro do corpo (~1 m); no chão, em torno dos pés
 	var centro := Vector3(0, 1.0 * _w_entrada, 0)
 	var t := Transform3D(_inclinacao, centro - _inclinacao * centro)
-	_modelo.transform = t * Transform3D(Basis(Vector3.UP, PI), Vector3.ZERO)
+	_modelo.transform = t * Transform3D(Basis(Vector3.UP, PI + _giro_pernas), Vector3.ZERO)
 
 
 ## Entrada na partida: no ônibus (invisível), queda livre (sem item na mão) e

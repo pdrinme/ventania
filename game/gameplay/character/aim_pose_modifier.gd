@@ -10,6 +10,7 @@ const PESOS := {"Spine": 0.22, "Chest": 0.33, "Neck": 0.17, "Head": 0.28}
 var pitch := 0.0          # rad, positivo = olhando para cima
 var head_extra := 0.0     # rad, inclinação extra da cabeça para trás
 var chest_kick := 0.0     # rad, recuo do disparo
+var yaw_twist := 0.0      # rad, giro do tronco em relação às pernas (giro no lugar)
 var _idx := {}
 
 
@@ -29,11 +30,12 @@ func _process_modification_with_delta(_delta: float) -> void:
 			ang += head_extra
 		elif nome == "Chest":
 			ang += chest_kick
-		if absf(ang) < 0.0005:
+		var giro: float = yaw_twist * PESOS[nome]
+		if absf(ang) < 0.0005 and absf(giro) < 0.0005:
 			continue
 		var g := sk.get_bone_global_pose(b)
 		var pai := sk.get_bone_parent(b)
 		var pg := sk.get_bone_global_pose(pai) if pai >= 0 else Transform3D()
-		var r := Basis(Vector3.RIGHT, -ang)          # +ang levanta a frente (+Z) para +Y
+		var r := Basis(Vector3.UP, giro) * Basis(Vector3.RIGHT, -ang)   # +ang levanta a frente (+Z) para +Y
 		var local := pg.basis.orthonormalized().inverse() * (r * g.basis.orthonormalized())
 		sk.set_bone_pose_rotation(b, local.get_rotation_quaternion())

@@ -21,10 +21,9 @@ DOBRADICA = (0, P / 2, A)
 def _arco(nome, raio, comp, z, cor, achatar=0.72, lados=12):
     """Meio cilindro deitado no eixo X (tampa abaulada), base plana em z."""
     o = k.cilindro(nome, raio, comp, (0, 0, z), cor, lados=lados, rot=(0, 90, 0))
+    # vértices em coordenadas LOCAIS (a posição do objeto não é aplicada): a base é z=0
     for v in o.data.vertices:
-        if v.co.z < z:
-            v.co.z = z
-        v.co.z = z + (v.co.z - z) * achatar
+        v.co.z = max(0.0, v.co.z) * achatar
     return o
 
 

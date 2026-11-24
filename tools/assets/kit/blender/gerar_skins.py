@@ -89,7 +89,7 @@ def _rebites(c, osso, pontos, cor="dourado", r=0.014):
 
 
 # =============================================================== RECRUTA (revisão de arte)
-def _oculos_aviador(c, cor_lente="lente", z=1.775, alca="preto", tam=1.0):
+def _oculos_aviador(c, cor_lente="lente", z=1.8, alca="preto", tam=1.0):
     """Óculos de aviador na testa: duas lentes em armação de metal, ponte e alça."""
     for s in (1, -1):
         c.add(k.cilindro("lente", 0.047 * tam, 0.035, (s * 0.068, -0.172, z), cor_lente, lados=14, rot=(80, 0, 0)), "Head")
